@@ -91,6 +91,7 @@ private:
     ConstantBuffer<PerFrameData> m_perFrameCB;
 
     char m_terrainPath[260] = "data/heightmap.png";
+    char m_terrainTexturePath[260] = "";
     char m_projectPath[260] = "data/project.json";
 
     // Load mesh divisions (cell counts, 0 = native image resolution - 1)

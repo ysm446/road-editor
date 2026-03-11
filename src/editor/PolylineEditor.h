@@ -78,6 +78,7 @@ public:
     void SetFilePath(const char* path) { strncpy_s(m_filePath, sizeof(m_filePath), path, _TRUNCATE); }
     bool ConsumeStatusMessage(std::string& outMessage);
     bool GetFocusTarget(DirectX::XMFLOAT3& outTarget) const;
+    bool GetPrimaryRoadForPathfinding(int& outRoadIndex) const;
     void SetShowRoadNames(bool show) { m_showRoadNames = show; }
     void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
     void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }

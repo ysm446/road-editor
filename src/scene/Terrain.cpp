@@ -32,6 +32,14 @@ bool Terrain::Initialize(ID3D11Device* device)
     rd.CullMode = D3D11_CULL_NONE;
     device->CreateRasterizerState(&rd, &m_rsWireframe);
 
+    D3D11_SAMPLER_DESC sd = {};
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+    device->CreateSamplerState(&sd, &m_colorTextureSampler);
+
     if (!m_terrainCB.Initialize(device))
         return false;
 
@@ -86,6 +94,61 @@ bool Terrain::LoadFromFile(ID3D11Device* device, const char* path)
 
     BuildMesh(device);
     return true;
+}
+
+bool Terrain::LoadColorTexture(ID3D11Device* device, const char* path)
+{
+    if (!device || !path || path[0] == '\0')
+        return false;
+
+    int w = 0;
+    int h = 0;
+    int ch = 0;
+    stbi_uc* data = stbi_load(path, &w, &h, &ch, 4);
+    if (!data)
+        return false;
+
+    m_colorTextureSRV.Reset();
+
+    D3D11_TEXTURE2D_DESC td = {};
+    td.Width = static_cast<UINT>(w);
+    td.Height = static_cast<UINT>(h);
+    td.MipLevels = 1;
+    td.ArraySize = 1;
+    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    td.SampleDesc.Count = 1;
+    td.Usage = D3D11_USAGE_DEFAULT;
+    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA srd = {};
+    srd.pSysMem = data;
+    srd.SysMemPitch = static_cast<UINT>(w * 4);
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+    HRESULT hr = device->CreateTexture2D(&td, &srd, &texture);
+    stbi_image_free(data);
+    if (FAILED(hr))
+        return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvd = {};
+    srvd.Format = td.Format;
+    srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvd.Texture2D.MipLevels = 1;
+    hr = device->CreateShaderResourceView(texture.Get(), &srvd, &m_colorTextureSRV);
+    if (FAILED(hr))
+    {
+        m_colorTextureSRV.Reset();
+        return false;
+    }
+
+    colorTexturePath = path;
+    return true;
+}
+
+void Terrain::ClearColorTexture()
+{
+    m_colorTextureSRV.Reset();
+    colorTexturePath.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -349,12 +412,18 @@ void Terrain::Render(ID3D11DeviceContext* ctx, ID3D11Buffer* perFrameCB)
     XMVECTOR  sun = XMVector3Normalize(XMVectorSet(0.6f, 1.0f, 0.4f, 0.0f));
     XMStoreFloat3(&tcb.sunDir, sun);
     tcb.maxHeight = heightScale;
+    tcb.colorMode = (colorMode == 3 && m_colorTextureSRV) ? 3 : colorMode;
+    tcb.padding = { 0.0f, 0.0f, 0.0f };
     m_terrainCB.Update(ctx, tcb);
 
     m_shader.Bind(ctx);
     ctx->VSSetConstantBuffers(0, 1, &perFrameCB);
     ctx->PSSetConstantBuffers(0, 1, &perFrameCB);
     ctx->PSSetConstantBuffers(1, 1, m_terrainCB.GetAddressOf());
+    ID3D11ShaderResourceView* terrainSrv = m_colorTextureSRV.Get();
+    ctx->PSSetShaderResources(0, 1, &terrainSrv);
+    ID3D11SamplerState* terrainSampler = m_colorTextureSampler.Get();
+    ctx->PSSetSamplers(0, 1, &terrainSampler);
 
     ctx->RSSetState(wireframe ? m_rsWireframe.Get() : m_rsSolid.Get());
     ctx->IASetInputLayout(m_inputLayout.Get());
@@ -366,6 +435,8 @@ void Terrain::Render(ID3D11DeviceContext* ctx, ID3D11Buffer* perFrameCB)
 
     ctx->DrawIndexed(m_indexCount, 0, 0);
 
+    ID3D11ShaderResourceView* nullSrv = nullptr;
+    ctx->PSSetShaderResources(0, 1, &nullSrv);
     ctx->RSSetState(nullptr);
 }
 
@@ -379,6 +450,8 @@ void Terrain::Shutdown()
     m_inputLayout.Reset();
     m_rsSolid.Reset();
     m_rsWireframe.Reset();
+    m_colorTextureSRV.Reset();
+    m_colorTextureSampler.Reset();
 }
 
 void Terrain::Reset()
@@ -386,6 +459,7 @@ void Terrain::Reset()
     m_vb.Reset();
     m_ib.Reset();
     m_inputLayout.Reset();
+    m_colorTextureSRV.Reset();
     m_rawHeights.clear();
     m_rawW = 0;
     m_rawH = 0;
@@ -401,6 +475,8 @@ void Terrain::Reset()
     offsetZ = 0.0f;
     meshSubdivW = 0;
     meshSubdivH = 0;
+    colorMode = 1;
     wireframe = false;
     visible = true;
+    colorTexturePath.clear();
 }

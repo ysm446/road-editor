@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #include <DirectXMath.h>
+#include <string>
 #include <vector>
 
 #include "renderer/Shader.h"
@@ -13,7 +14,9 @@ struct TerrainCB
 {
     DirectX::XMFLOAT3 sunDir;    // 12 bytes  (normalized, pointing toward light)
     float             maxHeight; //  4 bytes
-};                               // = 16 bytes
+    int               colorMode; //  4 bytes
+    DirectX::XMFLOAT3 padding;   // 12 bytes
+};                               // = 32 bytes
 
 class Terrain
 {
@@ -26,6 +29,8 @@ public:
     // Load a grayscale PNG/BMP/TGA via stb_image at native resolution.
     // Returns false if the file cannot be opened.
     bool LoadFromFile(ID3D11Device* device, const char* path);
+    bool LoadColorTexture(ID3D11Device* device, const char* path);
+    void ClearColorTexture();
 
     // Rebuild vertex/index buffers using current heightScale / horizontalScale.
     void Rebuild(ID3D11Device* device);
@@ -60,8 +65,10 @@ public:
     float offsetZ          =   0.0f;
     int   meshSubdivW      =   0;
     int   meshSubdivH      =   0;
+    int   colorMode        =   1;
     bool  wireframe        = false;
     bool  visible          = true;
+    std::string colorTexturePath;
 
 private:
     struct Vertex
@@ -79,6 +86,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11InputLayout>     m_inputLayout;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsSolid;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsWireframe;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_colorTextureSRV;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_colorTextureSampler;
     ConstantBuffer<TerrainCB>                     m_terrainCB;
 
     std::vector<float> m_rawHeights; // normalised heights [0, 1] at native resolution

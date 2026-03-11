@@ -243,6 +243,41 @@ bool PolylineEditor::GetFocusTarget(XMFLOAT3& outTarget) const
     return false;
 }
 
+bool PolylineEditor::GetPrimaryRoadForPathfinding(int& outRoadIndex) const
+{
+    if (!m_network)
+        return false;
+
+    if (m_selectedPoints.size() == 1)
+    {
+        const PointRef& pointRef = m_selectedPoints.front();
+        if (pointRef.roadIndex >= 0 &&
+            pointRef.roadIndex < static_cast<int>(m_network->roads.size()))
+        {
+            outRoadIndex = pointRef.roadIndex;
+            return true;
+        }
+    }
+
+    if (m_selectedRoads.size() == 1)
+    {
+        const int roadIndex = m_selectedRoads.front();
+        if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
+        {
+            outRoadIndex = roadIndex;
+            return true;
+        }
+    }
+
+    if (m_activeRoad >= 0 && m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        outRoadIndex = m_activeRoad;
+        return true;
+    }
+
+    return false;
+}
+
 PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
 {
     EditorSnapshot snapshot;
@@ -2293,8 +2328,8 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
 {
     const_cast<PolylineEditor*>(this)->SanitizeSelection();
 
-    static const XMFLOAT4 colorRoad     = { 1.0f, 0.8f, 0.1f, 1.0f };
-    static const XMFLOAT4 colorSelected = { 1.0f, 0.3f, 0.3f, 1.0f };
+    static const XMFLOAT4 colorRoad     = { 1.0f, 1.0f, 1.0f, 1.0f };
+    static const XMFLOAT4 colorSelected = { 1.0f, 0.55f, 0.15f, 1.0f };
     static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.4f };
     static const XMFLOAT4 colorAxisX    = { 1.0f, 0.2f, 0.2f, 1.0f };
     static const XMFLOAT4 colorAxisY    = { 0.2f, 1.0f, 0.2f, 1.0f };
@@ -2443,10 +2478,10 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 {
     const_cast<PolylineEditor*>(this)->SanitizeSelection();
 
-    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImDrawList* dl = ImGui::GetBackgroundDrawList();
     const float kRadius    = 3.0f;
-    const ImU32 colPoint    = IM_COL32(255, 255, 255, 220);
-    const ImU32 colSelected = IM_COL32(255,  80,  80, 255);
+    const ImU32 colPoint    = IM_COL32(255, 255, 255, 255);
+    const ImU32 colSelected = IM_COL32(255, 140, 38, 255);
     const ImU32 colCursor   = IM_COL32( 60, 255, 110, 220);
     const ImU32 colAxisX    = IM_COL32(255,  80,  80, 255);
     const ImU32 colAxisY    = IM_COL32( 80, 255, 120, 255);
@@ -2465,10 +2500,9 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             ImVec2 sp;
             if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, sp))
                 continue;
-            bool isActive = IsPointSelected(ri, pi);
+            bool isActive = IsPointSelected(ri, pi) || IsRoadSelected(ri) || ri == m_activeRoad;
             ImU32 col = isActive ? colSelected : colPoint;
-            float r   = isActive ? kRadius + 2.0f : kRadius;
-            dl->AddCircleFilled(sp, r, col, 20);
+            dl->AddCircleFilled(sp, kRadius, col, 20);
         }
 
         if ((m_showRoadNames || m_showRoadPreviewMetrics) && !road.points.empty())

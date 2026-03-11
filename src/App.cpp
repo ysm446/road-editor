@@ -331,7 +331,7 @@ bool IntersectRayWithGroundPlane(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir, XMFLOAT3& 
 void DrawViewAxisGizmo(XMMATRIX view)
 {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImDrawList* dl = ImGui::GetBackgroundDrawList();
     const ImVec2 center(
         viewport->WorkPos.x + 58.0f,
         viewport->WorkPos.y + viewport->WorkSize.y - 92.0f);
@@ -458,6 +458,7 @@ void App::LoadViewSettings()
     m_showRoadNames = false;
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
+    m_showContours = false;
 
     try
     {
@@ -469,6 +470,7 @@ void App::LoadViewSettings()
             m_showRoadNames = root.value("showRoadNames", false);
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
+            m_showContours = root.value("showContours", false);
         }
     }
     catch (...)
@@ -478,6 +480,7 @@ void App::LoadViewSettings()
     m_editor.SetShowRoadNames(m_showRoadNames);
     m_editor.SetShowIntersectionNames(m_showIntersectionNames);
     m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
+    RebuildContourCache();
 }
 
 void App::SaveViewSettings() const
@@ -488,7 +491,8 @@ void App::SaveViewSettings() const
         {
             { "showRoadNames", m_showRoadNames },
             { "showIntersectionNames", m_showIntersectionNames },
-            { "showRoadPreviewMetrics", m_showRoadPreviewMetrics }
+            { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
+            { "showContours", m_showContours }
         };
 
         std::ofstream ofs(kViewSettingsPath);
@@ -513,8 +517,10 @@ void App::ResetPathfindingState()
 
 bool App::SyncPathfindingEndpointsFromSelectedRoad()
 {
-    const int roadIndex = m_editor.GetActiveRoadIndex();
-    if (roadIndex < 0 || roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
+    int roadIndex = -1;
+    if (!m_editor.GetPrimaryRoadForPathfinding(roadIndex) ||
+        roadIndex < 0 ||
+        roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
     {
         SetStatusMessage("Select one road before entering pathfinding");
         return false;
@@ -643,6 +649,7 @@ void App::NewProject()
     m_contourSegments.clear();
 
     m_terrain->Reset();
+    m_terrainTexturePath[0] = '\0';
     m_roadNetwork = RoadNetwork();
     m_editor.SetNetwork(&m_roadNetwork);
     m_editor.SetFilePath("data/roads.json");
@@ -666,6 +673,7 @@ bool App::SaveProject(const char* path)
         root["terrain"] =
         {
             { "path",        m_terrainPath            },
+            { "texturePath", m_terrainTexturePath     },
             { "divisionsX",  m_loadResW               },
             { "divisionsY",  m_loadResH               },
             { "widthM",      m_loadWidthM             },
@@ -673,6 +681,7 @@ bool App::SaveProject(const char* path)
             { "heightM",     m_loadHeightM            },
             { "offsetX",     m_loadOffsetX            },
             { "offsetZ",     m_loadOffsetZ            },
+            { "colorMode",   m_terrain->colorMode     },
             { "visible",     m_terrain->visible       },
             { "wireframe",   m_terrain->wireframe     }
         };
@@ -721,7 +730,9 @@ bool App::LoadProject(const char* path)
         {
             const auto& t = root["terrain"];
             std::string terrainPath = t.value("path", std::string());
+            std::string terrainTexturePath = t.value("texturePath", std::string());
             strncpy_s(m_terrainPath, sizeof(m_terrainPath), terrainPath.c_str(), _TRUNCATE);
+            strncpy_s(m_terrainTexturePath, sizeof(m_terrainTexturePath), terrainTexturePath.c_str(), _TRUNCATE);
             m_loadResW    = t.value("divisionsX", 0);
             m_loadResH    = t.value("divisionsY", 0);
             m_loadWidthM  = t.value("widthM", 255.0f);
@@ -729,8 +740,13 @@ bool App::LoadProject(const char* path)
             m_loadHeightM = t.value("heightM", 100.0f);
             m_loadOffsetX = t.value("offsetX", 0.0f);
             m_loadOffsetZ = t.value("offsetZ", 0.0f);
+            m_terrain->colorMode = t.value("colorMode", 1);
             m_terrain->visible   = t.value("visible", true);
             m_terrain->wireframe = t.value("wireframe", false);
+            if (m_terrainTexturePath[0] != '\0')
+                m_terrain->LoadColorTexture(m_d3d->GetDevice(), m_terrainTexturePath);
+            else
+                m_terrain->ClearColorTexture();
 
             if (m_terrainPath[0] != '\0')
             {
@@ -1119,6 +1135,49 @@ void App::Render()
         ImGui::Checkbox("Visible",   &m_terrain->visible);
         ImGui::SameLine();
         ImGui::Checkbox("Wireframe", &m_terrain->wireframe);
+        static const char* kTerrainColorModes[] =
+        {
+            "Gray",
+            "Terrain",
+            "Slope",
+            "Texture"
+        };
+        int terrainColorMode = std::clamp(m_terrain->colorMode, 0, 3);
+        if (ImGui::Combo("Color Mode", &terrainColorMode, kTerrainColorModes, IM_ARRAYSIZE(kTerrainColorModes)))
+            m_terrain->colorMode = terrainColorMode;
+
+        if (m_terrain->colorMode == 3)
+        {
+            ImGui::TextDisabled("Terrain Texture");
+            ImGui::SetNextItemWidth(260.0f);
+            ImGui::InputText("##terraintex", m_terrainTexturePath, sizeof(m_terrainTexturePath));
+            bool texturePathCommitted = ImGui::IsItemDeactivatedAfterEdit();
+            ImGui::SameLine();
+            if (ImGui::Button("Browse..."))
+            {
+                if (OpenFileDialog(m_hwnd, m_terrainTexturePath, sizeof(m_terrainTexturePath),
+                                   "Image Files\0*.png;*.bmp;*.tga;*.jpg;*.jpeg\0All Files\0*.*\0",
+                                   "Open Terrain Texture"))
+                {
+                    texturePathCommitted = true;
+                }
+            }
+            if (texturePathCommitted)
+            {
+                if (m_terrainTexturePath[0] == '\0')
+                {
+                    m_terrain->ClearColorTexture();
+                }
+                else if (!m_terrain->LoadColorTexture(m_d3d->GetDevice(), m_terrainTexturePath))
+                {
+                    SetStatusMessage(std::string("Terrain texture load failed: ") + m_terrainTexturePath);
+                }
+                else
+                {
+                    SetStatusMessage(std::string("Terrain texture loaded: ") + m_terrainTexturePath);
+                }
+            }
+        }
 
         ImGui::Separator();
 
@@ -1224,6 +1283,7 @@ void App::Render()
         {
             m_showContours = showContours;
             RebuildContourCache();
+            SaveViewSettings();
         }
 
         float contourInterval = m_contourInterval;
@@ -1233,6 +1293,7 @@ void App::Render()
         {
             m_contourInterval = contourInterval;
             RebuildContourCache();
+            SaveViewSettings();
         }
 
     }
@@ -1419,7 +1480,7 @@ void App::DrawPathfindingOverlay(XMMATRIX viewProj, int vpW, int vpH)
     if (m_editor.GetMode() != EditorMode::Pathfinding)
         return;
 
-    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImDrawList* dl = ImGui::GetBackgroundDrawList();
     auto drawHandle = [&](XMFLOAT3 worldPos, ImU32 fillColor, bool active, const char* label)
     {
         XMFLOAT2 screenPos = {};
