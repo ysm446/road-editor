@@ -268,6 +268,21 @@ bool WorldToGrid(const PathGridConfig& grid, XMFLOAT3 worldPos, int& outCol, int
     return outCol >= 0 && outCol < grid.cols && outRow >= 0 && outRow < grid.rows;
 }
 
+XMFLOAT3 InterpolateContourPoint(XMFLOAT3 a, XMFLOAT3 b, float level)
+{
+    const float denom = b.y - a.y;
+    float t = 0.5f;
+    if (fabsf(denom) > 1e-6f)
+        t = std::clamp((level - a.y) / denom, 0.0f, 1.0f);
+
+    return
+    {
+        a.x + (b.x - a.x) * t,
+        level,
+        a.z + (b.z - a.z) * t
+    };
+}
+
 bool IntersectRayWithGroundPlane(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir, XMFLOAT3& outHit)
 {
     const XMVECTOR ro = XMLoadFloat3(&rayOrigin);
@@ -409,6 +424,7 @@ void App::ApplyTerrainSettings()
     m_terrain->offsetX          = m_loadOffsetX;
     m_terrain->offsetZ          = m_loadOffsetZ;
     m_terrain->Rebuild(m_d3d->GetDevice());
+    RebuildContourCache();
 }
 
 void App::LoadViewSettings()
@@ -465,6 +481,116 @@ void App::ResetPathfindingState()
     m_prevPathPickLButton = false;
 }
 
+bool App::SyncPathfindingEndpointsFromSelectedRoad()
+{
+    const int roadIndex = m_editor.GetActiveRoadIndex();
+    if (roadIndex < 0 || roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
+    {
+        SetStatusMessage("Select one road before entering pathfinding");
+        return false;
+    }
+
+    const Road& road = m_roadNetwork.roads[roadIndex];
+    if (road.points.size() < 2)
+    {
+        SetStatusMessage("Selected road needs at least two points");
+        return false;
+    }
+
+    m_pathfinding.startPos = road.points.front().pos;
+    m_pathfinding.endPos = road.points.back().pos;
+    m_pathfinding.hasStart = true;
+    m_pathfinding.hasEnd = true;
+    m_pathfinding.pickingStart = false;
+    m_pathfinding.pickingEnd = false;
+    m_pathfinding.previewPath.clear();
+    SetStatusMessage("Pathfinding endpoints synced from selected road");
+    return true;
+}
+
+void App::RebuildContourCache()
+{
+    m_contourSegments.clear();
+
+    if (!m_showContours || !m_terrain || !m_terrain->IsReady())
+        return;
+
+    const float interval = std::clamp(m_contourInterval, 0.5f, 1000.0f);
+    const int cols = m_terrain->GetMeshW();
+    const int rows = m_terrain->GetMeshH();
+    if (cols < 2 || rows < 2)
+        return;
+
+    const float halfWidth = static_cast<float>(cols - 1) * m_terrain->horizontalScaleX * 0.5f;
+    const float halfDepth = static_cast<float>(rows - 1) * m_terrain->horizontalScaleZ * 0.5f;
+    const float minX = m_terrain->offsetX - halfWidth;
+    const float minZ = m_terrain->offsetZ - halfDepth;
+
+    auto sampleVertex = [this, minX, minZ](int col, int row)
+    {
+        const float x = minX + static_cast<float>(col) * m_terrain->horizontalScaleX;
+        const float z = minZ + static_cast<float>(row) * m_terrain->horizontalScaleZ;
+        return XMFLOAT3{ x, m_terrain->GetHeightAt(x, z), z };
+    };
+
+    auto appendSegmentsForCell = [this](XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, XMFLOAT3 p3, float level)
+    {
+        std::vector<XMFLOAT3> intersections;
+        intersections.reserve(4);
+
+        auto tryEdge = [&intersections, level](XMFLOAT3 a, XMFLOAT3 b)
+        {
+            const bool aAbove = a.y >= level;
+            const bool bAbove = b.y >= level;
+            if (aAbove == bAbove)
+                return;
+            intersections.push_back(InterpolateContourPoint(a, b, level));
+        };
+
+        tryEdge(p0, p1);
+        tryEdge(p1, p2);
+        tryEdge(p2, p3);
+        tryEdge(p3, p0);
+
+        if (intersections.size() == 2)
+        {
+            m_contourSegments.push_back({ intersections[0], intersections[1] });
+        }
+        else if (intersections.size() == 4)
+        {
+            m_contourSegments.push_back({ intersections[0], intersections[1] });
+            m_contourSegments.push_back({ intersections[2], intersections[3] });
+        }
+    };
+
+    const float maxHeight = m_terrain->heightScale;
+    for (int row = 0; row < rows - 1; ++row)
+    {
+        for (int col = 0; col < cols - 1; ++col)
+        {
+            const XMFLOAT3 p0 = sampleVertex(col, row);
+            const XMFLOAT3 p1 = sampleVertex(col + 1, row);
+            const XMFLOAT3 p2 = sampleVertex(col + 1, row + 1);
+            const XMFLOAT3 p3 = sampleVertex(col, row + 1);
+
+            const float cellMin = (std::min)((std::min)(p0.y, p1.y), (std::min)(p2.y, p3.y));
+            const float cellMax = (std::max)((std::max)(p0.y, p1.y), (std::max)(p2.y, p3.y));
+            if (cellMax - cellMin <= 1e-5f)
+                continue;
+
+            const int firstLevel = static_cast<int>(std::ceil(cellMin / interval));
+            const int lastLevel = static_cast<int>(std::floor(cellMax / interval));
+            for (int levelIndex = firstLevel; levelIndex <= lastLevel; ++levelIndex)
+            {
+                const float level = static_cast<float>(levelIndex) * interval;
+                if (level < 0.0f || level > maxHeight)
+                    continue;
+                appendSegmentsForCell(p0, p1, p2, p3, level);
+            }
+        }
+    }
+}
+
 void App::NewProject()
 {
     strncpy_s(m_terrainPath, sizeof(m_terrainPath), "data/heightmap.png", _TRUNCATE);
@@ -481,6 +607,7 @@ void App::NewProject()
     m_cursorHitValid = false;
     m_cursorHitPos = {};
     ResetPathfindingState();
+    m_contourSegments.clear();
 
     m_terrain->Reset();
     m_roadNetwork = RoadNetwork();
@@ -580,6 +707,10 @@ bool App::LoadProject(const char* path)
                     return false;
                 }
                 ApplyTerrainSettings();
+            }
+            else
+            {
+                m_contourSegments.clear();
             }
         }
 
@@ -791,6 +922,14 @@ int App::Run()
                     m_cursorHitValid = IntersectRayWithGroundPlane(rayO, rayD3, m_cursorHitPos);
             }
 
+            const EditorMode currentMode = m_editor.GetMode();
+            if (currentMode != m_prevEditorMode)
+            {
+                if (currentMode == EditorMode::Pathfinding)
+                    SyncPathfindingEndpointsFromSelectedRoad();
+                m_prevEditorMode = currentMode;
+            }
+
             UpdatePathfindingInput(wantMouse);
         }
 
@@ -831,6 +970,7 @@ void App::Render()
     m_grid->Render(m_d3d->GetContext(), m_perFrameCB.Get());
 
     m_editor.DrawNetwork(m_debugDraw, vp, m_d3d->GetWidth(), m_d3d->GetHeight());
+    DrawContourPreview();
     DrawPathfindingPreview();
     m_debugDraw.Flush(m_d3d->GetContext(), m_perFrameCB.Get());
 
@@ -1029,6 +1169,7 @@ void App::Render()
             m_loadHeightM = 100.0f;
             m_loadOffsetX = 0.0f;
             m_loadOffsetZ = 0.0f;
+            m_contourSegments.clear();
             SetStatusMessage("Height field cleared");
         }
         if (ImGui::BeginPopup("LoadError"))
@@ -1036,6 +1177,23 @@ void App::Render()
             ImGui::Text("Failed to load: %s", m_terrainPath);
             if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
+        }
+
+        ImGui::Separator();
+        bool showContours = m_showContours;
+        if (ImGui::Checkbox("Show Contours", &showContours))
+        {
+            m_showContours = showContours;
+            RebuildContourCache();
+        }
+
+        float contourInterval = m_contourInterval;
+        ImGui::InputFloat("Contour Interval (m)", &contourInterval, 1.0f, 5.0f, "%.1f");
+        contourInterval = std::clamp(contourInterval, 0.5f, 1000.0f);
+        if (fabsf(contourInterval - m_contourInterval) > 1e-4f)
+        {
+            m_contourInterval = contourInterval;
+            RebuildContourCache();
         }
 
     }
@@ -1170,6 +1328,16 @@ void App::DrawPathfindingPreview()
         drawMarker(m_pathfinding.startPos, { 0.2f, 1.0f, 0.3f, 1.0f });
     if (m_pathfinding.hasEnd)
         drawMarker(m_pathfinding.endPos, { 1.0f, 0.3f, 0.3f, 1.0f });
+}
+
+void App::DrawContourPreview()
+{
+    if (!m_showContours || m_contourSegments.empty())
+        return;
+
+    const XMFLOAT4 contourColor = { 0.18f, 0.18f, 0.18f, 0.85f };
+    for (const ContourSegment& segment : m_contourSegments)
+        m_debugDraw.AddLine(segment.a, segment.b, contourColor);
 }
 
 bool App::ComputePathfindingPreview()
@@ -1387,7 +1555,11 @@ void App::DrawPathfindingPanel()
     }
 
     ImGui::TextDisabled("Terrain/grid based A* route preview");
+    ImGui::TextDisabled("Uses the selected road's first and last point");
     ImGui::Separator();
+
+    if (ImGui::Button("Use Selected Road", ImVec2(-1, 0)))
+        SyncPathfindingEndpointsFromSelectedRoad();
 
     if (ImGui::Button(m_pathfinding.pickingStart ? "Picking Start..." : "Pick Start", ImVec2(120, 0)))
     {

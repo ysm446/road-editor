@@ -45,8 +45,11 @@ private:
     void    SaveViewSettings() const;
     void    SetStatusMessage(const std::string& message);
     void    ResetPathfindingState();
+    bool    SyncPathfindingEndpointsFromSelectedRoad();
+    void    RebuildContourCache();
     void    UpdatePathfindingInput(bool wantMouseByImGui);
     void    DrawPathfindingPreview();
+    void    DrawContourPreview();
     void    DrawPathfindingPanel();
     bool    ComputePathfindingPreview();
     bool    ApplyPathfindingPreviewAsRoad();
@@ -66,6 +69,12 @@ private:
         DirectX::XMFLOAT3 startPos = { 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT3 endPos = { 0.0f, 0.0f, 0.0f };
         std::vector<DirectX::XMFLOAT3> previewPath;
+    };
+
+    struct ContourSegment
+    {
+        DirectX::XMFLOAT3 a = { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 b = { 0.0f, 0.0f, 0.0f };
     };
 
     HWND m_hwnd    = nullptr;
@@ -100,7 +109,11 @@ private:
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
     bool              m_prevPathPickLButton = false;
+    bool              m_showContours = false;
+    float             m_contourInterval = 5.0f;
+    EditorMode        m_prevEditorMode = EditorMode::Navigate;
     PathfindingState  m_pathfinding;
+    std::vector<ContourSegment> m_contourSegments;
 
     DebugDraw      m_debugDraw;
     RoadNetwork    m_roadNetwork;
