@@ -7,4 +7,5 @@ enum class EditorMode
     PointEdit,         // Select / drag / delete existing road points
     IntersectionDraw,  // Click terrain to place intersections
     IntersectionEdit,  // Select / delete intersections
+    Pathfinding,       // Terrain-based route preview / generation
 };

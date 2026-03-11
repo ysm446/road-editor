@@ -80,6 +80,7 @@ public:
     bool GetFocusTarget(DirectX::XMFLOAT3& outTarget) const;
     void SetShowRoadNames(bool show) { m_showRoadNames = show; }
     void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
+    void RecordUndoState() { PushUndoState(); }
 
 private:
     // Unproject a screen pixel to a world-space ray

@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <memory>
 #include <string>
+#include <vector>
 #include <DirectXMath.h>
 
 #include "renderer/D3D11Context.h"
@@ -43,7 +44,29 @@ private:
     void    LoadViewSettings();
     void    SaveViewSettings() const;
     void    SetStatusMessage(const std::string& message);
+    void    ResetPathfindingState();
+    void    UpdatePathfindingInput(bool wantMouseByImGui);
+    void    DrawPathfindingPreview();
+    void    DrawPathfindingPanel();
+    bool    ComputePathfindingPreview();
+    bool    ApplyPathfindingPreviewAsRoad();
     void    Render();
+
+    struct PathfindingState
+    {
+        bool enabled = false;
+        bool pickingStart = false;
+        bool pickingEnd = false;
+        bool hasStart = false;
+        bool hasEnd = false;
+        bool strictMaxGrade = true;
+        float maxGradePercent = 10.0f;
+        float gridStep = 5.0f;
+        float slopePenalty = 40.0f;
+        DirectX::XMFLOAT3 startPos = { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 endPos = { 0.0f, 0.0f, 0.0f };
+        std::vector<DirectX::XMFLOAT3> previewPath;
+    };
 
     HWND m_hwnd    = nullptr;
     bool m_running = true;
@@ -76,6 +99,8 @@ private:
     bool              m_prevFocusKey   = false;
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
+    bool              m_prevPathPickLButton = false;
+    PathfindingState  m_pathfinding;
 
     DebugDraw      m_debugDraw;
     RoadNetwork    m_roadNetwork;

@@ -5,9 +5,12 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <commdlg.h>
 #include <DirectXMath.h>
 #include <fstream>
+#include <limits>
+#include <queue>
 
 #include <nlohmann/json.hpp>
 
@@ -20,6 +23,250 @@ using namespace DirectX;
 namespace
 {
 constexpr const char* kViewSettingsPath = "data/view_settings.json";
+
+struct PathGridConfig
+{
+    float minX = 0.0f;
+    float minZ = 0.0f;
+    float maxX = 0.0f;
+    float maxZ = 0.0f;
+    float step = 5.0f;
+    int cols = 0;
+    int rows = 0;
+};
+
+float SamplePathHeightAt(const Terrain* terrain, float x, float z);
+
+float DistanceXZ(XMFLOAT3 a, XMFLOAT3 b)
+{
+    const float dx = b.x - a.x;
+    const float dz = b.z - a.z;
+    return sqrtf(dx * dx + dz * dz);
+}
+
+float Distance3D(XMFLOAT3 a, XMFLOAT3 b)
+{
+    const float dx = b.x - a.x;
+    const float dy = b.y - a.y;
+    const float dz = b.z - a.z;
+    return sqrtf(dx * dx + dy * dy + dz * dz);
+}
+
+XMFLOAT3 Lerp3(XMFLOAT3 a, XMFLOAT3 b, float t)
+{
+    return
+    {
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t
+    };
+}
+
+float DistancePointToSegment3D(XMFLOAT3 point, XMFLOAT3 segA, XMFLOAT3 segB)
+{
+    const XMVECTOR p = XMLoadFloat3(&point);
+    const XMVECTOR a = XMLoadFloat3(&segA);
+    const XMVECTOR b = XMLoadFloat3(&segB);
+    const XMVECTOR ab = XMVectorSubtract(b, a);
+    const float abLenSq = XMVectorGetX(XMVector3LengthSq(ab));
+    if (abLenSq <= 1e-6f)
+        return Distance3D(point, segA);
+
+    const float t = std::clamp(
+        XMVectorGetX(XMVector3Dot(XMVectorSubtract(p, a), ab)) / abLenSq,
+        0.0f,
+        1.0f);
+    XMFLOAT3 projected;
+    XMStoreFloat3(&projected, XMVectorAdd(a, XMVectorScale(ab, t)));
+    return Distance3D(point, projected);
+}
+
+void SimplifyDouglasPeuckerRecursive(const std::vector<XMFLOAT3>& points,
+                                     int startIndex,
+                                     int endIndex,
+                                     float tolerance,
+                                     std::vector<unsigned char>& keepFlags)
+{
+    if (endIndex <= startIndex + 1)
+        return;
+
+    float maxDistance = -1.0f;
+    int maxIndex = -1;
+    for (int i = startIndex + 1; i < endIndex; ++i)
+    {
+        const float distance = DistancePointToSegment3D(
+            points[i], points[startIndex], points[endIndex]);
+        if (distance > maxDistance)
+        {
+            maxDistance = distance;
+            maxIndex = i;
+        }
+    }
+
+    if (maxIndex >= 0 && maxDistance > tolerance)
+    {
+        keepFlags[maxIndex] = 1;
+        SimplifyDouglasPeuckerRecursive(points, startIndex, maxIndex, tolerance, keepFlags);
+        SimplifyDouglasPeuckerRecursive(points, maxIndex, endIndex, tolerance, keepFlags);
+    }
+}
+
+std::vector<XMFLOAT3> SimplifyDouglasPeucker(const std::vector<XMFLOAT3>& points, float tolerance)
+{
+    if (points.size() <= 2)
+        return points;
+
+    std::vector<unsigned char> keepFlags(points.size(), 0);
+    keepFlags.front() = 1;
+    keepFlags.back() = 1;
+    SimplifyDouglasPeuckerRecursive(
+        points,
+        0,
+        static_cast<int>(points.size()) - 1,
+        (std::max)(tolerance, 0.01f),
+        keepFlags);
+
+    std::vector<XMFLOAT3> simplified;
+    simplified.reserve(points.size());
+    for (size_t i = 0; i < points.size(); ++i)
+    {
+        if (keepFlags[i] != 0)
+            simplified.push_back(points[i]);
+    }
+    return simplified;
+}
+
+std::vector<XMFLOAT3> SmoothPathForRoadControls(std::vector<XMFLOAT3> points,
+                                                const Terrain* terrain,
+                                                float gridStep)
+{
+    if (points.size() < 3)
+        return points;
+
+    std::vector<XMFLOAT3> deduped;
+    deduped.reserve(points.size());
+    deduped.push_back(points.front());
+    for (size_t i = 1; i < points.size(); ++i)
+    {
+        if (Distance3D(points[i], deduped.back()) > 0.05f)
+            deduped.push_back(points[i]);
+    }
+    points = std::move(deduped);
+    if (points.size() < 3)
+        return points;
+
+    constexpr int kChaikinIterations = 2;
+    for (int iteration = 0; iteration < kChaikinIterations; ++iteration)
+    {
+        std::vector<XMFLOAT3> refined;
+        refined.reserve(points.size() * 2);
+        refined.push_back(points.front());
+
+        for (size_t i = 0; i + 1 < points.size(); ++i)
+        {
+            const XMFLOAT3 q = Lerp3(points[i], points[i + 1], 0.25f);
+            const XMFLOAT3 r = Lerp3(points[i], points[i + 1], 0.75f);
+            refined.push_back(q);
+            refined.push_back(r);
+        }
+
+        refined.push_back(points.back());
+        points = std::move(refined);
+    }
+
+    for (XMFLOAT3& point : points)
+        point.y = SamplePathHeightAt(terrain, point.x, point.z);
+
+    std::vector<XMFLOAT3> controls = SimplifyDouglasPeucker(points, gridStep * 0.75f);
+    if (controls.size() > 2)
+    {
+        const float minSpacing = (std::max)(gridStep * 0.6f, 1.0f);
+        std::vector<XMFLOAT3> filtered;
+        filtered.reserve(controls.size());
+        filtered.push_back(controls.front());
+        for (size_t i = 1; i + 1 < controls.size(); ++i)
+        {
+            if (DistanceXZ(controls[i], filtered.back()) >= minSpacing)
+                filtered.push_back(controls[i]);
+        }
+        filtered.push_back(controls.back());
+        controls = std::move(filtered);
+    }
+
+    if (controls.size() < 2)
+        return { points.front(), points.back() };
+
+    controls.front() = points.front();
+    controls.back() = points.back();
+    return controls;
+}
+
+float SamplePathHeightAt(const Terrain* terrain, float x, float z)
+{
+    if (terrain && terrain->IsReady())
+        return terrain->GetHeightAt(x, z);
+    return 0.0f;
+}
+
+bool BuildPathGridConfig(const Terrain* terrain,
+                         XMFLOAT3 startPos,
+                         XMFLOAT3 endPos,
+                         float requestedStep,
+                         PathGridConfig& outConfig)
+{
+    outConfig.step = (std::max)(requestedStep, 1.0f);
+
+    if (terrain && terrain->IsReady())
+    {
+        const float halfWidth =
+            static_cast<float>(terrain->GetMeshW() - 1) * terrain->horizontalScaleX * 0.5f;
+        const float halfDepth =
+            static_cast<float>(terrain->GetMeshH() - 1) * terrain->horizontalScaleZ * 0.5f;
+
+        outConfig.minX = terrain->offsetX - halfWidth;
+        outConfig.maxX = terrain->offsetX + halfWidth;
+        outConfig.minZ = terrain->offsetZ - halfDepth;
+        outConfig.maxZ = terrain->offsetZ + halfDepth;
+    }
+    else
+    {
+        const float margin = 100.0f;
+        outConfig.minX = (std::min)(startPos.x, endPos.x) - margin;
+        outConfig.maxX = (std::max)(startPos.x, endPos.x) + margin;
+        outConfig.minZ = (std::min)(startPos.z, endPos.z) - margin;
+        outConfig.maxZ = (std::max)(startPos.z, endPos.z) + margin;
+    }
+
+    const float width = outConfig.maxX - outConfig.minX;
+    const float depth = outConfig.maxZ - outConfig.minZ;
+    if (width <= 0.0f || depth <= 0.0f)
+        return false;
+
+    outConfig.cols = (std::max)(2, static_cast<int>(ceilf(width / outConfig.step)) + 1);
+    outConfig.rows = (std::max)(2, static_cast<int>(ceilf(depth / outConfig.step)) + 1);
+    return true;
+}
+
+XMFLOAT3 GridToWorld(const PathGridConfig& grid, int col, int row, const Terrain* terrain)
+{
+    XMFLOAT3 pos =
+    {
+        grid.minX + static_cast<float>(col) * grid.step,
+        0.0f,
+        grid.minZ + static_cast<float>(row) * grid.step
+    };
+    pos.y = SamplePathHeightAt(terrain, pos.x, pos.z);
+    return pos;
+}
+
+bool WorldToGrid(const PathGridConfig& grid, XMFLOAT3 worldPos, int& outCol, int& outRow)
+{
+    const float colF = (worldPos.x - grid.minX) / grid.step;
+    const float rowF = (worldPos.z - grid.minZ) / grid.step;
+    outCol = static_cast<int>(std::round(colF));
+    outRow = static_cast<int>(std::round(rowF));
+    return outCol >= 0 && outCol < grid.cols && outRow >= 0 && outRow < grid.rows;
+}
 
 bool IntersectRayWithGroundPlane(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir, XMFLOAT3& outHit)
 {
@@ -212,6 +459,12 @@ void App::SetStatusMessage(const std::string& message)
     m_statusMessage = message;
 }
 
+void App::ResetPathfindingState()
+{
+    m_pathfinding = PathfindingState();
+    m_prevPathPickLButton = false;
+}
+
 void App::NewProject()
 {
     strncpy_s(m_terrainPath, sizeof(m_terrainPath), "data/heightmap.png", _TRUNCATE);
@@ -227,6 +480,7 @@ void App::NewProject()
 
     m_cursorHitValid = false;
     m_cursorHitPos = {};
+    ResetPathfindingState();
 
     m_terrain->Reset();
     m_roadNetwork = RoadNetwork();
@@ -295,6 +549,7 @@ bool App::LoadProject(const char* path)
 {
     try
     {
+        ResetPathfindingState();
         std::ifstream ifs(path);
         if (!ifs)
             return false;
@@ -530,11 +785,13 @@ int App::Run()
                 XMStoreFloat3(&rayO, nearH);
                 XMStoreFloat3(&rayD3, XMVector3Normalize(farH - nearH));
 
-                if (m_terrain->IsReady())
+            if (m_terrain->IsReady())
                     m_cursorHitValid = m_terrain->Raycast(rayO, rayD3, m_cursorHitPos);
                 else
                     m_cursorHitValid = IntersectRayWithGroundPlane(rayO, rayD3, m_cursorHitPos);
             }
+
+            UpdatePathfindingInput(wantMouse);
         }
 
         Render();
@@ -574,6 +831,7 @@ void App::Render()
     m_grid->Render(m_d3d->GetContext(), m_perFrameCB.Get());
 
     m_editor.DrawNetwork(m_debugDraw, vp, m_d3d->GetWidth(), m_d3d->GetHeight());
+    DrawPathfindingPreview();
     m_debugDraw.Flush(m_d3d->GetContext(), m_perFrameCB.Get());
 
     // ImGui
@@ -783,6 +1041,9 @@ void App::Render()
     }
     ImGui::End();
 
+    if (m_editor.GetMode() == EditorMode::Pathfinding)
+        DrawPathfindingPanel();
+
     // 2D overlay: road point circles
     {
         RECT rc = {};
@@ -840,6 +1101,354 @@ LRESULT CALLBACK App::StaticWndProc(HWND hwnd, UINT msg,
         return app->WndProc(hwnd, msg, wParam, lParam);
 
     return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+void App::UpdatePathfindingInput(bool wantMouseByImGui)
+{
+    const bool lDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    const bool lClick = lDown && !m_prevPathPickLButton;
+    m_prevPathPickLButton = lDown;
+
+    if (m_editor.GetMode() != EditorMode::Pathfinding)
+    {
+        m_pathfinding.pickingStart = false;
+        m_pathfinding.pickingEnd = false;
+        return;
+    }
+
+    if (wantMouseByImGui || (GetAsyncKeyState(VK_MENU) & 0x8000) != 0)
+        return;
+
+    if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0)
+    {
+        m_pathfinding.pickingStart = false;
+        m_pathfinding.pickingEnd = false;
+    }
+
+    if (!lClick || !m_cursorHitValid)
+        return;
+
+    if (m_pathfinding.pickingStart)
+    {
+        m_pathfinding.startPos = m_cursorHitPos;
+        m_pathfinding.hasStart = true;
+        m_pathfinding.pickingStart = false;
+        SetStatusMessage("Pathfinding start picked");
+    }
+    else if (m_pathfinding.pickingEnd)
+    {
+        m_pathfinding.endPos = m_cursorHitPos;
+        m_pathfinding.hasEnd = true;
+        m_pathfinding.pickingEnd = false;
+        SetStatusMessage("Pathfinding end picked");
+    }
+}
+
+void App::DrawPathfindingPreview()
+{
+    if (m_pathfinding.previewPath.size() >= 2)
+    {
+        const XMFLOAT4 pathColor = { 1.0f, 0.75f, 0.2f, 1.0f };
+        for (size_t i = 1; i < m_pathfinding.previewPath.size(); ++i)
+            m_debugDraw.AddLine(m_pathfinding.previewPath[i - 1], m_pathfinding.previewPath[i], pathColor);
+    }
+
+    auto drawMarker = [this](XMFLOAT3 pos, XMFLOAT4 color)
+    {
+        const float radius = 1.5f;
+        m_debugDraw.AddLine(
+            { pos.x - radius, pos.y, pos.z },
+            { pos.x + radius, pos.y, pos.z },
+            color);
+        m_debugDraw.AddLine(
+            { pos.x, pos.y, pos.z - radius },
+            { pos.x, pos.y, pos.z + radius },
+            color);
+    };
+
+    if (m_pathfinding.hasStart)
+        drawMarker(m_pathfinding.startPos, { 0.2f, 1.0f, 0.3f, 1.0f });
+    if (m_pathfinding.hasEnd)
+        drawMarker(m_pathfinding.endPos, { 1.0f, 0.3f, 0.3f, 1.0f });
+}
+
+bool App::ComputePathfindingPreview()
+{
+    m_pathfinding.previewPath.clear();
+
+    if (!m_pathfinding.hasStart || !m_pathfinding.hasEnd)
+    {
+        SetStatusMessage("Pick start and end first");
+        return false;
+    }
+
+    PathGridConfig grid;
+    if (!BuildPathGridConfig(
+            m_terrain.get(),
+            m_pathfinding.startPos,
+            m_pathfinding.endPos,
+            m_pathfinding.gridStep,
+            grid))
+    {
+        SetStatusMessage("Pathfinding grid setup failed");
+        return false;
+    }
+
+    int startCol = 0;
+    int startRow = 0;
+    int endCol = 0;
+    int endRow = 0;
+    if (!WorldToGrid(grid, m_pathfinding.startPos, startCol, startRow) ||
+        !WorldToGrid(grid, m_pathfinding.endPos, endCol, endRow))
+    {
+        SetStatusMessage("Start or end is outside the search area");
+        return false;
+    }
+
+    const int cellCount = grid.cols * grid.rows;
+    if (cellCount <= 0 || cellCount > 1500000)
+    {
+        SetStatusMessage("Pathfinding grid is too large");
+        return false;
+    }
+
+    auto toIndex = [&grid](int col, int row)
+    {
+        return row * grid.cols + col;
+    };
+
+    auto heuristic = [&grid](int col, int row, int targetCol, int targetRow)
+    {
+        const float dx = static_cast<float>(targetCol - col) * grid.step;
+        const float dz = static_cast<float>(targetRow - row) * grid.step;
+        return sqrtf(dx * dx + dz * dz);
+    };
+
+    struct OpenNode
+    {
+        float score = 0.0f;
+        int index = -1;
+
+        bool operator<(const OpenNode& other) const
+        {
+            return score > other.score;
+        }
+    };
+
+    const int startIndex = toIndex(startCol, startRow);
+    const int endIndex = toIndex(endCol, endRow);
+    const float maxGrade = (std::max)(0.0f, m_pathfinding.maxGradePercent) * 0.01f;
+    const float slopePenalty = (std::max)(0.0f, m_pathfinding.slopePenalty);
+
+    std::vector<float> bestCost(cellCount, (std::numeric_limits<float>::max)());
+    std::vector<int> parent(cellCount, -1);
+    std::vector<unsigned char> closed(cellCount, 0);
+    std::priority_queue<OpenNode> openSet;
+
+    bestCost[startIndex] = 0.0f;
+    openSet.push({ heuristic(startCol, startRow, endCol, endRow), startIndex });
+
+    constexpr std::array<int, 8> kNeighborDx = { -1, 0, 1, -1, 1, -1, 0, 1 };
+    constexpr std::array<int, 8> kNeighborDz = { -1, -1, -1, 0, 0, 1, 1, 1 };
+
+    while (!openSet.empty())
+    {
+        const OpenNode current = openSet.top();
+        openSet.pop();
+
+        if (current.index < 0 || current.index >= cellCount || closed[current.index] != 0)
+            continue;
+
+        closed[current.index] = 1;
+        if (current.index == endIndex)
+            break;
+
+        const int row = current.index / grid.cols;
+        const int col = current.index % grid.cols;
+        const XMFLOAT3 currentPos = GridToWorld(grid, col, row, m_terrain.get());
+
+        for (size_t i = 0; i < kNeighborDx.size(); ++i)
+        {
+            const int nextCol = col + kNeighborDx[i];
+            const int nextRow = row + kNeighborDz[i];
+            if (nextCol < 0 || nextCol >= grid.cols || nextRow < 0 || nextRow >= grid.rows)
+                continue;
+
+            const int nextIndex = toIndex(nextCol, nextRow);
+            if (closed[nextIndex] != 0)
+                continue;
+
+            const XMFLOAT3 nextPos = GridToWorld(grid, nextCol, nextRow, m_terrain.get());
+            const float horizontalDistance = DistanceXZ(currentPos, nextPos);
+            if (horizontalDistance <= 1e-4f)
+                continue;
+
+            const float dy = nextPos.y - currentPos.y;
+            const float grade = fabsf(dy) / horizontalDistance;
+            if (m_pathfinding.strictMaxGrade && grade > maxGrade)
+                continue;
+
+            float moveCost = horizontalDistance + fabsf(dy);
+            if (!m_pathfinding.strictMaxGrade && grade > maxGrade)
+                moveCost += (grade - maxGrade) * slopePenalty * horizontalDistance;
+            else
+                moveCost += grade * 0.1f * horizontalDistance;
+
+            const float tentativeCost = bestCost[current.index] + moveCost;
+            if (tentativeCost >= bestCost[nextIndex])
+                continue;
+
+            bestCost[nextIndex] = tentativeCost;
+            parent[nextIndex] = current.index;
+            openSet.push(
+                {
+                    tentativeCost + heuristic(nextCol, nextRow, endCol, endRow),
+                    nextIndex
+                });
+        }
+    }
+
+    if (parent[endIndex] < 0 && endIndex != startIndex)
+    {
+        SetStatusMessage("No route found for the current grade settings");
+        return false;
+    }
+
+    std::vector<XMFLOAT3> reversedPath;
+    for (int index = endIndex; index >= 0; index = parent[index])
+    {
+        const int row = index / grid.cols;
+        const int col = index % grid.cols;
+        reversedPath.push_back(GridToWorld(grid, col, row, m_terrain.get()));
+        if (index == startIndex)
+            break;
+    }
+
+    if (reversedPath.empty())
+    {
+        SetStatusMessage("Pathfinding produced an empty path");
+        return false;
+    }
+
+    m_pathfinding.previewPath.assign(reversedPath.rbegin(), reversedPath.rend());
+    m_pathfinding.previewPath.front() = m_pathfinding.startPos;
+    m_pathfinding.previewPath.back() = m_pathfinding.endPos;
+    SetStatusMessage(
+        "Path preview computed (" + std::to_string(m_pathfinding.previewPath.size()) + " points)");
+    return true;
+}
+
+bool App::ApplyPathfindingPreviewAsRoad()
+{
+    if (m_pathfinding.previewPath.size() < 2)
+    {
+        SetStatusMessage("Compute a path preview first");
+        return false;
+    }
+
+    const std::vector<XMFLOAT3> controlPoints = SmoothPathForRoadControls(
+        m_pathfinding.previewPath,
+        m_terrain.get(),
+        m_pathfinding.gridStep);
+    if (controlPoints.size() < 2)
+    {
+        SetStatusMessage("Path smoothing failed");
+        return false;
+    }
+
+    m_editor.RecordUndoState();
+    const int roadIndex = m_roadNetwork.AddRoad("Path Road " + std::to_string(m_roadNetwork.roads.size()));
+    if (roadIndex < 0 || roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
+    {
+        SetStatusMessage("Failed to create road from preview");
+        return false;
+    }
+
+    Road& road = m_roadNetwork.roads[roadIndex];
+    road.points.clear();
+    road.points.reserve(controlPoints.size());
+    for (const XMFLOAT3& pos : controlPoints)
+        road.points.push_back({ pos, 3.0f });
+
+    m_editor.SetMode(EditorMode::Navigate);
+    SetStatusMessage(
+        "Path applied as smoothed control points (" + std::to_string(road.points.size()) + ")");
+    return true;
+}
+
+void App::DrawPathfindingPanel()
+{
+    ImGui::SetNextWindowPos(ImVec2(340, 30), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(320, 260), ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin("Pathfinding"))
+    {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::TextDisabled("Terrain/grid based A* route preview");
+    ImGui::Separator();
+
+    if (ImGui::Button(m_pathfinding.pickingStart ? "Picking Start..." : "Pick Start", ImVec2(120, 0)))
+    {
+        m_pathfinding.pickingStart = true;
+        m_pathfinding.pickingEnd = false;
+    }
+    ImGui::SameLine();
+    if (m_pathfinding.hasStart)
+        ImGui::Text("%.1f, %.1f, %.1f", m_pathfinding.startPos.x, m_pathfinding.startPos.y, m_pathfinding.startPos.z);
+    else
+        ImGui::TextDisabled("Not set");
+
+    if (ImGui::Button(m_pathfinding.pickingEnd ? "Picking End..." : "Pick End", ImVec2(120, 0)))
+    {
+        m_pathfinding.pickingStart = false;
+        m_pathfinding.pickingEnd = true;
+    }
+    ImGui::SameLine();
+    if (m_pathfinding.hasEnd)
+        ImGui::Text("%.1f, %.1f, %.1f", m_pathfinding.endPos.x, m_pathfinding.endPos.y, m_pathfinding.endPos.z);
+    else
+        ImGui::TextDisabled("Not set");
+
+    ImGui::Separator();
+
+    ImGui::InputFloat("Max Grade (%)", &m_pathfinding.maxGradePercent, 0.5f, 5.0f, "%.1f");
+    m_pathfinding.maxGradePercent = std::clamp(m_pathfinding.maxGradePercent, 0.0f, 100.0f);
+
+    ImGui::InputFloat("Grid Step (m)", &m_pathfinding.gridStep, 0.5f, 5.0f, "%.1f");
+    m_pathfinding.gridStep = std::clamp(m_pathfinding.gridStep, 1.0f, 100.0f);
+
+    ImGui::Checkbox("Strict Max Grade", &m_pathfinding.strictMaxGrade);
+    if (!m_pathfinding.strictMaxGrade)
+    {
+        ImGui::InputFloat("Slope Penalty", &m_pathfinding.slopePenalty, 5.0f, 20.0f, "%.1f");
+        m_pathfinding.slopePenalty = std::clamp(m_pathfinding.slopePenalty, 0.0f, 1000.0f);
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::Button("Compute", ImVec2(-1, 0)))
+        ComputePathfindingPreview();
+
+    if (ImGui::Button("Apply as Road", ImVec2(-1, 0)))
+        ApplyPathfindingPreviewAsRoad();
+
+    if (ImGui::Button("Clear", ImVec2(-1, 0)))
+    {
+        m_pathfinding.pickingStart = false;
+        m_pathfinding.pickingEnd = false;
+        m_pathfinding.hasStart = false;
+        m_pathfinding.hasEnd = false;
+        m_pathfinding.previewPath.clear();
+        SetStatusMessage("Pathfinding preview cleared");
+    }
+
+    ImGui::Separator();
+    ImGui::TextDisabled("Esc: cancel picking");
+    ImGui::TextDisabled("Pick start/end, then compute");
+
+    ImGui::End();
 }
 
 LRESULT App::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

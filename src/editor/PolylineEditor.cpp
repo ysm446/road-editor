@@ -1265,7 +1265,7 @@ void PolylineEditor::Update(int vpW, int vpH,
     m_prevUndoShortcut = undoShortcut;
     m_prevRedoShortcut = redoShortcut;
 
-    if (wPress)
+    if (wPress && m_mode != EditorMode::Pathfinding)
     {
         if (m_mode == EditorMode::PointEdit || m_mode == EditorMode::IntersectionEdit)
         {
@@ -1282,6 +1282,13 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             SetMode(EditorMode::IntersectionEdit);
         }
+    }
+
+    if (m_mode == EditorMode::Pathfinding)
+    {
+        if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+            SetMode(EditorMode::Navigate);
+        return;
     }
 
     if (m_marqueeSelecting)
@@ -2272,6 +2279,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         bool editActive = (m_mode == EditorMode::PointEdit);
         bool isecDrawActive = (m_mode == EditorMode::IntersectionDraw);
         bool isecEditActive = (m_mode == EditorMode::IntersectionEdit);
+        bool pathActive = (m_mode == EditorMode::Pathfinding);
 
         if (navActive)  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
         if (ImGui::Button("Object")) SetMode(EditorMode::Navigate);
@@ -2300,6 +2308,12 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         if (isecEditActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
         if (ImGui::Button("Edit Isec")) SetMode(EditorMode::IntersectionEdit);
         if (isecEditActive) ImGui::PopStyleColor();
+
+        ImGui::SameLine();
+
+        if (pathActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
+        if (ImGui::Button("Pathfinding")) SetMode(EditorMode::Pathfinding);
+        if (pathActive) ImGui::PopStyleColor();
     }
 
     ImGui::Separator();
@@ -2343,6 +2357,12 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), "Edit Intersections");
         ImGui::TextDisabled("Click: select intersection");
         ImGui::TextDisabled("Delete: remove intersection");
+        break;
+    case EditorMode::Pathfinding:
+        ImGui::TextColored(ImVec4(1.0f,0.7f,0.2f,1), "Pathfinding");
+        ImGui::TextDisabled("Pick start and end on terrain");
+        ImGui::TextDisabled("Adjust grid step and max grade");
+        ImGui::TextDisabled("Compute preview, then apply as road");
         break;
     }
 
