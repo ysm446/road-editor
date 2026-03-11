@@ -10,6 +10,10 @@ using namespace DirectX;
 
 namespace
 {
+constexpr int kCurveRoadTypeDefault = 0;
+constexpr float kCurveDefaultTargetSpeed = 30.0f;
+constexpr float kCurveDefaultFriction = 0.15f;
+
 std::string GenerateUuidString()
 {
     UUID uuid = {};
@@ -189,36 +193,82 @@ static RoadPoint PointFromJson(const nlohmann::json& j)
     return p;
 }
 
+static nlohmann::json CurvePointToJson(const RoadPoint& p)
+{
+    return {
+        { "pos", { p.pos.x, p.pos.y, p.pos.z } },
+        { "useCurvatureRadius", 0 },
+        { "curvatureRadius", 0.0f }
+    };
+}
+
+static RoadPoint CurvePointFromJson(const nlohmann::json& j)
+{
+    RoadPoint p;
+    if (j.contains("pos") && j["pos"].is_array() && j["pos"].size() >= 3)
+    {
+        p.pos =
+        {
+            j["pos"][0].get<float>(),
+            j["pos"][1].get<float>(),
+            j["pos"][2].get<float>()
+        };
+    }
+    else
+    {
+        p.pos = { 0.0f, 0.0f, 0.0f };
+    }
+    p.width = 3.0f;
+    return p;
+}
+
 static nlohmann::json RoadToJson(const Road& r)
 {
+    nlohmann::json legacyPoints = nlohmann::json::array();
     nlohmann::json pts = nlohmann::json::array();
     for (const auto& p : r.points)
-        pts.push_back(PointToJson(p));
+    {
+        legacyPoints.push_back(PointToJson(p));
+        pts.push_back(CurvePointToJson(p));
+    }
 
     return {
-        { "id",     r.id     },
-        { "name",   r.name   },
+        { "id", r.id },
+        { "name", r.name },
         { "groupId", r.groupId },
         { "closed", r.closed },
-        { "points", pts      },
+        { "points", legacyPoints },
         { "startIntersectionId", r.startIntersectionId },
-        { "endIntersectionId",   r.endIntersectionId   }
+        { "endIntersectionId", r.endIntersectionId },
+        { "roadType", kCurveRoadTypeDefault },
+        { "defaultTargetSpeed", kCurveDefaultTargetSpeed },
+        { "defaultFriction", kCurveDefaultFriction },
+        { "active", 1 },
+        { "point", pts },
+        { "verticalCurve", nlohmann::json::array() },
+        { "bankAngle", nlohmann::json::array() },
+        { "laneSection", nlohmann::json::array() }
     };
 }
 
 static Road RoadFromJson(const nlohmann::json& j)
 {
     Road r;
-    r.id     = j.value("id", std::string());
-    r.name   = j.value("name",   "Road");
+    r.id = j.value("id", std::string());
+    r.name = j.value("name", std::string("Road"));
     r.groupId = j.value("groupId", std::string());
     r.closed = j.value("closed", false);
     r.startIntersectionId = j.value("startIntersectionId", std::string());
-    r.endIntersectionId   = j.value("endIntersectionId", std::string());
+    r.endIntersectionId = j.value("endIntersectionId", std::string());
     if (j.contains("points"))
     {
         for (const auto& p : j["points"])
             r.points.push_back(PointFromJson(p));
+    }
+    else if (j.contains("point"))
+    {
+        for (const auto& p : j["point"])
+            r.points.push_back(CurvePointFromJson(p));
     }
     EnsureRoadId(r);
     return r;
@@ -279,9 +329,9 @@ bool RoadNetwork::SaveToFile(const char* path) const
     try
     {
         nlohmann::json root;
-        root["version"] = 2;
+        root["version"] = 3;
         root["groups"] = nlohmann::json::array();
-        root["roads"]   = nlohmann::json::array();
+        root["roads"] = nlohmann::json::array();
         root["intersections"] = nlohmann::json::array();
         for (const auto& group : groups)
             root["groups"].push_back(GroupToJson(group));
@@ -316,6 +366,18 @@ bool RoadNetwork::LoadFromFile(const char* path)
         roads.clear();
         intersections.clear();
         groups.clear();
+
+        if (root.is_array())
+        {
+            EnsureDefaultGroup();
+            for (const auto& r : root)
+                roads.push_back(RoadFromJson(r));
+            const std::string defaultGroupId = groups.front().id;
+            for (Road& road : roads)
+                road.groupId = defaultGroupId;
+            return true;
+        }
+
         if (root.contains("groups"))
         {
             for (const auto& group : root["groups"])

@@ -2083,7 +2083,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const_cast<PolylineEditor*>(this)->SanitizeSelection();
 
     ImDrawList* dl = ImGui::GetForegroundDrawList();
-    const float kRadius    = 4.0f;
+    const float kRadius    = 3.0f;
     const ImU32 colPoint    = IM_COL32(255, 255, 255, 220);
     const ImU32 colSelected = IM_COL32(255,  80,  80, 255);
     const ImU32 colCursor   = IM_COL32( 60, 255, 110, 220);
