@@ -119,6 +119,7 @@ private:
     bool GetSelectedRoadConnectionId(std::string& outId) const;
     void SetSelectedRoadConnectionId(const std::string& intersectionId);
     void ClearSelectedRoadConnection();
+    bool SplitSelectedRoadAtPoint();
     int FindSnapIntersectionForSelectedEndpoint(int vpW, int vpH,
                                                 DirectX::XMMATRIX viewProj) const;
     void SnapSelectedEndpointToIntersection(int intersectionIndex);
@@ -200,6 +201,7 @@ private:
     // Track left-button state for click detection
     bool m_prevLButton = false;
     bool m_prevWKey    = false;
+    bool m_prevVKey    = false;
 
     // Default width for new points
     float m_defaultWidth = 3.0f;

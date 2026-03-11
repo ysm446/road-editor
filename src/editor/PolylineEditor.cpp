@@ -712,6 +712,90 @@ void PolylineEditor::ClearSelectedRoadConnection()
     SetSelectedRoadConnectionId("");
 }
 
+bool PolylineEditor::SplitSelectedRoadAtPoint()
+{
+    if (!m_network || m_selectedPoints.size() != 1)
+        return false;
+
+    PointRef selectedPoint;
+    if (!GetPrimarySelectedPoint(selectedPoint))
+        return false;
+    if (selectedPoint.roadIndex < 0 ||
+        selectedPoint.roadIndex >= static_cast<int>(m_network->roads.size()))
+        return false;
+
+    const int sourceRoadIndex = selectedPoint.roadIndex;
+    const Road& sourceRoad = m_network->roads[sourceRoadIndex];
+    const int splitIndex = selectedPoint.pointIndex;
+    if (splitIndex <= 0 || splitIndex >= static_cast<int>(sourceRoad.points.size()) - 1)
+    {
+        m_statusMessage = "Select a middle point to split the road";
+        return false;
+    }
+
+    PushUndoState();
+
+    const XMFLOAT3 splitPos = sourceRoad.points[splitIndex].pos;
+    const std::string originalStartIntersectionId = sourceRoad.startIntersectionId;
+    const std::string originalEndIntersectionId = sourceRoad.endIntersectionId;
+    const std::string originalName = sourceRoad.name;
+    const std::string originalGroupId = sourceRoad.groupId;
+    const bool originalClosed = sourceRoad.closed;
+    const float originalLaneWidth = sourceRoad.laneWidth;
+    const int originalLaneLeft = sourceRoad.laneLeft;
+    const int originalLaneRight = sourceRoad.laneRight;
+    const std::vector<RoadPoint> originalPoints = sourceRoad.points;
+
+    const int newIntersectionIndex = m_network->AddIntersection(splitPos, "Intersection");
+    if (newIntersectionIndex < 0 ||
+        newIntersectionIndex >= static_cast<int>(m_network->intersections.size()))
+        return false;
+
+    Intersection& splitIntersection = m_network->intersections[newIntersectionIndex];
+    splitIntersection.groupId = originalGroupId;
+    splitIntersection.pos = splitPos;
+
+    const std::string splitIntersectionId = splitIntersection.id;
+
+    const int newRoadIndex = m_network->AddRoad(originalName + " B");
+    if (newRoadIndex < 0 || newRoadIndex >= static_cast<int>(m_network->roads.size()))
+        return false;
+
+    Road& newRoad = m_network->roads[newRoadIndex];
+    newRoad.groupId = originalGroupId;
+    newRoad.closed = false;
+    newRoad.startIntersectionId = splitIntersectionId;
+    newRoad.endIntersectionId = originalEndIntersectionId;
+    newRoad.laneWidth = originalLaneWidth;
+    newRoad.laneLeft = originalLaneLeft;
+    newRoad.laneRight = originalLaneRight;
+    newRoad.points.assign(originalPoints.begin() + splitIndex, originalPoints.end());
+    newRoad.points.front().pos = splitPos;
+
+    Road& updatedSourceRoad = m_network->roads[sourceRoadIndex];
+    updatedSourceRoad.groupId = originalGroupId;
+    updatedSourceRoad.name = originalName + " A";
+    updatedSourceRoad.startIntersectionId = originalStartIntersectionId;
+    updatedSourceRoad.closed = false;
+    updatedSourceRoad.endIntersectionId = splitIntersectionId;
+    updatedSourceRoad.laneWidth = originalLaneWidth;
+    updatedSourceRoad.laneLeft = originalLaneLeft;
+    updatedSourceRoad.laneRight = originalLaneRight;
+    updatedSourceRoad.points.assign(originalPoints.begin(), originalPoints.begin() + splitIndex + 1);
+    updatedSourceRoad.points.back().pos = splitPos;
+
+    m_activeRoad = sourceRoadIndex;
+    ClearPointSelection();
+    SelectSingleIntersection(newIntersectionIndex);
+    m_activeGizmoAxis = GizmoAxis::None;
+    m_hoverSnapIntersection = -1;
+    m_dragging = false;
+    m_statusMessage = originalClosed
+        ? "Closed road split into two roads"
+        : "Road split with new intersection";
+    return true;
+}
+
 int PolylineEditor::FindSnapIntersectionForSelectedEndpoint(
     int vpW, int vpH, XMMATRIX viewProj) const
 {
@@ -1206,6 +1290,8 @@ void PolylineEditor::Update(int vpW, int vpH,
     bool lClick = lDown && !m_prevLButton;  // rising edge
     bool wDown = (GetAsyncKeyState('W') & 0x8000) != 0;
     bool wPress = wDown && !m_prevWKey;
+    bool vDown = (GetAsyncKeyState('V') & 0x8000) != 0;
+    bool vPress = vDown && !m_prevVKey;
 
     if (wantMouse || alt)
     {
@@ -1213,10 +1299,12 @@ void PolylineEditor::Update(int vpW, int vpH,
         m_hoverSnapIntersection = -1;
         m_prevLButton  = lDown;
         m_prevWKey     = wDown;
+        m_prevVKey     = vDown;
         return;
     }
     m_prevLButton = lDown;
     m_prevWKey = wDown;
+    m_prevVKey = vDown;
 
     // Compute ray
     XMFLOAT3 rayOrig, rayDir;
@@ -1467,6 +1555,12 @@ void PolylineEditor::Update(int vpW, int vpH,
     {
         // Rebuild viewProj from invViewProj (inverse)
         XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
+
+        if (vPress && !ImGui::GetIO().WantTextInput)
+        {
+            if (SplitSelectedRoadAtPoint())
+                return;
+        }
 
         if (m_dragging && lDown)
         {
