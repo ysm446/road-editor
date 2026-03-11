@@ -35,8 +35,12 @@ public:
                 DirectX::XMMATRIX invViewProj,
                 bool wantMouseByImGui);
 
-    // Queue debug lines representing the current network
+    // Queue debug lines representing the current network (3D road edges).
     void DrawNetwork(DebugDraw& dd) const;
+
+    // Draw 2D point circles on the viewport using ImGui foreground draw list.
+    // Call inside an ImGui frame, after BeginFrame().
+    void DrawOverlay(DirectX::XMMATRIX viewProj, int vpW, int vpH) const;
 
     // UI panels (called inside ImGui frame)
     void DrawUI(ID3D11Device* device);

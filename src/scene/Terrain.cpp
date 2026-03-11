@@ -69,20 +69,66 @@ void Terrain::GenerateProcedural(ID3D11Device* device, int width, int height)
 // ---------------------------------------------------------------------------
 // Load from greyscale image file
 // ---------------------------------------------------------------------------
-bool Terrain::LoadFromFile(ID3D11Device* device, const char* path)
+bool Terrain::LoadFromFile(ID3D11Device* device, const char* path,
+                           int targetW, int targetH)
 {
     int w, h, ch;
     stbi_uc* data = stbi_load(path, &w, &h, &ch, 1); // force 1-channel
     if (!data)
         return false;
 
-    m_rawW = w;
-    m_rawH = h;
-    m_rawHeights.resize(w * h);
+    // Build normalised source heights
+    std::vector<float> src(w * h);
     for (int i = 0; i < w * h; ++i)
-        m_rawHeights[i] = data[i] / 255.0f;
-
+        src[i] = data[i] / 255.0f;
     stbi_image_free(data);
+
+    // Determine output resolution
+    int dstW = (targetW > 1) ? targetW : w;
+    int dstH = (targetH > 1) ? targetH : h;
+
+    if (dstW == w && dstH == h)
+    {
+        // No resampling needed
+        m_rawW = w;
+        m_rawH = h;
+        m_rawHeights = std::move(src);
+    }
+    else
+    {
+        // Bilinear resample src(w x h) -> dst(dstW x dstH)
+        m_rawW = dstW;
+        m_rawH = dstH;
+        m_rawHeights.resize(dstW * dstH);
+
+        for (int row = 0; row < dstH; ++row)
+        {
+            float v = static_cast<float>(row) / (dstH - 1) * (h - 1);
+            int   r0 = static_cast<int>(v);
+            int   r1 = r0 + 1;
+            if (r1 >= h) r1 = h - 1;
+            float fr = v - r0;
+
+            for (int col = 0; col < dstW; ++col)
+            {
+                float u  = static_cast<float>(col) / (dstW - 1) * (w - 1);
+                int   c0 = static_cast<int>(u);
+                int   c1 = c0 + 1;
+                if (c1 >= w) c1 = w - 1;
+                float fc = u - c0;
+
+                float h00 = src[r0 * w + c0];
+                float h10 = src[r0 * w + c1];
+                float h01 = src[r1 * w + c0];
+                float h11 = src[r1 * w + c1];
+
+                float h0 = h00 + (h10 - h00) * fc;
+                float h1 = h01 + (h11 - h01) * fc;
+                m_rawHeights[row * dstW + col] = h0 + (h1 - h0) * fr;
+            }
+        }
+    }
+
     BuildMesh(device);
     return true;
 }

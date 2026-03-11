@@ -24,8 +24,10 @@ public:
     void GenerateProcedural(ID3D11Device* device, int width = 256, int height = 256);
 
     // Load a grayscale PNG/BMP/TGA via stb_image.
+    // targetW/targetH: resample to this resolution (0 = native size).
     // Returns false if the file cannot be opened.
-    bool LoadFromFile(ID3D11Device* device, const char* path);
+    bool LoadFromFile(ID3D11Device* device, const char* path,
+                      int targetW = 0, int targetH = 0);
 
     // Rebuild vertex/index buffers using current heightScale / horizontalScale.
     void Rebuild(ID3D11Device* device);

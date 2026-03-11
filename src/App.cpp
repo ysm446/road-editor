@@ -59,7 +59,7 @@ bool App::CreateAppWindow(HINSTANCE hInstance, int nCmdShow)
         0, L"RoadEditorClass",
         L"Road Editor - Phase 3",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1600, 1200,
         nullptr, nullptr, hInstance,
         this);  // passed to WM_NCCREATE as CREATESTRUCT::lpCreateParams
 
@@ -159,6 +159,28 @@ int App::Run()
                             { static_cast<float>(cursor.x),
                               static_cast<float>(cursor.y) },
                             invVP, wantMouse);
+
+            // Terrain cursor raycast
+            m_cursorHitValid = false;
+            if (m_terrain->IsReady() && vpW > 0 && vpH > 0)
+            {
+                float ndcX =  (static_cast<float>(cursor.x) / vpW) * 2.0f - 1.0f;
+                float ndcY = -(static_cast<float>(cursor.y) / vpH) * 2.0f + 1.0f;
+
+                XMVECTOR nearH = XMVector4Transform(
+                    XMVectorSet(ndcX, ndcY, 0.0f, 1.0f), invVP);
+                XMVECTOR farH  = XMVector4Transform(
+                    XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), invVP);
+
+                nearH = nearH / XMVectorSplatW(nearH);
+                farH  = farH  / XMVectorSplatW(farH);
+
+                XMFLOAT3 rayO, rayD3;
+                XMStoreFloat3(&rayO, nearH);
+                XMStoreFloat3(&rayD3, XMVector3Normalize(farH - nearH));
+
+                m_cursorHitValid = m_terrain->Raycast(rayO, rayD3, m_cursorHitPos);
+            }
         }
 
         Render();
@@ -222,6 +244,12 @@ void App::Render()
         auto p = m_camera->GetPosition();
         ImGui::Text("Position  %.2f  %.2f  %.2f", p.x, p.y, p.z);
         ImGui::Separator();
+        if (m_cursorHitValid)
+            ImGui::Text("Cursor    %.2f  %.2f  %.2f",
+                        m_cursorHitPos.x, m_cursorHitPos.y, m_cursorHitPos.z);
+        else
+            ImGui::TextDisabled("Cursor    --");
+        ImGui::Separator();
         ImGui::TextDisabled("Alt + LMB drag : rotate");
         ImGui::TextDisabled("Alt + MMB drag : pan");
         ImGui::TextDisabled("Scroll wheel   : zoom");
@@ -230,7 +258,7 @@ void App::Render()
 
     // Terrain panel
     ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(290, 240), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(290, 280), ImGuiCond_Always);
     ImGui::Begin("Terrain");
     {
         ImGui::Checkbox("Visible",   &m_terrain->visible);
@@ -293,9 +321,23 @@ void App::Render()
                            "Image Files\0*.png;*.bmp;*.tga;*.jpg\0All Files\0*.*\0",
                            "Open Heightmap");
         }
+        // Resolution override (0 = native)
+        ImGui::SetNextItemWidth(110);
+        ImGui::InputInt("W##res", &m_loadResW, 0, 0);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(110);
+        ImGui::InputInt("H##res", &m_loadResH, 0, 0);
+        ImGui::SameLine();
+        ImGui::TextDisabled("(0=native)");
+        if (m_loadResW < 0) m_loadResW = 0;
+        if (m_loadResH < 0) m_loadResH = 0;
+        if (m_loadResW > 4096) m_loadResW = 4096;
+        if (m_loadResH > 4096) m_loadResH = 4096;
+
         if (ImGui::Button("Load", ImVec2(-1, 0)))
         {
-            if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
+            if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath,
+                                         m_loadResW, m_loadResH))
                 ImGui::OpenPopup("LoadError");
         }
         if (ImGui::BeginPopup("LoadError"))
@@ -307,6 +349,15 @@ void App::Render()
 
     }
     ImGui::End();
+
+    // 2D overlay: road point circles
+    {
+        RECT rc = {};
+        GetClientRect(m_hwnd, &rc);
+        int vpW = rc.right  - rc.left;
+        int vpH = rc.bottom - rc.top;
+        m_editor.DrawOverlay(vp, vpW, vpH);
+    }
 
     // Road editor panel
     m_editor.DrawUI(m_d3d->GetDevice());

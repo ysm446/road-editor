@@ -262,16 +262,15 @@ void PolylineEditor::Update(int vpW, int vpH,
 }
 
 // ---------------------------------------------------------------------------
-// DrawNetwork
+// DrawNetwork / DrawOverlay
 // ---------------------------------------------------------------------------
+
 void PolylineEditor::DrawNetwork(DebugDraw& dd) const
 {
     static const XMFLOAT4 colorRoad     = { 1.0f, 0.8f, 0.1f, 1.0f };
     static const XMFLOAT4 colorSelected = { 1.0f, 0.3f, 0.3f, 1.0f };
-    static const XMFLOAT4 colorPoint    = { 1.0f, 1.0f, 1.0f, 1.0f };
-    static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.8f };
+    static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.4f };
 
-    // Draw roads
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
@@ -282,41 +281,56 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd) const
 
         if (road.closed && road.points.size() >= 2)
             dd.AddLine(road.points.back().pos, road.points.front().pos, col);
+    }
 
-        // Draw point markers (small cross)
+    // Preview segment from cursor to last placed point
+    if (m_hasCursorPos &&
+        m_mode == EditorMode::PolylineDraw &&
+        m_activeRoad >= 0 &&
+        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        const Road& road = m_network->roads[m_activeRoad];
+        if (!road.points.empty())
+            dd.AddLine(road.points.back().pos, m_cursorPos, colorCursor);
+    }
+}
+
+// Project a world-space point to screen pixels. Returns false if behind camera.
+static bool WorldToScreen(XMFLOAT3 world, XMMATRIX viewProj,
+                           int vpW, int vpH, ImVec2& out)
+{
+    XMVECTOR h = XMVector4Transform(
+        XMVectorSet(world.x, world.y, world.z, 1.0f), viewProj);
+    float w = XMVectorGetW(h);
+    if (w <= 0.0f) return false;
+    out.x = ( XMVectorGetX(h) / w * 0.5f + 0.5f) * vpW;
+    out.y = (-XMVectorGetY(h) / w * 0.5f + 0.5f) * vpH;
+    return true;
+}
+
+void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
+{
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    const float kRadius    = 4.0f;
+    const ImU32 colPoint    = IM_COL32(255, 255, 255, 220);
+    const ImU32 colSelected = IM_COL32(255,  80,  80, 255);
+    const ImU32 colCursor   = IM_COL32( 60, 255, 110, 220);
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
         for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
         {
-            const XMFLOAT3& p = road.points[pi].pos;
-            XMFLOAT4 pc = (ri == m_activeRoad && pi == m_activePoint)
-                          ? colorSelected : colorPoint;
-            float s = 0.4f;
-            dd.AddLine({ p.x - s, p.y, p.z }, { p.x + s, p.y, p.z }, pc);
-            dd.AddLine({ p.x, p.y, p.z - s }, { p.x, p.y, p.z + s }, pc);
-            dd.AddLine({ p.x, p.y - s, p.z }, { p.x, p.y + s, p.z }, pc);
+            ImVec2 sp;
+            if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, sp))
+                continue;
+            bool isActive = (ri == m_activeRoad && pi == m_activePoint);
+            ImU32 col = isActive ? colSelected : colPoint;
+            float r   = isActive ? kRadius + 2.0f : kRadius;
+            dl->AddCircleFilled(sp, r, col, 20);
         }
     }
 
-    // Draw cursor / preview position
-    if (m_hasCursorPos)
-    {
-        float s = 0.5f;
-        const XMFLOAT3& p = m_cursorPos;
-        dd.AddLine({ p.x - s, p.y, p.z }, { p.x + s, p.y, p.z }, colorCursor);
-        dd.AddLine({ p.x, p.y, p.z - s }, { p.x, p.y, p.z + s }, colorCursor);
-
-        // Preview segment from last point
-        if (m_mode == EditorMode::PolylineDraw &&
-            m_activeRoad >= 0 &&
-            m_activeRoad < static_cast<int>(m_network->roads.size()))
-        {
-            const Road& road = m_network->roads[m_activeRoad];
-            if (!road.points.empty())
-            {
-                XMFLOAT4 preview = { 0.2f, 1.0f, 0.4f, 0.4f };
-                dd.AddLine(road.points.back().pos, m_cursorPos, preview);
-            }
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

@@ -51,6 +51,14 @@ private:
 
     char m_terrainPath[260] = "data/heightmap.png";
 
+    // Load resolution (0 = native)
+    int m_loadResW = 0;
+    int m_loadResH = 0;
+
+    // Mouse-terrain intersection (updated each frame)
+    bool              m_cursorHitValid = false;
+    DirectX::XMFLOAT3 m_cursorHitPos   = {};
+
     DebugDraw      m_debugDraw;
     RoadNetwork    m_roadNetwork;
     PolylineEditor m_editor;
