@@ -2683,7 +2683,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
 
     ImGui::SetNextWindowPos(ImVec2(10, 360), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(320, 420), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Road Editor");
+    ImGui::Begin(u8"\u9053\u8DEF\u30A8\u30C7\u30A3\u30BF");
 
     // Mode toolbar
     {
@@ -2695,37 +2695,37 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         bool pathActive = (m_mode == EditorMode::Pathfinding);
 
         if (navActive)  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Object")) SetMode(EditorMode::Navigate);
+        if (ImGui::Button(u8"\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8")) SetMode(EditorMode::Navigate);
         if (navActive)  ImGui::PopStyleColor();
 
         ImGui::SameLine();
 
         if (drawActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Draw Road")) StartNewRoad();
+        if (ImGui::Button(u8"\u9053\u8DEF\u4F5C\u6210")) StartNewRoad();
         if (drawActive) ImGui::PopStyleColor();
 
         ImGui::SameLine();
 
         if (editActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Edit Points")) SetMode(EditorMode::PointEdit);
+        if (ImGui::Button(u8"\u30DD\u30A4\u30F3\u30C8\u7DE8\u96C6")) SetMode(EditorMode::PointEdit);
         if (editActive) ImGui::PopStyleColor();
 
         ImGui::NewLine();
 
         if (isecDrawActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Draw Isec")) SetMode(EditorMode::IntersectionDraw);
+        if (ImGui::Button(u8"\u4EA4\u5DEE\u70B9\u4F5C\u6210")) SetMode(EditorMode::IntersectionDraw);
         if (isecDrawActive) ImGui::PopStyleColor();
 
         ImGui::SameLine();
 
         if (isecEditActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Edit Isec")) SetMode(EditorMode::IntersectionEdit);
+        if (ImGui::Button(u8"\u4EA4\u5DEE\u70B9\u7DE8\u96C6")) SetMode(EditorMode::IntersectionEdit);
         if (isecEditActive) ImGui::PopStyleColor();
 
         ImGui::SameLine();
 
         if (pathActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Pathfinding"))
+        if (ImGui::Button(u8"\u7D4C\u8DEF\u63A2\u7D22"))
         {
             if (pathActive)
                 SetMode(EditorMode::Navigate);
@@ -2741,54 +2741,54 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     switch (m_mode)
     {
     case EditorMode::Navigate:
-        ImGui::TextDisabled("Object selection mode");
-        ImGui::TextDisabled("Click road: select road");
-        ImGui::TextDisabled("Ctrl+Click road: multi-select roads");
-        ImGui::TextDisabled("Selected road points can be picked directly");
-        ImGui::TextDisabled("Drag empty area: marquee select points");
-        ImGui::TextDisabled("Press W: show gizmo for selected point/intersection");
+        ImGui::TextDisabled(u8"\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u9078\u629E\u30E2\u30FC\u30C9");
+        ImGui::TextDisabled(u8"\u9053\u8DEF\u3092\u30AF\u30EA\u30C3\u30AF: \u9053\u8DEF\u9078\u629E");
+        ImGui::TextDisabled(u8"Ctrl+\u30AF\u30EA\u30C3\u30AF: \u9053\u8DEF\u3092\u8907\u6570\u9078\u629E");
+        ImGui::TextDisabled(u8"\u9078\u629E\u4E2D\u9053\u8DEF\u306E\u30DD\u30A4\u30F3\u30C8\u306F\u76F4\u63A5\u9078\u629E\u53EF\u80FD");
+        ImGui::TextDisabled(u8"\u7A7A\u304D\u9818\u57DF\u3092\u30C9\u30E9\u30C3\u30B0: \u77E9\u5F62\u9078\u629E");
+        ImGui::TextDisabled(u8"W \u30AD\u30FC: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8/\u4EA4\u5DEE\u70B9\u306B\u30AE\u30BA\u30E2\u8868\u793A");
         break;
     case EditorMode::PolylineDraw:
-        ImGui::TextColored(ImVec4(0.2f,1,0.4f,1), "Drawing: %s",
+        ImGui::TextColored(ImVec4(0.2f,1,0.4f,1), u8"\u4F5C\u6210\u4E2D: %s",
             (m_activeRoad >= 0 &&
              m_activeRoad < static_cast<int>(m_network->roads.size()))
             ? m_network->roads[m_activeRoad].name.c_str() : "");
-        ImGui::TextDisabled("Left click: add point");
-        ImGui::TextDisabled("Enter: confirm  Esc: cancel");
-        ImGui::SliderFloat("Width", &m_defaultWidth, 0.5f, 20.0f);
+        ImGui::TextDisabled(u8"\u5DE6\u30AF\u30EA\u30C3\u30AF: \u30DD\u30A4\u30F3\u30C8\u8FFD\u52A0");
+        ImGui::TextDisabled(u8"Enter: \u78BA\u5B9A  Esc: \u30AD\u30E3\u30F3\u30BB\u30EB");
+        ImGui::SliderFloat(u8"\u5E45", &m_defaultWidth, 0.5f, 20.0f);
         break;
     case EditorMode::PointEdit:
-        ImGui::TextColored(ImVec4(1,0.8f,0.2f,1), "Edit Points");
-        ImGui::TextDisabled("Click point: select");
-        ImGui::TextDisabled("Ctrl+Click: add/remove point");
-        ImGui::TextDisabled("Drag empty area: marquee select points");
-        ImGui::TextDisabled("Ctrl+Shift marquee: remove from selection");
-        ImGui::TextDisabled("Drag center: pan in screen plane");
-        ImGui::TextDisabled("Click X/Y/Z axis: move on that axis");
-        ImGui::TextDisabled("Endpoint near intersection: snap/connect");
-        ImGui::TextDisabled("Delete: remove point");
+        ImGui::TextColored(ImVec4(1,0.8f,0.2f,1), u8"\u30DD\u30A4\u30F3\u30C8\u7DE8\u96C6");
+        ImGui::TextDisabled(u8"\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E");
+        ImGui::TextDisabled(u8"Ctrl+\u30AF\u30EA\u30C3\u30AF: \u8FFD\u52A0/\u89E3\u9664");
+        ImGui::TextDisabled(u8"\u7A7A\u304D\u9818\u57DF\u3092\u30C9\u30E9\u30C3\u30B0: \u77E9\u5F62\u9078\u629E");
+        ImGui::TextDisabled(u8"Ctrl+Shift \u77E9\u5F62: \u9078\u629E\u89E3\u9664");
+        ImGui::TextDisabled(u8"\u4E2D\u592E\u30C9\u30E9\u30C3\u30B0: \u30B9\u30AF\u30EA\u30FC\u30F3\u5E73\u9762\u3067\u79FB\u52D5");
+        ImGui::TextDisabled(u8"X/Y/Z \u8EF8\u30AF\u30EA\u30C3\u30AF: \u8EF8\u65B9\u5411\u306B\u79FB\u52D5");
+        ImGui::TextDisabled(u8"\u7AEF\u70B9\u304C\u4EA4\u5DEE\u70B9\u4ED8\u8FD1: \u30B9\u30CA\u30C3\u30D7/\u63A5\u7D9A");
+        ImGui::TextDisabled(u8"Delete: \u30DD\u30A4\u30F3\u30C8\u524A\u9664");
         break;
     case EditorMode::IntersectionDraw:
-        ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), "Draw Intersections");
-        ImGui::TextDisabled("Left click: place intersection");
-        ImGui::TextDisabled("Esc: back to object mode");
+        ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), u8"\u4EA4\u5DEE\u70B9\u4F5C\u6210");
+        ImGui::TextDisabled(u8"\u5DE6\u30AF\u30EA\u30C3\u30AF: \u4EA4\u5DEE\u70B9\u914D\u7F6E");
+        ImGui::TextDisabled(u8"Esc: \u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u30E2\u30FC\u30C9\u3078\u623B\u308B");
         break;
     case EditorMode::IntersectionEdit:
-        ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), "Edit Intersections");
-        ImGui::TextDisabled("Click: select intersection");
-        ImGui::TextDisabled("Delete: remove intersection");
+        ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), u8"\u4EA4\u5DEE\u70B9\u7DE8\u96C6");
+        ImGui::TextDisabled(u8"\u30AF\u30EA\u30C3\u30AF: \u4EA4\u5DEE\u70B9\u9078\u629E");
+        ImGui::TextDisabled(u8"Delete: \u4EA4\u5DEE\u70B9\u524A\u9664");
         break;
     case EditorMode::Pathfinding:
-        ImGui::TextColored(ImVec4(1.0f,0.7f,0.2f,1), "Pathfinding");
-        ImGui::TextDisabled("Pick start and end on terrain");
-        ImGui::TextDisabled("Adjust grid step and max grade");
-        ImGui::TextDisabled("Compute preview, then apply as road");
+        ImGui::TextColored(ImVec4(1.0f,0.7f,0.2f,1), u8"\u7D4C\u8DEF\u63A2\u7D22");
+        ImGui::TextDisabled(u8"\u5730\u5F62\u4E0A\u306E\u59CB\u70B9\u3068\u7D42\u70B9\u3092\u8ABF\u6574");
+        ImGui::TextDisabled(u8"\u30B0\u30EA\u30C3\u30C9\u9593\u9694\u3068\u6700\u5927\u52FE\u914D\u3092\u8ABF\u6574");
+        ImGui::TextDisabled(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u3092\u78BA\u8A8D\u3057\u3066\u9053\u8DEF\u3078\u9069\u7528");
         break;
     }
 
     ImGui::Separator();
     bool snapToTerrain = m_snapToTerrain;
-    if (ImGui::Checkbox("Snap To Terrain", &snapToTerrain))
+    if (ImGui::Checkbox(u8"\u5730\u5F62\u306B\u30B9\u30CA\u30C3\u30D7", &snapToTerrain))
     {
         PushUndoState();
         m_snapToTerrain = snapToTerrain;
@@ -2823,12 +2823,12 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         }
     }
     ImGui::TextDisabled(m_snapToTerrain
-        ? "Center/XZ gizmo moves snap to terrain"
-        : "Points and intersections move freely in 3D");
+        ? u8"\u4E2D\u592E/XZ \u30AE\u30BA\u30E2\u79FB\u52D5\u306F\u5730\u5F62\u3078\u30B9\u30CA\u30C3\u30D7\u3057\u307E\u3059"
+        : u8"\u30DD\u30A4\u30F3\u30C8\u3068\u4EA4\u5DEE\u70B9\u306F 3D \u7A7A\u9593\u5185\u3092\u81EA\u7531\u306B\u79FB\u52D5\u3057\u307E\u3059");
     ImGui::Separator();
 
-    ImGui::Text("Groups (%d)", static_cast<int>(m_network->groups.size()));
-    if (ImGui::Button("Add Group"))
+    ImGui::Text(u8"\u30B0\u30EB\u30FC\u30D7 (%d)", static_cast<int>(m_network->groups.size()));
+    if (ImGui::Button(u8"\u30B0\u30EB\u30FC\u30D7\u8FFD\u52A0"))
     {
         PushUndoState();
         const int newIndex = m_network->AddGroup(
@@ -2869,7 +2869,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
 
         if (ImGui::BeginPopupContextItem("GroupContext"))
         {
-            if (ImGui::MenuItem("Delete Group", nullptr, false,
+            if (ImGui::MenuItem(u8"\u30B0\u30EB\u30FC\u30D7\u524A\u9664", nullptr, false,
                                 static_cast<int>(m_network->groups.size()) > 1))
             {
                 groupToDelete = gi;
@@ -2880,7 +2880,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         if (groupOpen)
         {
             if (ImGui::TreeNodeEx("Roads", ImGuiTreeNodeFlags_DefaultOpen,
-                                  "Roads (%d)",
+                                  u8"\u9053\u8DEF (%d)",
                                   static_cast<int>(std::count_if(
                                       m_network->roads.begin(),
                                       m_network->roads.end(),
@@ -2909,7 +2909,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                     }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
-                        if (ImGui::MenuItem("Delete Road"))
+                        if (ImGui::MenuItem(u8"\u9053\u8DEF\u524A\u9664"))
                         {
                             PushUndoState();
                             m_network->RemoveRoad(i);
@@ -2922,7 +2922,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             }
 
             if (ImGui::TreeNodeEx("Intersections", ImGuiTreeNodeFlags_DefaultOpen,
-                                  "Intersections (%d)",
+                                  u8"\u4EA4\u5DEE\u70B9 (%d)",
                                   static_cast<int>(std::count_if(
                                       m_network->intersections.begin(),
                                       m_network->intersections.end(),
@@ -2947,7 +2947,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
-                        if (ImGui::MenuItem("Delete Intersection"))
+                        if (ImGui::MenuItem(u8"\u4EA4\u5DEE\u70B9\u524A\u9664"))
                         {
                             PushUndoState();
                             m_network->RemoveIntersection(i);
@@ -2979,21 +2979,21 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         RoadGroup& group = m_network->groups[m_activeGroup];
         char groupNameBuf[128] = {};
         strncpy_s(groupNameBuf, sizeof(groupNameBuf), group.name.c_str(), _TRUNCATE);
-        ImGui::Text("Active Group");
-        if (ImGui::InputText("Name##group", groupNameBuf, sizeof(groupNameBuf)))
+        ImGui::Text(u8"\u30A2\u30AF\u30C6\u30A3\u30D6\u30B0\u30EB\u30FC\u30D7");
+        if (ImGui::InputText(u8"\u540D\u524D##group", groupNameBuf, sizeof(groupNameBuf)))
         {
             PushUndoState();
             group.name = groupNameBuf;
         }
         bool groupVisible = group.visible;
-        if (ImGui::Checkbox("Visible##group", &groupVisible))
+        if (ImGui::Checkbox(u8"\u8868\u793A##group", &groupVisible))
         {
             PushUndoState();
             group.visible = groupVisible;
         }
         ImGui::SameLine();
         bool groupLocked = group.locked;
-        if (ImGui::Checkbox("Locked##group", &groupLocked))
+        if (ImGui::Checkbox(u8"\u30ED\u30C3\u30AF##group", &groupLocked))
         {
             PushUndoState();
             group.locked = groupLocked;
@@ -3005,40 +3005,40 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     {
         Road& road = m_network->roads[m_activeRoad];
         ImGui::Separator();
-        ImGui::Text("Road");
+        ImGui::Text(u8"\u9053\u8DEF");
         if (m_selectedRoads.size() > 1)
-            ImGui::TextDisabled("Selected Roads: %d", static_cast<int>(m_selectedRoads.size()));
+            ImGui::TextDisabled(u8"\u9078\u629E\u4E2D\u306E\u9053\u8DEF: %d", static_cast<int>(m_selectedRoads.size()));
 
         if (m_selectedRoads.size() == 2)
         {
-            if (ImGui::Button("Merge Selected Roads"))
+            if (ImGui::Button(u8"\u9078\u629E\u4E2D\u306E\u9053\u8DEF\u3092\u30DE\u30FC\u30B8"))
                 MergeSelectedRoads();
         }
 
         char roadNameBuf[128] = {};
         strncpy_s(roadNameBuf, sizeof(roadNameBuf), road.name.c_str(), _TRUNCATE);
-        if (ImGui::InputText("Name##road", roadNameBuf, sizeof(roadNameBuf)))
+        if (ImGui::InputText(u8"\u540D\u524D##road", roadNameBuf, sizeof(roadNameBuf)))
         {
             PushUndoState();
             road.name = roadNameBuf;
         }
 
         float laneWidth = road.laneWidth;
-        if (ImGui::InputFloat("Lane Width", &laneWidth, 0.1f, 1.0f, "%.2f"))
+        if (ImGui::InputFloat(u8"\u8ECA\u7DDA\u5E45", &laneWidth, 0.1f, 1.0f, "%.2f"))
         {
             PushUndoState();
             road.laneWidth = (std::max)(0.1f, laneWidth);
         }
 
         int laneLeft = road.laneLeft;
-        if (ImGui::InputInt("Lane Left", &laneLeft))
+        if (ImGui::InputInt(u8"\u5DE6\u8ECA\u7DDA\u6570", &laneLeft))
         {
             PushUndoState();
             road.laneLeft = (std::max)(0, laneLeft);
         }
 
         int laneRight = road.laneRight;
-        if (ImGui::InputInt("Lane Right", &laneRight))
+        if (ImGui::InputInt(u8"\u53F3\u8ECA\u7DDA\u6570", &laneRight))
         {
             PushUndoState();
             road.laneRight = (std::max)(0, laneRight);
@@ -3046,7 +3046,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
 
         const RoadGroup* currentGroup = m_network->FindGroupById(road.groupId);
         const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
-        if (ImGui::BeginCombo("Group##road", preview))
+        if (ImGui::BeginCombo(u8"\u30B0\u30EB\u30FC\u30D7##road", preview))
         {
             for (int gi = 0; gi < static_cast<int>(m_network->groups.size()); ++gi)
             {
@@ -3075,9 +3075,9 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         if (selectedPoint.pointIndex < static_cast<int>(road.points.size()))
         {
             RoadPoint& rp = road.points[selectedPoint.pointIndex];
-            ImGui::Text("Point %d:%d", selectedPoint.roadIndex, selectedPoint.pointIndex);
+            ImGui::Text(u8"\u30DD\u30A4\u30F3\u30C8 %d:%d", selectedPoint.roadIndex, selectedPoint.pointIndex);
             float pointPos[3] = { rp.pos.x, rp.pos.y, rp.pos.z };
-            if (ImGui::InputFloat3("Pos", pointPos))
+            if (ImGui::InputFloat3(u8"\u4F4D\u7F6E", pointPos))
             {
                 PushUndoState();
                 rp.pos = { pointPos[0], pointPos[1], pointPos[2] };
@@ -3088,11 +3088,11 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             {
                 std::string connectionId;
                 if (GetSelectedRoadConnectionId(connectionId))
-                    ImGui::Text("Connected: %s", connectionId.c_str());
+                    ImGui::Text(u8"\u63A5\u7D9A\u5148: %s", connectionId.c_str());
                 else
-                    ImGui::TextDisabled("Connected: none");
+                    ImGui::TextDisabled(u8"\u63A5\u7D9A\u5148: \u306A\u3057");
 
-                if (ImGui::Button("Disconnect Endpoint"))
+                if (ImGui::Button(u8"\u7AEF\u70B9\u306E\u63A5\u7D9A\u3092\u89E3\u9664"))
                 {
                     PushUndoState();
                     ClearSelectedRoadConnection();
@@ -3110,15 +3110,15 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         strncpy_s(nameBuf, sizeof(nameBuf), isec.name.c_str(), _TRUNCATE);
         static const char* kIntersectionTypes[] = { "intersection", "roundabout" };
         int typeIndex = (isec.type == "roundabout") ? 1 : 0;
-        ImGui::Text("Intersection");
-        if (ImGui::InputText("Name##isec", nameBuf, sizeof(nameBuf)))
+        ImGui::Text(u8"\u4EA4\u5DEE\u70B9");
+        if (ImGui::InputText(u8"\u540D\u524D##isec", nameBuf, sizeof(nameBuf)))
         {
             PushUndoState();
             isec.name = nameBuf;
         }
         const RoadGroup* currentGroup = m_network->FindGroupById(isec.groupId);
         const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
-        if (ImGui::BeginCombo("Group##isec", preview))
+        if (ImGui::BeginCombo(u8"\u30B0\u30EB\u30FC\u30D7##isec", preview))
         {
             for (int gi = 0; gi < static_cast<int>(m_network->groups.size()); ++gi)
             {

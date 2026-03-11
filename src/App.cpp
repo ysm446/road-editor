@@ -1037,11 +1037,11 @@ void App::Render()
 
     if (ImGui::BeginMainMenuBar())
     {
-        if (ImGui::BeginMenu("File"))
+        if (ImGui::BeginMenu(u8"\u30D5\u30A1\u30A4\u30EB"))
         {
-            if (ImGui::MenuItem("New Project"))
+            if (ImGui::MenuItem(u8"\u65B0\u898F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8"))
                 NewProject();
-            if (ImGui::MenuItem("Open Project..."))
+            if (ImGui::MenuItem(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u958B\u304F..."))
             {
                 if (OpenFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
                                    "Project Files\0*.json\0All Files\0*.*\0",
@@ -1051,12 +1051,12 @@ void App::Render()
                         ImGui::OpenPopup("ProjectLoadError");
                 }
             }
-            if (ImGui::MenuItem("Save Project"))
+            if (ImGui::MenuItem(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u4FDD\u5B58"))
             {
                 if (!SaveProject(m_projectPath))
                     ImGui::OpenPopup("ProjectSaveError");
             }
-            if (ImGui::MenuItem("Save Project As..."))
+            if (ImGui::MenuItem(u8"\u540D\u524D\u3092\u4ED8\u3051\u3066\u4FDD\u5B58..."))
             {
                 if (SaveFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
                                    "Project Files\0*.json\0All Files\0*.*\0",
@@ -1068,21 +1068,21 @@ void App::Render()
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("View"))
+        if (ImGui::BeginMenu(u8"\u8868\u793A"))
         {
-            if (ImGui::MenuItem("Road Names", nullptr, m_showRoadNames))
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u540D", nullptr, m_showRoadNames))
             {
                 m_showRoadNames = !m_showRoadNames;
                 m_editor.SetShowRoadNames(m_showRoadNames);
                 SaveViewSettings();
             }
-            if (ImGui::MenuItem("Intersection Names", nullptr, m_showIntersectionNames))
+            if (ImGui::MenuItem(u8"\u4EA4\u5DEE\u70B9\u540D", nullptr, m_showIntersectionNames))
             {
                 m_showIntersectionNames = !m_showIntersectionNames;
                 m_editor.SetShowIntersectionNames(m_showIntersectionNames);
                 SaveViewSettings();
             }
-            if (ImGui::MenuItem("Road Preview Metrics", nullptr, m_showRoadPreviewMetrics))
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u30D7\u30EC\u30D3\u30E5\u30FC\u60C5\u5831", nullptr, m_showRoadPreviewMetrics))
             {
                 m_showRoadPreviewMetrics = !m_showRoadPreviewMetrics;
                 m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
@@ -1097,13 +1097,13 @@ void App::Render()
 
     if (ImGui::BeginPopup("ProjectSaveError"))
     {
-        ImGui::Text("Project save failed: %s", m_projectPath);
+        ImGui::Text(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u4FDD\u5B58\u306B\u5931\u6557\u3057\u307E\u3057\u305F: %s", m_projectPath);
         if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
     if (ImGui::BeginPopup("ProjectLoadError"))
     {
-        ImGui::Text("Project load failed: %s", m_projectPath);
+        ImGui::Text(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F: %s", m_projectPath);
         if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
@@ -1111,49 +1111,49 @@ void App::Render()
     // Camera panel
     ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(280, 110), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Camera");
+    ImGui::Begin(u8"\u30AB\u30E1\u30E9");
     {
         auto p = m_camera->GetPosition();
         ImGui::Text("Position  %.2f  %.2f  %.2f", p.x, p.y, p.z);
         ImGui::Separator();
         if (m_cursorHitValid)
-            ImGui::Text("Cursor    %.2f  %.2f  %.2f",
+            ImGui::Text(u8"\u30AB\u30FC\u30BD\u30EB  %.2f  %.2f  %.2f",
                         m_cursorHitPos.x, m_cursorHitPos.y, m_cursorHitPos.z);
         else
-            ImGui::TextDisabled("Cursor    --");
+            ImGui::TextDisabled(u8"\u30AB\u30FC\u30BD\u30EB  --");
         ImGui::Separator();
-        ImGui::TextDisabled("Alt + LMB drag : rotate");
-        ImGui::TextDisabled("Alt + MMB drag : pan");
-        ImGui::TextDisabled("Scroll wheel   : zoom");
+        ImGui::TextDisabled(u8"Alt + \u5DE6\u30C9\u30E9\u30C3\u30B0 : \u56DE\u8EE2");
+        ImGui::TextDisabled(u8"Alt + \u4E2D\u30C9\u30E9\u30C3\u30B0 : \u30D1\u30F3");
+        ImGui::TextDisabled(u8"\u30DE\u30A6\u30B9\u30DB\u30A4\u30FC\u30EB   : \u30BA\u30FC\u30E0");
     }
     ImGui::End();
 
     // Terrain panel
     ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Terrain", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin(u8"\u5730\u5F62", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
-        ImGui::Checkbox("Visible",   &m_terrain->visible);
+        ImGui::Checkbox(u8"\u8868\u793A",   &m_terrain->visible);
         ImGui::SameLine();
-        ImGui::Checkbox("Wireframe", &m_terrain->wireframe);
+        ImGui::Checkbox(u8"\u30EF\u30A4\u30E4\u30FC", &m_terrain->wireframe);
         static const char* kTerrainColorModes[] =
         {
-            "Gray",
-            "Terrain",
-            "Slope",
-            "Texture"
+            u8"\u30B0\u30EC\u30FC",
+            u8"\u5730\u5F62",
+            u8"\u52FE\u914D",
+            u8"\u30C6\u30AF\u30B9\u30C1\u30E3"
         };
         int terrainColorMode = std::clamp(m_terrain->colorMode, 0, 3);
-        if (ImGui::Combo("Color Mode", &terrainColorMode, kTerrainColorModes, IM_ARRAYSIZE(kTerrainColorModes)))
+        if (ImGui::Combo(u8"\u8868\u793A\u30E2\u30FC\u30C9", &terrainColorMode, kTerrainColorModes, IM_ARRAYSIZE(kTerrainColorModes)))
             m_terrain->colorMode = terrainColorMode;
 
         if (m_terrain->colorMode == 3)
         {
-            ImGui::TextDisabled("Terrain Texture");
+            ImGui::TextDisabled(u8"\u5730\u5F62\u30C6\u30AF\u30B9\u30C1\u30E3");
             ImGui::SetNextItemWidth(260.0f);
             ImGui::InputText("##terraintex", m_terrainTexturePath, sizeof(m_terrainTexturePath));
             bool texturePathCommitted = ImGui::IsItemDeactivatedAfterEdit();
             ImGui::SameLine();
-            if (ImGui::Button("Browse..."))
+            if (ImGui::Button(u8"\u53C2\u7167..."))
             {
                 if (OpenFileDialog(m_hwnd, m_terrainTexturePath, sizeof(m_terrainTexturePath),
                                    "Image Files\0*.png;*.bmp;*.tga;*.jpg;*.jpeg\0All Files\0*.*\0",
@@ -1187,22 +1187,22 @@ void App::Render()
             int rawH = m_terrain->GetRawH();
             int mW   = m_terrain->GetMeshW();
             int mH   = m_terrain->GetMeshH();
-            ImGui::Text("Image: %d x %d px", rawW, rawH);
-            ImGui::Text("Mesh: %d x %d verts  %d x %d cells",
+            ImGui::Text(u8"\u753B\u50CF: %d x %d px", rawW, rawH);
+            ImGui::Text(u8"\u30E1\u30C3\u30B7\u30E5: %d x %d \u9802\u70B9  %d x %d \u30BB\u30EB",
                         mW, mH, mW - 1, mH - 1);
         }
         else
         {
-            ImGui::TextDisabled("No terrain loaded");
+            ImGui::TextDisabled(u8"\u5730\u5F62\u306F\u672A\u30ED\u30FC\u30C9\u3067\u3059");
         }
 
         ImGui::Separator();
 
-        ImGui::TextDisabled("Load Heightmap");
+        ImGui::TextDisabled(u8"\u30CF\u30A4\u30C8\u30DE\u30C3\u30D7");
         ImGui::SetNextItemWidth(-60);
         ImGui::InputText("##hmap", m_terrainPath, sizeof(m_terrainPath));
         ImGui::SameLine();
-        if (ImGui::Button("Browse"))
+        if (ImGui::Button(u8"\u53C2\u7167"))
         {
             OpenFileDialog(m_hwnd, m_terrainPath, sizeof(m_terrainPath),
                            "Image Files\0*.png;*.bmp;*.tga;*.jpg\0All Files\0*.*\0",
@@ -1212,19 +1212,19 @@ void App::Render()
         bool applyToCurrentTerrain = false;
 
         int loadDivisions[2] = { m_loadResW, m_loadResH };
-        ImGui::InputInt2("Divisions X / Z", loadDivisions);
+        ImGui::InputInt2(u8"\u5206\u5272\u6570 X / Z", loadDivisions);
         m_loadResW = loadDivisions[0];
         m_loadResH = loadDivisions[1];
         if (ImGui::IsItemDeactivatedAfterEdit())
             applyToCurrentTerrain = true;
-        ImGui::TextDisabled("Value = wireframe cell count, 0 = image size - 1");
+        ImGui::TextDisabled(u8"\u5024 = \u30EF\u30A4\u30E4\u30FC\u30BB\u30EB\u6570\u30010 \u306F\u753B\u50CF\u30B5\u30A4\u30BA - 1");
         if (m_loadResW < 0) m_loadResW = 0;
         if (m_loadResH < 0) m_loadResH = 0;
         if (m_loadResW > 4096) m_loadResW = 4096;
         if (m_loadResH > 4096) m_loadResH = 4096;
 
         float loadSizeM[3] = { m_loadWidthM, m_loadDepthM, m_loadHeightM };
-        ImGui::InputFloat3("Size X / Z / Y (m)", loadSizeM, "%.0f");
+        ImGui::InputFloat3(u8"\u30B5\u30A4\u30BA X / Z / Y (m)", loadSizeM, "%.0f");
         m_loadWidthM  = loadSizeM[0];
         m_loadDepthM  = loadSizeM[1];
         m_loadHeightM = loadSizeM[2];
@@ -1235,7 +1235,7 @@ void App::Render()
         if (m_loadHeightM < 1.0f) m_loadHeightM = 1.0f;
 
         float loadOffsetM[2] = { m_loadOffsetX, m_loadOffsetZ };
-        ImGui::InputFloat2("Offset X / Z (m)", loadOffsetM, "%.1f");
+        ImGui::InputFloat2(u8"\u30AA\u30D5\u30BB\u30C3\u30C8 X / Z (m)", loadOffsetM, "%.1f");
         m_loadOffsetX = loadOffsetM[0];
         m_loadOffsetZ = loadOffsetM[1];
         if (ImGui::IsItemDeactivatedAfterEdit())
@@ -1244,7 +1244,7 @@ void App::Render()
         if (applyToCurrentTerrain && m_terrain->IsReady())
             ApplyTerrainSettings();
 
-        if (ImGui::Button("Load", ImVec2(-1, 0)))
+        if (ImGui::Button(u8"\u8AAD\u307F\u8FBC\u307F", ImVec2(-1, 0)))
         {
             if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
             {
@@ -1257,7 +1257,7 @@ void App::Render()
                 SetStatusMessage(std::string("Terrain loaded: ") + m_terrainPath);
             }
         }
-        if (ImGui::Button("Clear Height Field", ImVec2(-1, 0)))
+        if (ImGui::Button(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u30AF\u30EA\u30A2", ImVec2(-1, 0)))
         {
             m_terrain->Reset();
             m_loadResW = 0;
@@ -1272,14 +1272,14 @@ void App::Render()
         }
         if (ImGui::BeginPopup("LoadError"))
         {
-            ImGui::Text("Failed to load: %s", m_terrainPath);
+            ImGui::Text(u8"\u8AAD\u307F\u8FBC\u307F\u5931\u6557: %s", m_terrainPath);
             if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
         }
 
         ImGui::Separator();
         bool showContours = m_showContours;
-        if (ImGui::Checkbox("Show Contours", &showContours))
+        if (ImGui::Checkbox(u8"\u7B49\u9AD8\u7DDA\u3092\u8868\u793A", &showContours))
         {
             m_showContours = showContours;
             RebuildContourCache();
@@ -1287,7 +1287,7 @@ void App::Render()
         }
 
         float contourInterval = m_contourInterval;
-        ImGui::InputFloat("Contour Interval (m)", &contourInterval, 1.0f, 5.0f, "%.1f");
+        ImGui::InputFloat(u8"\u7B49\u9AD8\u7DDA\u9593\u9694 (m)", &contourInterval, 1.0f, 5.0f, "%.1f");
         contourInterval = std::clamp(contourInterval, 0.5f, 1000.0f);
         if (fabsf(contourInterval - m_contourInterval) > 1e-4f)
         {
@@ -1762,7 +1762,7 @@ void App::DrawPathfindingPanel()
     ImGui::SetNextWindowPos(ImVec2(340, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(320, 260), ImGuiCond_FirstUseEver);
     bool open = true;
-    if (!ImGui::Begin("Pathfinding", &open))
+    if (!ImGui::Begin(u8"\u7D4C\u8DEF\u63A2\u7D22", &open))
     {
         ImGui::End();
         if (!open)
@@ -1773,45 +1773,45 @@ void App::DrawPathfindingPanel()
         return;
     }
 
-    ImGui::TextDisabled("Terrain/grid based A* route preview");
-    ImGui::TextDisabled("Drag the start/end handles in the viewport");
+    ImGui::TextDisabled(u8"\u5730\u5F62\u30B0\u30EA\u30C3\u30C9\u30D9\u30FC\u30B9\u306E A* \u7D4C\u8DEF\u30D7\u30EC\u30D3\u30E5\u30FC");
+    ImGui::TextDisabled(u8"\u30D3\u30E5\u30FC\u30DD\u30FC\u30C8\u3067\u59CB\u70B9\u30FB\u7D42\u70B9\u30CF\u30F3\u30C9\u30EB\u3092\u30C9\u30E9\u30C3\u30B0");
     ImGui::Separator();
 
-    if (ImGui::Button("Use Selected Road", ImVec2(-1, 0)))
+    if (ImGui::Button(u8"\u9078\u629E\u4E2D\u306E\u9053\u8DEF\u3092\u4F7F\u7528", ImVec2(-1, 0)))
         SyncPathfindingEndpointsFromSelectedRoad();
 
     if (m_pathfinding.hasStart)
-        ImGui::Text("Start  %.1f, %.1f, %.1f", m_pathfinding.startPos.x, m_pathfinding.startPos.y, m_pathfinding.startPos.z);
+        ImGui::Text(u8"\u59CB\u70B9  %.1f, %.1f, %.1f", m_pathfinding.startPos.x, m_pathfinding.startPos.y, m_pathfinding.startPos.z);
     else
-        ImGui::TextDisabled("Start  not set");
+        ImGui::TextDisabled(u8"\u59CB\u70B9  \u672A\u8A2D\u5B9A");
 
     if (m_pathfinding.hasEnd)
-        ImGui::Text("End    %.1f, %.1f, %.1f", m_pathfinding.endPos.x, m_pathfinding.endPos.y, m_pathfinding.endPos.z);
+        ImGui::Text(u8"\u7D42\u70B9  %.1f, %.1f, %.1f", m_pathfinding.endPos.x, m_pathfinding.endPos.y, m_pathfinding.endPos.z);
     else
-        ImGui::TextDisabled("End    not set");
+        ImGui::TextDisabled(u8"\u7D42\u70B9  \u672A\u8A2D\u5B9A");
 
     ImGui::Separator();
 
-    ImGui::InputFloat("Max Grade (%)", &m_pathfinding.maxGradePercent, 0.5f, 5.0f, "%.1f");
+    ImGui::InputFloat(u8"\u6700\u5927\u52FE\u914D (%)", &m_pathfinding.maxGradePercent, 0.5f, 5.0f, "%.1f");
     const float clampedMaxGrade = std::clamp(m_pathfinding.maxGradePercent, 0.0f, 100.0f);
     if (fabsf(clampedMaxGrade - m_pathfinding.maxGradePercent) > 1e-4f)
         m_pathfinding.maxGradePercent = clampedMaxGrade;
     if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
         ComputePathfindingPreview();
 
-    ImGui::InputFloat("Grid Step (m)", &m_pathfinding.gridStep, 0.5f, 5.0f, "%.1f");
+    ImGui::InputFloat(u8"\u30B0\u30EA\u30C3\u30C9\u9593\u9694 (m)", &m_pathfinding.gridStep, 0.5f, 5.0f, "%.1f");
     const float clampedGridStep = std::clamp(m_pathfinding.gridStep, 1.0f, 100.0f);
     if (fabsf(clampedGridStep - m_pathfinding.gridStep) > 1e-4f)
         m_pathfinding.gridStep = clampedGridStep;
     if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
         ComputePathfindingPreview();
 
-    ImGui::Checkbox("Strict Max Grade", &m_pathfinding.strictMaxGrade);
+    ImGui::Checkbox(u8"\u6700\u5927\u52FE\u914D\u3092\u53B3\u5B88", &m_pathfinding.strictMaxGrade);
     if (ImGui::IsItemEdited() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
         ComputePathfindingPreview();
     if (!m_pathfinding.strictMaxGrade)
     {
-        ImGui::InputFloat("Slope Penalty", &m_pathfinding.slopePenalty, 5.0f, 20.0f, "%.1f");
+        ImGui::InputFloat(u8"\u52FE\u914D\u30DA\u30CA\u30EB\u30C6\u30A3", &m_pathfinding.slopePenalty, 5.0f, 20.0f, "%.1f");
         const float clampedPenalty = std::clamp(m_pathfinding.slopePenalty, 0.0f, 1000.0f);
         if (fabsf(clampedPenalty - m_pathfinding.slopePenalty) > 1e-4f)
             m_pathfinding.slopePenalty = clampedPenalty;
@@ -1821,10 +1821,10 @@ void App::DrawPathfindingPanel()
 
     ImGui::Separator();
 
-    if (ImGui::Button("Apply as Road", ImVec2(-1, 0)))
+    if (ImGui::Button(u8"\u9053\u8DEF\u306B\u9069\u7528", ImVec2(-1, 0)))
         ApplyPathfindingPreviewAsRoad();
 
-    if (ImGui::Button("Clear", ImVec2(-1, 0)))
+    if (ImGui::Button(u8"\u30AF\u30EA\u30A2", ImVec2(-1, 0)))
     {
         m_pathfinding.draggingStart = false;
         m_pathfinding.draggingEnd = false;
@@ -1835,8 +1835,8 @@ void App::DrawPathfindingPanel()
     }
 
     ImGui::Separator();
-    ImGui::TextDisabled("Click a handle to drag it on terrain");
-    ImGui::TextDisabled("Preview recomputes while dragging");
+    ImGui::TextDisabled(u8"\u30CF\u30F3\u30C9\u30EB\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u5730\u5F62\u4E0A\u3092\u30C9\u30E9\u30C3\u30B0");
+    ImGui::TextDisabled(u8"\u30C9\u30E9\u30C3\u30B0\u4E2D\u306F\u30D7\u30EC\u30D3\u30E5\u30FC\u3092\u81EA\u52D5\u518D\u8A08\u7B97");
 
     ImGui::End();
 

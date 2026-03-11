@@ -82,6 +82,10 @@ target_compile_definitions(RoadEditor PRIVATE
     _UNICODE
 )
 
+if (MSVC)
+    target_compile_options(RoadEditor PRIVATE /utf-8)
+endif()
+
 # Copy shaders to output directory after build
 add_custom_command(TARGET RoadEditor POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

@@ -11,6 +11,29 @@ bool ImGuiLayer::Initialize(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+    ImFontConfig fontCfg = {};
+    fontCfg.OversampleH = 2;
+    fontCfg.OversampleV = 2;
+    fontCfg.PixelSnapH = false;
+    const char* fontCandidates[] =
+    {
+        "C:/Windows/Fonts/meiryo.ttc",
+        "C:/Windows/Fonts/YuGothM.ttc",
+        "C:/Windows/Fonts/msgothic.ttc"
+    };
+    for (const char* fontPath : fontCandidates)
+    {
+        if (GetFileAttributesA(fontPath) != INVALID_FILE_ATTRIBUTES)
+        {
+            io.Fonts->AddFontFromFileTTF(
+                fontPath,
+                18.0f,
+                &fontCfg,
+                io.Fonts->GetGlyphRangesJapanese());
+            break;
+        }
+    }
+
     ImGui::StyleColorsDark();
 
     // Tweak colours slightly for the dark background
