@@ -10,6 +10,126 @@ using namespace DirectX;
 namespace
 {
 constexpr size_t kMaxUndoStates = 128;
+constexpr int kPreviewCurveSubdivisions = 12;
+
+float Distance3(XMFLOAT3 a, XMFLOAT3 b)
+{
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    const float dz = a.z - b.z;
+    return sqrtf(dx * dx + dy * dy + dz * dz);
+}
+
+XMFLOAT3 Lerp3(XMFLOAT3 a, XMFLOAT3 b, float t)
+{
+    return
+    {
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t
+    };
+}
+
+XMFLOAT3 QuadraticBezier(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, float t)
+{
+    const float u = 1.0f - t;
+    const float uu = u * u;
+    const float tt = t * t;
+    return
+    {
+        uu * p0.x + 2.0f * u * t * p1.x + tt * p2.x,
+        uu * p0.y + 2.0f * u * t * p1.y + tt * p2.y,
+        uu * p0.z + 2.0f * u * t * p1.z + tt * p2.z
+    };
+}
+
+void AppendQuadraticBezierSamples(
+    std::vector<XMFLOAT3>& samples,
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2,
+    int subdivisions)
+{
+    for (int step = 1; step <= subdivisions; ++step)
+    {
+        const float t = static_cast<float>(step) / static_cast<float>(subdivisions);
+        samples.push_back(QuadraticBezier(p0, p1, p2, t));
+    }
+}
+
+std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
+{
+    std::vector<XMFLOAT3> samples;
+    const int pointCount = static_cast<int>(road.points.size());
+    if (pointCount < 2)
+        return samples;
+
+    if (pointCount == 2)
+    {
+        samples.push_back(road.points[0].pos);
+        samples.push_back(road.points[1].pos);
+        return samples;
+    }
+
+    const bool closed = road.closed && pointCount >= 3;
+    const int edgeCount = closed ? pointCount : pointCount - 1;
+    std::vector<XMFLOAT3> edgeMidpoints(edgeCount);
+
+    for (int edgeIndex = 0; edgeIndex < edgeCount; ++edgeIndex)
+    {
+        const int startIndex = edgeIndex;
+        const int endIndex = (edgeIndex + 1) % pointCount;
+        float t = 0.5f;
+
+        if (closed || (edgeIndex > 0 && edgeIndex < edgeCount - 1))
+        {
+            const int prevEdgeIndex = closed ? (edgeIndex - 1 + edgeCount) % edgeCount : edgeIndex - 1;
+            const int nextEdgeIndex = closed ? (edgeIndex + 1) % edgeCount : edgeIndex + 1;
+            const int prevStartIndex = prevEdgeIndex;
+            const int prevEndIndex = (prevEdgeIndex + 1) % pointCount;
+            const int nextStartIndex = nextEdgeIndex;
+            const int nextEndIndex = (nextEdgeIndex + 1) % pointCount;
+            const float prevLen = Distance3(
+                road.points[prevStartIndex].pos,
+                road.points[prevEndIndex].pos);
+            const float nextLen = Distance3(
+                road.points[nextStartIndex].pos,
+                road.points[nextEndIndex].pos);
+            const float sum = prevLen + nextLen;
+            if (sum > 1e-5f)
+                t = prevLen / sum;
+        }
+
+        edgeMidpoints[edgeIndex] = Lerp3(
+            road.points[startIndex].pos,
+            road.points[endIndex].pos,
+            t);
+    }
+
+    if (closed)
+    {
+        samples.push_back(edgeMidpoints.back());
+        for (int pointIndex = 0; pointIndex < pointCount; ++pointIndex)
+        {
+            const XMFLOAT3 p0 = edgeMidpoints[(pointIndex - 1 + edgeCount) % edgeCount];
+            const XMFLOAT3 p1 = road.points[pointIndex].pos;
+            const XMFLOAT3 p2 = edgeMidpoints[pointIndex];
+            AppendQuadraticBezierSamples(samples, p0, p1, p2, kPreviewCurveSubdivisions);
+        }
+        samples.push_back(samples.front());
+        return samples;
+    }
+
+    samples.push_back(road.points.front().pos);
+    samples.push_back(edgeMidpoints.front());
+    for (int pointIndex = 1; pointIndex < pointCount - 1; ++pointIndex)
+    {
+        const XMFLOAT3 p0 = edgeMidpoints[pointIndex - 1];
+        const XMFLOAT3 p1 = road.points[pointIndex].pos;
+        const XMFLOAT3 p2 = edgeMidpoints[pointIndex];
+        AppendQuadraticBezierSamples(samples, p0, p1, p2, kPreviewCurveSubdivisions);
+    }
+    samples.push_back(road.points.back().pos);
+    return samples;
+}
 }
 
 bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
@@ -1836,6 +1956,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     static const XMFLOAT4 colorIntersectionSelected = { 1.0f, 0.4f, 0.2f, 1.0f };
     static const XMFLOAT4 colorConnection = { 0.9f, 0.9f, 0.3f, 0.9f };
     static const XMFLOAT4 colorSnapCandidate = { 1.0f, 1.0f, 0.2f, 1.0f };
+    static const XMFLOAT4 colorPreview = { 0.45f, 0.95f, 0.95f, 0.9f };
 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
@@ -1849,6 +1970,10 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
 
         if (road.closed && road.points.size() >= 2)
             dd.AddLine(road.points.back().pos, road.points.front().pos, col);
+
+        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
+            dd.AddLine(previewCurve[sampleIndex], previewCurve[sampleIndex + 1], colorPreview);
 
         const int startIsec = FindIntersectionIndexById(road.startIntersectionId);
         const int endIsec   = FindIntersectionIndexById(road.endIntersectionId);
