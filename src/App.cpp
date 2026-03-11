@@ -302,6 +302,9 @@ int App::Run()
                 m_running = false;
         }
 
+        if (!m_running)
+            break;
+
         auto   now = std::chrono::high_resolution_clock::now();
         float  dt  = std::chrono::duration<float>(now - lastTime).count();
         lastTime    = now;
@@ -584,7 +587,9 @@ void App::Render()
 
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        const float statusBarHeight = ImGui::GetFrameHeight();
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float statusBarHeight =
+            ImGui::GetTextLineHeight() + style.WindowPadding.y * 2.0f;
         ImGui::SetNextWindowPos(
             ImVec2(viewport->WorkPos.x,
                    viewport->WorkPos.y + viewport->WorkSize.y - statusBarHeight));

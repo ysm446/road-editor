@@ -1,9 +1,43 @@
 #include "RoadData.h"
 
 #include <fstream>
+#include <rpc.h>
 #include <stdexcept>
 
+#pragma comment(lib, "Rpcrt4.lib")
+
 using namespace DirectX;
+
+namespace
+{
+std::string GenerateUuidString()
+{
+    UUID uuid = {};
+    const RPC_STATUS createStatus = UuidCreate(&uuid);
+    if (createStatus != RPC_S_OK && createStatus != RPC_S_UUID_LOCAL_ONLY)
+        throw std::runtime_error("UuidCreate failed");
+
+    RPC_CSTR str = nullptr;
+    if (UuidToStringA(&uuid, &str) != RPC_S_OK || str == nullptr)
+        throw std::runtime_error("UuidToStringA failed");
+
+    std::string result(reinterpret_cast<const char*>(str));
+    RpcStringFreeA(&str);
+    return result;
+}
+
+void EnsureRoadId(Road& road)
+{
+    if (road.id.empty())
+        road.id = GenerateUuidString();
+}
+
+void EnsureIntersectionId(Intersection& intersection)
+{
+    if (intersection.id.empty())
+        intersection.id = GenerateUuidString();
+}
+}
 
 // ---------------------------------------------------------------------------
 // RoadNetwork
@@ -12,7 +46,7 @@ using namespace DirectX;
 int RoadNetwork::AddRoad(const std::string& name)
 {
     Road r;
-    r.id = "road_" + std::to_string(roads.size());
+    r.id = GenerateUuidString();
     r.name = name;
     roads.push_back(std::move(r));
     return static_cast<int>(roads.size()) - 1;
@@ -21,7 +55,7 @@ int RoadNetwork::AddRoad(const std::string& name)
 int RoadNetwork::AddIntersection(XMFLOAT3 pos, const std::string& name)
 {
     Intersection i;
-    i.id   = "isec_" + std::to_string(intersections.size());
+    i.id   = GenerateUuidString();
     i.name = name + " " + std::to_string(intersections.size());
     i.type = "intersection";
     i.pos  = pos;
@@ -90,6 +124,7 @@ static Road RoadFromJson(const nlohmann::json& j)
         for (const auto& p : j["points"])
             r.points.push_back(PointFromJson(p));
     }
+    EnsureRoadId(r);
     return r;
 }
 
@@ -114,6 +149,7 @@ static Intersection IntersectionFromJson(const nlohmann::json& j)
     i.type   = j.value("type", std::string("intersection"));
     i.pos    = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
     i.radius = j.value("radius", 4.0f);
+    EnsureIntersectionId(i);
     return i;
 }
 
