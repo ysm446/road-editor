@@ -51,9 +51,12 @@ private:
 
     char m_terrainPath[260] = "data/heightmap.png";
 
-    // Load resolution (0 = native)
+    // Load mesh divisions (cell counts, 0 = native image resolution - 1)
     int m_loadResW = 0;
     int m_loadResH = 0;
+    float m_loadWidthM  = 255.0f;
+    float m_loadDepthM  = 255.0f;
+    float m_loadHeightM = 100.0f;
 
     // Mouse-terrain intersection (updated each frame)
     bool              m_cursorHitValid = false;

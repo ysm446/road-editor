@@ -59,7 +59,7 @@ bool App::CreateAppWindow(HINSTANCE hInstance, int nCmdShow)
         0, L"RoadEditorClass",
         L"Road Editor - Phase 3",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1600, 1200,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1600, 900,
         nullptr, nullptr, hInstance,
         this);  // passed to WM_NCCREATE as CREATESTRUCT::lpCreateParams
 
@@ -258,8 +258,7 @@ void App::Render()
 
     // Terrain panel
     ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(290, 280), ImGuiCond_Always);
-    ImGui::Begin("Terrain");
+    ImGui::Begin("Terrain", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     {
         ImGui::Checkbox("Visible",   &m_terrain->visible);
         ImGui::SameLine();
@@ -267,41 +266,15 @@ void App::Render()
 
         ImGui::Separator();
 
-        // --- Size / scale in metres ---
         if (m_terrain->IsReady())
         {
-            int W = m_terrain->GetRawW();
-            int H = m_terrain->GetRawH();
-            ImGui::Text("Resolution: %d x %d px", W, H);
-
-            // Derive current size in metres (editing buffers, not committed yet)
-            float widthM  = (W - 1) * m_terrain->horizontalScaleX;
-            float depthM  = (H - 1) * m_terrain->horizontalScaleZ;
-            float heightM = m_terrain->heightScale;
-
-            // Rebuild when editing is confirmed (Enter or focus lost)
-            bool changed = false;
-            ImGui::InputFloat("Width (m)",  &widthM,  0, 0, "%.0f");
-            if (ImGui::IsItemDeactivatedAfterEdit())
-            {
-                if (widthM  >= 1.0f) m_terrain->horizontalScaleX = widthM  / (W - 1);
-                changed = true;
-            }
-            ImGui::InputFloat("Depth (m)",  &depthM,  0, 0, "%.0f");
-            if (ImGui::IsItemDeactivatedAfterEdit())
-            {
-                if (depthM  >= 1.0f) m_terrain->horizontalScaleZ = depthM  / (H - 1);
-                changed = true;
-            }
-            ImGui::InputFloat("Height (m)", &heightM, 0, 0, "%.0f");
-            if (ImGui::IsItemDeactivatedAfterEdit())
-            {
-                if (heightM >= 1.0f) m_terrain->heightScale = heightM;
-                changed = true;
-            }
-            ImGui::TextDisabled("Enter or click away to apply");
-            if (changed)
-                m_terrain->Rebuild(m_d3d->GetDevice());
+            int rawW = m_terrain->GetRawW();
+            int rawH = m_terrain->GetRawH();
+            int mW   = m_terrain->GetMeshW();
+            int mH   = m_terrain->GetMeshH();
+            ImGui::Text("Image: %d x %d px", rawW, rawH);
+            ImGui::Text("Mesh: %d x %d verts  %d x %d cells",
+                        mW, mH, mW - 1, mH - 1);
         }
         else
         {
@@ -310,8 +283,7 @@ void App::Render()
 
         ImGui::Separator();
 
-        // --- Load heightmap from file ---
-        ImGui::Text("Load Heightmap");
+        ImGui::TextDisabled("Load Heightmap");
         ImGui::SetNextItemWidth(-60);
         ImGui::InputText("##hmap", m_terrainPath, sizeof(m_terrainPath));
         ImGui::SameLine();
@@ -321,24 +293,58 @@ void App::Render()
                            "Image Files\0*.png;*.bmp;*.tga;*.jpg\0All Files\0*.*\0",
                            "Open Heightmap");
         }
-        // Resolution override (0 = native)
-        ImGui::SetNextItemWidth(110);
-        ImGui::InputInt("W##res", &m_loadResW, 0, 0);
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(110);
-        ImGui::InputInt("H##res", &m_loadResH, 0, 0);
-        ImGui::SameLine();
-        ImGui::TextDisabled("(0=native)");
+
+        bool applyToCurrentTerrain = false;
+
+        int loadDivisions[2] = { m_loadResW, m_loadResH };
+        ImGui::InputInt2("Divisions X / Y", loadDivisions);
+        m_loadResW = loadDivisions[0];
+        m_loadResH = loadDivisions[1];
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            applyToCurrentTerrain = true;
+        ImGui::TextDisabled("Value = wireframe cell count, 0 = image size - 1");
         if (m_loadResW < 0) m_loadResW = 0;
         if (m_loadResH < 0) m_loadResH = 0;
         if (m_loadResW > 4096) m_loadResW = 4096;
         if (m_loadResH > 4096) m_loadResH = 4096;
 
+        float loadSizeM[3] = { m_loadWidthM, m_loadDepthM, m_loadHeightM };
+        ImGui::InputFloat3("Size W / D / H (m)", loadSizeM, "%.0f");
+        m_loadWidthM  = loadSizeM[0];
+        m_loadDepthM  = loadSizeM[1];
+        m_loadHeightM = loadSizeM[2];
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            applyToCurrentTerrain = true;
+        if (m_loadWidthM < 1.0f) m_loadWidthM = 1.0f;
+        if (m_loadDepthM < 1.0f) m_loadDepthM = 1.0f;
+        if (m_loadHeightM < 1.0f) m_loadHeightM = 1.0f;
+
+        auto applyTerrainSettings = [&]()
+        {
+            m_terrain->meshSubdivW = m_loadResW;
+            m_terrain->meshSubdivH = m_loadResH;
+
+            const int cellsW = (m_loadResW > 0) ? m_loadResW : (m_terrain->GetRawW() - 1);
+            const int cellsH = (m_loadResH > 0) ? m_loadResH : (m_terrain->GetRawH() - 1);
+            m_terrain->horizontalScaleX = m_loadWidthM / static_cast<float>((cellsW > 0) ? cellsW : 1);
+            m_terrain->horizontalScaleZ = m_loadDepthM / static_cast<float>((cellsH > 0) ? cellsH : 1);
+            m_terrain->heightScale      = m_loadHeightM;
+            m_terrain->Rebuild(m_d3d->GetDevice());
+        };
+
+        if (applyToCurrentTerrain && m_terrain->IsReady())
+            applyTerrainSettings();
+
         if (ImGui::Button("Load", ImVec2(-1, 0)))
         {
-            if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath,
-                                         m_loadResW, m_loadResH))
+            if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
+            {
                 ImGui::OpenPopup("LoadError");
+            }
+            else
+            {
+                applyTerrainSettings();
+            }
         }
         if (ImGui::BeginPopup("LoadError"))
         {

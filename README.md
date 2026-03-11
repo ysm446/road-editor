@@ -3,9 +3,14 @@
 DirectX 11 + Dear ImGui によるスタンドアロンの道路ネットワークエディタ。
 Houdini の道路エディタ HDA で培った設計思想をベースに、段階的に実装を進めるプロジェクト。
 
-## スクリーンショット
+## 現在の機能
 
-*Phase 1: グリッド表示 + オービットカメラ*
+- 無限グリッド表示
+- オービットカメラ操作
+- ハイトマップ画像からの地形生成
+- Terrain パネルからの分割数、幅、奥行き、高さの調整
+- 地形へのレイキャストを使ったポリライン編集の基礎実装
+- 道路データの JSON 保存・読み込み
 
 ## 技術スタック
 
@@ -57,40 +62,66 @@ build\Debug\RoadEditor.exe
 
 | 操作 | 入力 |
 |------|------|
-| 回転 | 中ボタンドラッグ |
-| パン | Shift + 中ボタンドラッグ |
+| 回転 | Alt + 左ドラッグ |
+| パン | Alt + 中ドラッグ |
 | ズーム | スクロールホイール |
 
-## 実装フェーズ
+## Terrain の使い方
 
-- [x] **Phase 1**: D3D11 初期化 / Dear ImGui 統合 / オービットカメラ / 無限グリッド
-- [ ] **Phase 2**: ハイトマップ地形表示
-- [ ] **Phase 3**: ポリライン道路配置・編集 / JSON 保存・読み込み
-- [ ] **Phase 4**: スプライン補間による道路メッシュ自動生成
+- `Browse` でハイトマップ画像を選択して `Load` を押すと地形を生成します。
+- `Divisions X / Y` はワイヤーフレーム格子のセル数です。`0` を指定すると画像解像度に合わせて `image size - 1` が使われます。
+- `Size W / D / H (m)` は地形の幅、奥行き、高さです。
+- 地形ロード後も同じ UI を使い続けられ、`Divisions` や `Size` を変更するとその地形が再構築されます。
+- `Wireframe` をオンにすると地形メッシュをワイヤーフレーム表示できます。
+
+## 実装状況
+
+- [x] Phase 1: D3D11 初期化 / Dear ImGui 統合 / オービットカメラ / 無限グリッド
+- [x] Phase 2: ハイトマップ地形表示
+- [~] Phase 3: ポリライン道路配置・編集 / JSON 保存・読み込み
+- [ ] Phase 4: スプライン補間による道路メッシュ自動生成
 
 ## プロジェクト構成
 
 ```
 RoadEditor/
 ├── CMakeLists.txt
+├── data/
+│   ├── heightmap.png
+│   └── roads.json
 ├── shaders/
 │   ├── common.hlsli
 │   ├── grid_vs.hlsl
-│   └── grid_ps.hlsl
+│   ├── grid_ps.hlsl
+│   ├── line_vs.hlsl
+│   ├── line_ps.hlsl
+│   ├── terrain_vs.hlsl
+│   └── terrain_ps.hlsl
 ├── src/
 │   ├── main.cpp
 │   ├── App.h / App.cpp
+│   ├── editor/
+│   │   ├── EditorState.h
+│   │   ├── PolylineEditor.h / .cpp
+│   │   └── RoadData.h / .cpp
 │   ├── renderer/
 │   │   ├── D3D11Context.h / .cpp
 │   │   ├── Shader.h / .cpp
-│   │   └── Buffer.h
+│   │   ├── Buffer.h
+│   │   └── DebugDraw.h / .cpp
 │   ├── scene/
 │   │   ├── Camera.h / .cpp
-│   │   └── Grid.h / .cpp
+│   │   ├── Grid.h / .cpp
+│   │   └── Terrain.h / .cpp
 │   └── ui/
 │       └── ImGuiLayer.h / .cpp
-└── data/                   # (Phase 2+) heightmap images
 ```
+
+## メモ
+
+- 初回ロード前でも Terrain パネルの `Divisions` と `Size` を設定できます。
+- ロード後も UI は切り替わらず、同じ項目で地形パラメータを編集できます。
+- `build\Debug\RoadEditor.exe` の出力先は環境や CMake ジェネレータによって変わる場合があります。
 
 ## ライセンス
 

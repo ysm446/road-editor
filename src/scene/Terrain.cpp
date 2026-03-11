@@ -69,65 +69,19 @@ void Terrain::GenerateProcedural(ID3D11Device* device, int width, int height)
 // ---------------------------------------------------------------------------
 // Load from greyscale image file
 // ---------------------------------------------------------------------------
-bool Terrain::LoadFromFile(ID3D11Device* device, const char* path,
-                           int targetW, int targetH)
+bool Terrain::LoadFromFile(ID3D11Device* device, const char* path)
 {
     int w, h, ch;
     stbi_uc* data = stbi_load(path, &w, &h, &ch, 1); // force 1-channel
     if (!data)
         return false;
 
-    // Build normalised source heights
-    std::vector<float> src(w * h);
+    m_rawW = w;
+    m_rawH = h;
+    m_rawHeights.resize(w * h);
     for (int i = 0; i < w * h; ++i)
-        src[i] = data[i] / 255.0f;
+        m_rawHeights[i] = data[i] / 255.0f;
     stbi_image_free(data);
-
-    // Determine output resolution
-    int dstW = (targetW > 1) ? targetW : w;
-    int dstH = (targetH > 1) ? targetH : h;
-
-    if (dstW == w && dstH == h)
-    {
-        // No resampling needed
-        m_rawW = w;
-        m_rawH = h;
-        m_rawHeights = std::move(src);
-    }
-    else
-    {
-        // Bilinear resample src(w x h) -> dst(dstW x dstH)
-        m_rawW = dstW;
-        m_rawH = dstH;
-        m_rawHeights.resize(dstW * dstH);
-
-        for (int row = 0; row < dstH; ++row)
-        {
-            float v = static_cast<float>(row) / (dstH - 1) * (h - 1);
-            int   r0 = static_cast<int>(v);
-            int   r1 = r0 + 1;
-            if (r1 >= h) r1 = h - 1;
-            float fr = v - r0;
-
-            for (int col = 0; col < dstW; ++col)
-            {
-                float u  = static_cast<float>(col) / (dstW - 1) * (w - 1);
-                int   c0 = static_cast<int>(u);
-                int   c1 = c0 + 1;
-                if (c1 >= w) c1 = w - 1;
-                float fc = u - c0;
-
-                float h00 = src[r0 * w + c0];
-                float h10 = src[r0 * w + c1];
-                float h01 = src[r1 * w + c0];
-                float h11 = src[r1 * w + c1];
-
-                float h0 = h00 + (h10 - h00) * fc;
-                float h1 = h01 + (h11 - h01) * fc;
-                m_rawHeights[row * dstW + col] = h0 + (h1 - h0) * fr;
-            }
-        }
-    }
 
     BuildMesh(device);
     return true;
@@ -156,17 +110,45 @@ void Terrain::BuildMesh(ID3D11Device* device)
     m_indexCount = 0;
     m_ready      = false;
 
-    const int   W      = m_rawW;
-    const int   H      = m_rawH;
+    // meshSubdivW/H are cell counts. Vertex count is cells + 1.
+    const int   cellsW = (meshSubdivW > 0) ? meshSubdivW : (m_rawW - 1);
+    const int   cellsH = (meshSubdivH > 0) ? meshSubdivH : (m_rawH - 1);
+    const int   W      = cellsW + 1;
+    const int   H      = cellsH + 1;
+    m_meshW = W;
+    m_meshH = H;
+
     const float sX     = horizontalScaleX;
     const float sZ     = horizontalScaleZ;
     const float vScale = heightScale;
 
+    // Sample m_rawHeights via bilinear interpolation at mesh (col, row)
+    auto sampleRaw = [&](float u, float v) -> float
+    {
+        // u,v in [0,1]
+        float fc = u * (m_rawW - 1);
+        float fr = v * (m_rawH - 1);
+        int c0 = static_cast<int>(fc); if (c0 >= m_rawW - 1) c0 = m_rawW - 2;
+        int r0 = static_cast<int>(fr); if (r0 >= m_rawH - 1) r0 = m_rawH - 2;
+        int c1 = c0 + 1;
+        int r1 = r0 + 1;
+        float dc = fc - c0;
+        float dr = fr - r0;
+        float h00 = m_rawHeights[r0 * m_rawW + c0];
+        float h10 = m_rawHeights[r0 * m_rawW + c1];
+        float h01 = m_rawHeights[r1 * m_rawW + c0];
+        float h11 = m_rawHeights[r1 * m_rawW + c1];
+        return (h00 + (h10 - h00) * dc) * (1.0f - dr)
+             + (h01 + (h11 - h01) * dc) * dr;
+    };
+
     auto getH = [&](int col, int row) -> float
     {
-        col = std::clamp(col, 0, W - 1);
-        row = std::clamp(row, 0, H - 1);
-        return m_rawHeights[row * W + col] * vScale;
+        if (col < 0) col = 0; if (col >= W) col = W - 1;
+        if (row < 0) row = 0; if (row >= H) row = H - 1;
+        float u = (W > 1) ? static_cast<float>(col) / (W - 1) : 0.5f;
+        float v = (H > 1) ? static_cast<float>(row) / (H - 1) : 0.5f;
+        return sampleRaw(u, v) * vScale;
     };
 
     // Build vertices
