@@ -75,6 +75,8 @@ void App::ApplyTerrainSettings()
     m_terrain->horizontalScaleX = m_loadWidthM / static_cast<float>((cellsW > 0) ? cellsW : 1);
     m_terrain->horizontalScaleZ = m_loadDepthM / static_cast<float>((cellsH > 0) ? cellsH : 1);
     m_terrain->heightScale      = m_loadHeightM;
+    m_terrain->offsetX          = m_loadOffsetX;
+    m_terrain->offsetZ          = m_loadOffsetZ;
     m_terrain->Rebuild(m_d3d->GetDevice());
 }
 
@@ -103,6 +105,8 @@ bool App::SaveProject(const char* path)
             { "widthM",      m_loadWidthM             },
             { "depthM",      m_loadDepthM             },
             { "heightM",     m_loadHeightM            },
+            { "offsetX",     m_loadOffsetX            },
+            { "offsetZ",     m_loadOffsetZ            },
             { "visible",     m_terrain->visible       },
             { "wireframe",   m_terrain->wireframe     }
         };
@@ -156,6 +160,8 @@ bool App::LoadProject(const char* path)
             m_loadWidthM  = t.value("widthM", 255.0f);
             m_loadDepthM  = t.value("depthM", 255.0f);
             m_loadHeightM = t.value("heightM", 100.0f);
+            m_loadOffsetX = t.value("offsetX", 0.0f);
+            m_loadOffsetZ = t.value("offsetZ", 0.0f);
             m_terrain->visible   = t.value("visible", true);
             m_terrain->wireframe = t.value("wireframe", false);
 
@@ -521,7 +527,7 @@ void App::Render()
         bool applyToCurrentTerrain = false;
 
         int loadDivisions[2] = { m_loadResW, m_loadResH };
-        ImGui::InputInt2("Divisions X / Y", loadDivisions);
+        ImGui::InputInt2("Divisions X / Z", loadDivisions);
         m_loadResW = loadDivisions[0];
         m_loadResH = loadDivisions[1];
         if (ImGui::IsItemDeactivatedAfterEdit())
@@ -533,7 +539,7 @@ void App::Render()
         if (m_loadResH > 4096) m_loadResH = 4096;
 
         float loadSizeM[3] = { m_loadWidthM, m_loadDepthM, m_loadHeightM };
-        ImGui::InputFloat3("Size W / D / H (m)", loadSizeM, "%.0f");
+        ImGui::InputFloat3("Size X / Z / Y (m)", loadSizeM, "%.0f");
         m_loadWidthM  = loadSizeM[0];
         m_loadDepthM  = loadSizeM[1];
         m_loadHeightM = loadSizeM[2];
@@ -542,6 +548,13 @@ void App::Render()
         if (m_loadWidthM < 1.0f) m_loadWidthM = 1.0f;
         if (m_loadDepthM < 1.0f) m_loadDepthM = 1.0f;
         if (m_loadHeightM < 1.0f) m_loadHeightM = 1.0f;
+
+        float loadOffsetM[2] = { m_loadOffsetX, m_loadOffsetZ };
+        ImGui::InputFloat2("Offset X / Z (m)", loadOffsetM, "%.1f");
+        m_loadOffsetX = loadOffsetM[0];
+        m_loadOffsetZ = loadOffsetM[1];
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            applyToCurrentTerrain = true;
 
         if (applyToCurrentTerrain && m_terrain->IsReady())
             ApplyTerrainSettings();

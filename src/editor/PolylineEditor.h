@@ -65,7 +65,7 @@ public:
 
     // Save / load
     bool Save(const char* path) const { return m_network->SaveToFile(path); }
-    bool Load(const char* path) { return m_network->LoadFromFile(path); }
+    bool Load(const char* path);
     const char* GetFilePath() const { return m_filePath; }
     void SetFilePath(const char* path) { strncpy_s(m_filePath, sizeof(m_filePath), path, _TRUNCATE); }
     bool ConsumeStatusMessage(std::string& outMessage);
@@ -88,6 +88,10 @@ private:
                                int vpW, int vpH,
                                DirectX::XMFLOAT2 px,
                                DirectX::XMMATRIX viewProj) const;
+    int FindNearestSegmentOnRoad(int roadIndex,
+                                 int vpW, int vpH,
+                                 DirectX::XMFLOAT2 px,
+                                 DirectX::XMMATRIX viewProj) const;
     int FindNearestRoad(int vpW, int vpH,
                         DirectX::XMFLOAT2 px,
                         DirectX::XMMATRIX viewProj) const;
@@ -115,6 +119,25 @@ private:
                                  GizmoAxis axis,
                                  DirectX::XMMATRIX viewProj,
                                  int vpW, int vpH) const;
+    void PushUndoState();
+    void Undo();
+    void Redo();
+    void ClearHistory();
+
+    struct EditorSnapshot
+    {
+        RoadNetwork network;
+        EditorMode  mode = EditorMode::Navigate;
+        int activeRoad = -1;
+        int activePoint = -1;
+        int activeGroup = -1;
+        int activeIntersection = -1;
+        int hoverSnapIntersection = -1;
+        float defaultWidth = 3.0f;
+        bool snapToTerrain = true;
+    };
+    EditorSnapshot CaptureSnapshot() const;
+    void RestoreSnapshot(const EditorSnapshot& snapshot);
 
     Terrain*     m_terrain = nullptr;
     RoadNetwork* m_network = nullptr;
@@ -152,4 +175,8 @@ private:
     // Save/load path buffer
     char m_filePath[260] = "data/roads.json";
     std::string m_statusMessage;
+    std::vector<EditorSnapshot> m_undoStack;
+    std::vector<EditorSnapshot> m_redoStack;
+    bool m_prevUndoShortcut = false;
+    bool m_prevRedoShortcut = false;
 };

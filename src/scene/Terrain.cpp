@@ -121,6 +121,8 @@ void Terrain::BuildMesh(ID3D11Device* device)
     const float sX     = horizontalScaleX;
     const float sZ     = horizontalScaleZ;
     const float vScale = heightScale;
+    const float offX   = offsetX;
+    const float offZ   = offsetZ;
 
     // Sample m_rawHeights via bilinear interpolation at mesh (col, row)
     auto sampleRaw = [&](float u, float v) -> float
@@ -160,8 +162,8 @@ void Terrain::BuildMesh(ID3D11Device* device)
         for (int col = 0; col < W; ++col)
         {
             float y = getH(col, row);
-            float x = (col - (W - 1) * 0.5f) * sX;
-            float z = (row - (H - 1) * 0.5f) * sZ;
+            float x = (col - (W - 1) * 0.5f) * sX + offX;
+            float z = (row - (H - 1) * 0.5f) * sZ + offZ;
 
             // Finite-difference normal (tangents scaled by cell size)
             float hL = getH(col - 1, row);
@@ -250,8 +252,8 @@ float Terrain::GetHeightAt(float worldX, float worldZ) const
     const float vScale = heightScale;
 
     // Inverse of BuildMesh vertex placement. Convert world XZ -> mesh grid col/row.
-    float meshCol = worldX / horizontalScaleX + (m_meshW - 1) * 0.5f;
-    float meshRow = worldZ / horizontalScaleZ + (m_meshH - 1) * 0.5f;
+    float meshCol = (worldX - offsetX) / horizontalScaleX + (m_meshW - 1) * 0.5f;
+    float meshRow = (worldZ - offsetZ) / horizontalScaleZ + (m_meshH - 1) * 0.5f;
     meshCol = std::clamp(meshCol, 0.0f, static_cast<float>(m_meshW - 1));
     meshRow = std::clamp(meshRow, 0.0f, static_cast<float>(m_meshH - 1));
 

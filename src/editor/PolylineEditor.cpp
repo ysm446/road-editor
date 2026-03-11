@@ -7,6 +7,11 @@
 
 using namespace DirectX;
 
+namespace
+{
+constexpr size_t kMaxUndoStates = 128;
+}
+
 bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
 {
     if (m_statusMessage.empty())
@@ -15,6 +20,88 @@ bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
     outMessage = m_statusMessage;
     m_statusMessage.clear();
     return true;
+}
+
+bool PolylineEditor::Load(const char* path)
+{
+    if (!m_network->LoadFromFile(path))
+        return false;
+
+    ClearHistory();
+    SanitizeSelection();
+    return true;
+}
+
+PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
+{
+    EditorSnapshot snapshot;
+    snapshot.network = *m_network;
+    snapshot.mode = m_mode;
+    snapshot.activeRoad = m_activeRoad;
+    snapshot.activePoint = m_activePoint;
+    snapshot.activeGroup = m_activeGroup;
+    snapshot.activeIntersection = m_activeIntersection;
+    snapshot.hoverSnapIntersection = m_hoverSnapIntersection;
+    snapshot.defaultWidth = m_defaultWidth;
+    snapshot.snapToTerrain = m_snapToTerrain;
+    return snapshot;
+}
+
+void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
+{
+    *m_network = snapshot.network;
+    m_mode = snapshot.mode;
+    m_activeRoad = snapshot.activeRoad;
+    m_activePoint = snapshot.activePoint;
+    m_activeGroup = snapshot.activeGroup;
+    m_activeIntersection = snapshot.activeIntersection;
+    m_hoverSnapIntersection = snapshot.hoverSnapIntersection;
+    m_defaultWidth = snapshot.defaultWidth;
+    m_snapToTerrain = snapshot.snapToTerrain;
+
+    m_dragging = false;
+    m_activeGizmoAxis = GizmoAxis::None;
+    SanitizeSelection();
+}
+
+void PolylineEditor::PushUndoState()
+{
+    if (!m_network)
+        return;
+
+    if (m_undoStack.size() >= kMaxUndoStates)
+        m_undoStack.erase(m_undoStack.begin());
+
+    m_undoStack.push_back(CaptureSnapshot());
+    m_redoStack.clear();
+}
+
+void PolylineEditor::Undo()
+{
+    if (m_undoStack.empty() || !m_network)
+        return;
+
+    m_redoStack.push_back(CaptureSnapshot());
+    RestoreSnapshot(m_undoStack.back());
+    m_undoStack.pop_back();
+    m_statusMessage = "Undo";
+}
+
+void PolylineEditor::Redo()
+{
+    if (m_redoStack.empty() || !m_network)
+        return;
+
+    m_undoStack.push_back(CaptureSnapshot());
+    RestoreSnapshot(m_redoStack.back());
+    m_redoStack.pop_back();
+    m_statusMessage = "Redo";
+}
+
+void PolylineEditor::ClearHistory()
+{
+    m_undoStack.clear();
+    m_redoStack.clear();
 }
 
 void PolylineEditor::SanitizeSelection()
@@ -210,6 +297,35 @@ int PolylineEditor::FindNearestPointOnRoad(
     }
 
     return bestPt;
+}
+
+int PolylineEditor::FindNearestSegmentOnRoad(
+    int roadIndex, int vpW, int vpH, XMFLOAT2 px, XMMATRIX viewProj) const
+{
+    if (roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return -1;
+
+    const Road& road = m_network->roads[roadIndex];
+    const float threshold = 10.0f;
+    float bestDist = threshold;
+    int bestSegment = -1;
+
+    for (int p = 0; p + 1 < static_cast<int>(road.points.size()); ++p)
+    {
+        const XMFLOAT2 a = WorldToScreen(road.points[p].pos, viewProj, vpW, vpH);
+        const XMFLOAT2 b = WorldToScreen(road.points[p + 1].pos, viewProj, vpW, vpH);
+        if (a.x < 0.0f || b.x < 0.0f)
+            continue;
+
+        const float d = DistPointToSegment2D(px, a, b);
+        if (d < bestDist)
+        {
+            bestDist = d;
+            bestSegment = p;
+        }
+    }
+
+    return bestSegment;
 }
 
 int PolylineEditor::FindNearestRoad(
@@ -537,6 +653,7 @@ void PolylineEditor::SetMode(EditorMode mode)
 void PolylineEditor::StartNewRoad()
 {
     m_network->EnsureDefaultGroup();
+    PushUndoState();
     m_activeRoad  = m_network->AddRoad("Road " +
         std::to_string(m_network->roads.size()));
     if (m_activeGroup >= 0 &&
@@ -559,7 +676,10 @@ void PolylineEditor::ConfirmRoad()
             m_activeRoad < static_cast<int>(m_network->roads.size()))
         {
             if (!m_network->roads[m_activeRoad].IsValid())
+            {
+                PushUndoState();
                 m_network->RemoveRoad(m_activeRoad);
+            }
         }
         m_activeRoad  = -1;
         m_activePoint = -1;
@@ -574,6 +694,7 @@ void PolylineEditor::CancelRoad()
         if (m_activeRoad >= 0 &&
             m_activeRoad < static_cast<int>(m_network->roads.size()))
         {
+            PushUndoState();
             m_network->RemoveRoad(m_activeRoad);
         }
         m_activeRoad  = -1;
@@ -620,6 +741,31 @@ void PolylineEditor::Update(int vpW, int vpH,
     m_hasCursorPos = hasHit;
     m_cursorPos    = hitPos;
 
+    const bool ctrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+    const bool zDown = (GetAsyncKeyState('Z') & 0x8000) != 0;
+    const bool yDown = (GetAsyncKeyState('Y') & 0x8000) != 0;
+    const bool undoShortcut = ctrlDown && zDown;
+    const bool redoShortcut = ctrlDown && yDown;
+    if (!ImGui::GetIO().WantTextInput)
+    {
+        if (undoShortcut && !m_prevUndoShortcut)
+        {
+            Undo();
+            m_prevUndoShortcut = undoShortcut;
+            m_prevRedoShortcut = redoShortcut;
+            return;
+        }
+        if (redoShortcut && !m_prevRedoShortcut)
+        {
+            Redo();
+            m_prevUndoShortcut = undoShortcut;
+            m_prevRedoShortcut = redoShortcut;
+            return;
+        }
+    }
+    m_prevUndoShortcut = undoShortcut;
+    m_prevRedoShortcut = redoShortcut;
+
     if (wPress)
     {
         if (m_mode == EditorMode::PointEdit || m_mode == EditorMode::IntersectionEdit)
@@ -642,6 +788,40 @@ void PolylineEditor::Update(int vpW, int vpH,
     if (m_mode == EditorMode::Navigate)
     {
         const XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
+        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+            m_activeIntersection >= 0 &&
+            m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+        {
+            PushUndoState();
+            const std::string removedId = m_network->intersections[m_activeIntersection].id;
+            for (Road& road : m_network->roads)
+            {
+                if (road.startIntersectionId == removedId)
+                    road.startIntersectionId.clear();
+                if (road.endIntersectionId == removedId)
+                    road.endIntersectionId.clear();
+            }
+            m_network->RemoveIntersection(m_activeIntersection);
+            m_activeIntersection = -1;
+            m_hoverSnapIntersection = -1;
+            m_statusMessage = "Intersection deleted";
+            return;
+        }
+
+        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+            m_activeRoad >= 0 &&
+            m_activePoint < 0 &&
+            m_activeRoad < static_cast<int>(m_network->roads.size()))
+        {
+            PushUndoState();
+            m_network->RemoveRoad(m_activeRoad);
+            m_activeRoad = -1;
+            m_activePoint = -1;
+            m_hoverSnapIntersection = -1;
+            m_statusMessage = "Road deleted";
+            return;
+        }
+
         if (lClick)
         {
             if (m_activeRoad >= 0)
@@ -690,6 +870,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_activeRoad >= 0 &&
             m_activeRoad < static_cast<int>(m_network->roads.size()))
         {
+            PushUndoState();
             RoadPoint rp;
             rp.pos   = hitPos;
             rp.width = m_defaultWidth;
@@ -710,6 +891,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         if (lClick && hasHit)
         {
             m_network->EnsureDefaultGroup();
+            PushUndoState();
             m_activeIntersection = m_network->AddIntersection(hitPos);
             if (m_activeGroup >= 0 &&
                 m_activeGroup < static_cast<int>(m_network->groups.size()) &&
@@ -831,11 +1013,13 @@ void PolylineEditor::Update(int vpW, int vpH,
             {
                 if (m_hoverSnapIntersection >= 0)
                 {
+                    PushUndoState();
                     SnapSelectedEndpointToIntersection(m_hoverSnapIntersection);
                     m_statusMessage = "Road endpoint connected";
                 }
                 else
                 {
+                    PushUndoState();
                     ClearSelectedRoadConnection();
                 }
             }
@@ -863,6 +1047,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                     {
                         m_planeDragStartHit = m_axisDragStartPos;
                     }
+                    PushUndoState();
                     m_dragging         = true;
                 }
             }
@@ -879,6 +1064,46 @@ void PolylineEditor::Update(int vpW, int vpH,
                     m_dragging         = false;
                     m_activeGizmoAxis  = GizmoAxis::None;
                     m_hoverSnapIntersection = -1;
+                }
+                else if (m_activeRoad >= 0 &&
+                         m_activeRoad < static_cast<int>(m_network->roads.size()) &&
+                         hasHit)
+                {
+                    Road& road = m_network->roads[m_activeRoad];
+                    const int segmentIndex =
+                        FindNearestSegmentOnRoad(m_activeRoad, vpW, vpH, mousePos, viewProj);
+                    if (segmentIndex >= 0)
+                    {
+                        PushUndoState();
+                        RoadPoint newPoint;
+                        newPoint.pos = hitPos;
+                        if (segmentIndex >= 0 &&
+                            segmentIndex + 1 < static_cast<int>(road.points.size()))
+                        {
+                            newPoint.width =
+                                0.5f * (road.points[segmentIndex].width +
+                                        road.points[segmentIndex + 1].width);
+                        }
+                        else
+                        {
+                            newPoint.width = m_defaultWidth;
+                        }
+
+                        road.points.insert(road.points.begin() + segmentIndex + 1, newPoint);
+                        m_activePoint = segmentIndex + 1;
+                        m_dragging = false;
+                        m_activeGizmoAxis = GizmoAxis::None;
+                        m_hoverSnapIntersection = -1;
+                        m_statusMessage = "Point inserted";
+                    }
+                    else
+                    {
+                        m_activePoint      = -1;
+                        m_dragging         = false;
+                        m_activeGizmoAxis  = GizmoAxis::None;
+                        m_hoverSnapIntersection = -1;
+                        m_mode             = EditorMode::Navigate;
+                    }
                 }
                 else
                 {
@@ -898,6 +1123,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_activePoint >= 0 &&
             m_activeRoad  < static_cast<int>(m_network->roads.size()))
         {
+            PushUndoState();
             Road& road = m_network->roads[m_activeRoad];
             if (m_activePoint < static_cast<int>(road.points.size()))
             {
@@ -1015,6 +1241,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 {
                     m_planeDragStartHit = m_axisDragStartPos;
                 }
+                PushUndoState();
                 m_dragging = true;
             }
             else
@@ -1033,6 +1260,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_activeIntersection >= 0 &&
             m_activeIntersection < static_cast<int>(m_network->intersections.size()))
         {
+            PushUndoState();
             const std::string removedId = m_network->intersections[m_activeIntersection].id;
             for (Road& road : m_network->roads)
             {
@@ -1411,26 +1639,31 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     }
 
     ImGui::Separator();
-    if (ImGui::Checkbox("Snap To Terrain", &m_snapToTerrain) &&
-        m_snapToTerrain && m_terrain && m_terrain->IsReady())
+    bool snapToTerrain = m_snapToTerrain;
+    if (ImGui::Checkbox("Snap To Terrain", &snapToTerrain))
     {
-        if (m_activeRoad >= 0 &&
-            m_activePoint >= 0 &&
-            m_activeRoad < static_cast<int>(m_network->roads.size()))
+        PushUndoState();
+        m_snapToTerrain = snapToTerrain;
+        if (m_snapToTerrain && m_terrain && m_terrain->IsReady())
         {
-            Road& road = m_network->roads[m_activeRoad];
-            if (m_activePoint < static_cast<int>(road.points.size()))
-                road.points[m_activePoint].pos.y =
-                    m_terrain->GetHeightAt(road.points[m_activePoint].pos.x,
-                                           road.points[m_activePoint].pos.z);
-        }
+            if (m_activeRoad >= 0 &&
+                m_activePoint >= 0 &&
+                m_activeRoad < static_cast<int>(m_network->roads.size()))
+            {
+                Road& road = m_network->roads[m_activeRoad];
+                if (m_activePoint < static_cast<int>(road.points.size()))
+                    road.points[m_activePoint].pos.y =
+                        m_terrain->GetHeightAt(road.points[m_activePoint].pos.x,
+                                               road.points[m_activePoint].pos.z);
+            }
 
-        if (m_activeIntersection >= 0 &&
-            m_activeIntersection < static_cast<int>(m_network->intersections.size()))
-        {
-            Intersection& isec = m_network->intersections[m_activeIntersection];
-            isec.pos.y = m_terrain->GetHeightAt(isec.pos.x, isec.pos.z);
-            SyncRoadConnectionsForIntersection(m_activeIntersection);
+            if (m_activeIntersection >= 0 &&
+                m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+            {
+                Intersection& isec = m_network->intersections[m_activeIntersection];
+                isec.pos.y = m_terrain->GetHeightAt(isec.pos.x, isec.pos.z);
+                SyncRoadConnectionsForIntersection(m_activeIntersection);
+            }
         }
     }
     ImGui::TextDisabled(m_snapToTerrain
@@ -1441,6 +1674,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     ImGui::Text("Groups (%d)", static_cast<int>(m_network->groups.size()));
     if (ImGui::Button("Add Group"))
     {
+        PushUndoState();
         const int newIndex = m_network->AddGroup(
             "Group " + std::to_string(m_network->groups.size()));
         m_activeGroup = newIndex;
@@ -1463,9 +1697,19 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             m_activeGroup = gi;
 
         ImGui::SameLine();
-        ImGui::Checkbox("##visible", &group.visible);
+        bool groupVisible = group.visible;
+        if (ImGui::Checkbox("##visible", &groupVisible))
+        {
+            PushUndoState();
+            group.visible = groupVisible;
+        }
         ImGui::SameLine();
-        ImGui::Checkbox("##locked", &group.locked);
+        bool groupLocked = group.locked;
+        if (ImGui::Checkbox("##locked", &groupLocked))
+        {
+            PushUndoState();
+            group.locked = groupLocked;
+        }
 
         if (ImGui::BeginPopupContextItem("GroupContext"))
         {
@@ -1507,6 +1751,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                     {
                         if (ImGui::MenuItem("Delete Road"))
                         {
+                            PushUndoState();
                             m_network->RemoveRoad(i);
                             if (m_activeRoad >= static_cast<int>(m_network->roads.size()))
                                 m_activeRoad = -1;
@@ -1545,6 +1790,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                     {
                         if (ImGui::MenuItem("Delete Intersection"))
                         {
+                            PushUndoState();
                             m_network->RemoveIntersection(i);
                             if (m_activeIntersection >= static_cast<int>(m_network->intersections.size()))
                                 m_activeIntersection = -1;
@@ -1562,6 +1808,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     ImGui::EndChild();
     if (groupToDelete >= 0)
     {
+        PushUndoState();
         m_network->RemoveGroup(groupToDelete);
         SanitizeSelection();
         m_statusMessage = "Group deleted";
@@ -1575,10 +1822,23 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         strncpy_s(groupNameBuf, sizeof(groupNameBuf), group.name.c_str(), _TRUNCATE);
         ImGui::Text("Active Group");
         if (ImGui::InputText("Name##group", groupNameBuf, sizeof(groupNameBuf)))
+        {
+            PushUndoState();
             group.name = groupNameBuf;
-        ImGui::Checkbox("Visible##group", &group.visible);
+        }
+        bool groupVisible = group.visible;
+        if (ImGui::Checkbox("Visible##group", &groupVisible))
+        {
+            PushUndoState();
+            group.visible = groupVisible;
+        }
         ImGui::SameLine();
-        ImGui::Checkbox("Locked##group", &group.locked);
+        bool groupLocked = group.locked;
+        if (ImGui::Checkbox("Locked##group", &groupLocked))
+        {
+            PushUndoState();
+            group.locked = groupLocked;
+        }
     }
 
     if (m_activeRoad >= 0 &&
@@ -1591,7 +1851,10 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         char roadNameBuf[128] = {};
         strncpy_s(roadNameBuf, sizeof(roadNameBuf), road.name.c_str(), _TRUNCATE);
         if (ImGui::InputText("Name##road", roadNameBuf, sizeof(roadNameBuf)))
+        {
+            PushUndoState();
             road.name = roadNameBuf;
+        }
 
         const RoadGroup* currentGroup = m_network->FindGroupById(road.groupId);
         const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
@@ -1603,6 +1866,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                 const bool selected = (road.groupId == group.id);
                 if (ImGui::Selectable(group.name.c_str(), selected))
                 {
+                    PushUndoState();
                     road.groupId = group.id;
                     m_activeGroup = gi;
                 }
@@ -1623,12 +1887,20 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         {
             RoadPoint& rp = road.points[m_activePoint];
             ImGui::Text("Point %d", m_activePoint);
-            if (ImGui::InputFloat3("Pos", &rp.pos.x) &&
-                m_snapToTerrain && m_terrain && m_terrain->IsReady())
+            float pointPos[3] = { rp.pos.x, rp.pos.y, rp.pos.z };
+            if (ImGui::InputFloat3("Pos", pointPos))
             {
-                rp.pos.y = m_terrain->GetHeightAt(rp.pos.x, rp.pos.z);
+                PushUndoState();
+                rp.pos = { pointPos[0], pointPos[1], pointPos[2] };
+                if (m_snapToTerrain && m_terrain && m_terrain->IsReady())
+                    rp.pos.y = m_terrain->GetHeightAt(rp.pos.x, rp.pos.z);
             }
-            ImGui::SliderFloat("Width##pt", &rp.width, 0.5f, 20.0f);
+            float pointWidth = rp.width;
+            if (ImGui::SliderFloat("Width##pt", &pointWidth, 0.5f, 20.0f))
+            {
+                PushUndoState();
+                rp.width = pointWidth;
+            }
             if (IsSelectedRoadEndpoint())
             {
                 std::string connectionId;
@@ -1639,6 +1911,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
 
                 if (ImGui::Button("Disconnect Endpoint"))
                 {
+                    PushUndoState();
                     ClearSelectedRoadConnection();
                     m_statusMessage = "Road endpoint disconnected";
                 }
@@ -1656,7 +1929,10 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         int typeIndex = (isec.type == "roundabout") ? 1 : 0;
         ImGui::Text("Intersection");
         if (ImGui::InputText("Name##isec", nameBuf, sizeof(nameBuf)))
+        {
+            PushUndoState();
             isec.name = nameBuf;
+        }
         const RoadGroup* currentGroup = m_network->FindGroupById(isec.groupId);
         const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
         if (ImGui::BeginCombo("Group##isec", preview))
@@ -1667,6 +1943,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                 const bool selected = (isec.groupId == group.id);
                 if (ImGui::Selectable(group.name.c_str(), selected))
                 {
+                    PushUndoState();
                     isec.groupId = group.id;
                     m_activeGroup = gi;
                 }
@@ -1676,14 +1953,25 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             ImGui::EndCombo();
         }
         if (ImGui::Combo("Type##isec", &typeIndex, kIntersectionTypes, IM_ARRAYSIZE(kIntersectionTypes)))
-            isec.type = kIntersectionTypes[typeIndex];
-        if (ImGui::InputFloat3("Pos##isec", &isec.pos.x) &&
-            m_snapToTerrain && m_terrain && m_terrain->IsReady())
         {
-            isec.pos.y = m_terrain->GetHeightAt(isec.pos.x, isec.pos.z);
+            PushUndoState();
+            isec.type = kIntersectionTypes[typeIndex];
+        }
+        float isecPos[3] = { isec.pos.x, isec.pos.y, isec.pos.z };
+        if (ImGui::InputFloat3("Pos##isec", isecPos))
+        {
+            PushUndoState();
+            isec.pos = { isecPos[0], isecPos[1], isecPos[2] };
+            if (m_snapToTerrain && m_terrain && m_terrain->IsReady())
+                isec.pos.y = m_terrain->GetHeightAt(isec.pos.x, isec.pos.z);
             SyncRoadConnectionsForIntersection(m_activeIntersection);
         }
-        ImGui::SliderFloat("Radius##isec", &isec.radius, 1.0f, 20.0f);
+        float isecRadius = isec.radius;
+        if (ImGui::SliderFloat("Radius##isec", &isecRadius, 1.0f, 20.0f))
+        {
+            PushUndoState();
+            isec.radius = isecRadius;
+        }
     }
 
     ImGui::Separator();

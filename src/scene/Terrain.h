@@ -55,6 +55,8 @@ public:
     float heightScale      = 100.0f;
     float horizontalScaleX =   1.0f;
     float horizontalScaleZ =   1.0f;
+    float offsetX          =   0.0f;
+    float offsetZ          =   0.0f;
     int   meshSubdivW      =   0;
     int   meshSubdivH      =   0;
     bool  wireframe        = false;

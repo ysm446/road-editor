@@ -63,6 +63,8 @@ private:
     float m_loadWidthM  = 255.0f;
     float m_loadDepthM  = 255.0f;
     float m_loadHeightM = 100.0f;
+    float m_loadOffsetX = 0.0f;
+    float m_loadOffsetZ = 0.0f;
 
     // Mouse-terrain intersection (updated each frame)
     bool              m_cursorHitValid = false;
