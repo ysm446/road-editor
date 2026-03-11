@@ -160,8 +160,8 @@ void Terrain::BuildMesh(ID3D11Device* device)
         for (int col = 0; col < W; ++col)
         {
             float y = getH(col, row);
-            float x = (col - W * 0.5f) * sX;
-            float z = (row - H * 0.5f) * sZ;
+            float x = (col - (W - 1) * 0.5f) * sX;
+            float z = (row - (H - 1) * 0.5f) * sZ;
 
             // Finite-difference normal (tangents scaled by cell size)
             float hL = getH(col - 1, row);
@@ -244,30 +244,31 @@ void Terrain::BuildMesh(ID3D11Device* device)
 // ---------------------------------------------------------------------------
 float Terrain::GetHeightAt(float worldX, float worldZ) const
 {
-    if (!m_ready || m_rawW < 2 || m_rawH < 2)
+    if (!m_ready || m_rawW < 2 || m_rawH < 2 || m_meshW < 2 || m_meshH < 2)
         return 0.0f;
 
     const float vScale = heightScale;
 
-    // Convert world XZ -> normalised grid col/row
-    float col = worldX / horizontalScaleX + m_rawW * 0.5f;
-    float row  = worldZ / horizontalScaleZ + m_rawH * 0.5f;
+    // Inverse of BuildMesh vertex placement. Convert world XZ -> mesh grid col/row.
+    float meshCol = worldX / horizontalScaleX + (m_meshW - 1) * 0.5f;
+    float meshRow = worldZ / horizontalScaleZ + (m_meshH - 1) * 0.5f;
+    meshCol = std::clamp(meshCol, 0.0f, static_cast<float>(m_meshW - 1));
+    meshRow = std::clamp(meshRow, 0.0f, static_cast<float>(m_meshH - 1));
+
+    // Remap mesh col/row to raw heightmap texel space.
+    float col = (m_meshW > 1) ? meshCol / (m_meshW - 1) * (m_rawW - 1) : 0.0f;
+    float row = (m_meshH > 1) ? meshRow / (m_meshH - 1) * (m_rawH - 1) : 0.0f;
 
     int c0 = static_cast<int>(col);
     int r0 = static_cast<int>(row);
-    int c1 = c0 + 1;
-    int r1 = r0 + 1;
+    int c1 = (std::min)(c0 + 1, m_rawW - 1);
+    int r1 = (std::min)(r0 + 1, m_rawH - 1);
 
-    // Clamp
     c0 = std::clamp(c0, 0, m_rawW - 1);
-    c1 = std::clamp(c1, 0, m_rawW - 1);
     r0 = std::clamp(r0, 0, m_rawH - 1);
-    r1 = std::clamp(r1, 0, m_rawH - 1);
 
-    float fc = col - static_cast<int>(col);
-    float fr = row - static_cast<int>(row);
-    fc = std::clamp(fc, 0.0f, 1.0f);
-    fr = std::clamp(fr, 0.0f, 1.0f);
+    float fc = std::clamp(col - c0, 0.0f, 1.0f);
+    float fr = std::clamp(row - r0, 0.0f, 1.0f);
 
     float h00 = m_rawHeights[r0 * m_rawW + c0] * vScale;
     float h10 = m_rawHeights[r0 * m_rawW + c1] * vScale;

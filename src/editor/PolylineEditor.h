@@ -33,6 +33,7 @@ public:
     // Selection
     int  GetActiveRoadIndex()  const { return m_activeRoad;  }
     int  GetActivePointIndex() const { return m_activePoint; }
+    int  GetActiveIntersectionIndex() const { return m_activeIntersection; }
 
     // --- Per-frame update ---
     // Call after camera input, before rendering.
@@ -82,6 +83,26 @@ private:
                           DirectX::XMFLOAT2 px,
                           DirectX::XMMATRIX viewProj,
                           int& outRoad, int& outPt) const;
+    int FindNearestPointOnRoad(int roadIndex,
+                               int vpW, int vpH,
+                               DirectX::XMFLOAT2 px,
+                               DirectX::XMMATRIX viewProj) const;
+    int FindNearestRoad(int vpW, int vpH,
+                        DirectX::XMFLOAT2 px,
+                        DirectX::XMMATRIX viewProj) const;
+    int FindNearestIntersection(int vpW, int vpH,
+                                DirectX::XMFLOAT2 px,
+                                DirectX::XMMATRIX viewProj) const;
+    int FindIntersectionIndexById(const std::string& id) const;
+    bool IsSelectedRoadEndpoint() const;
+    bool GetSelectedRoadConnectionId(std::string& outId) const;
+    void SetSelectedRoadConnectionId(const std::string& intersectionId);
+    void ClearSelectedRoadConnection();
+    int FindSnapIntersectionForSelectedEndpoint(int vpW, int vpH,
+                                                DirectX::XMMATRIX viewProj) const;
+    void SnapSelectedEndpointToIntersection(int intersectionIndex);
+    void SyncRoadConnectionsForIntersection(int intersectionIndex);
+    bool GetActiveGizmoPivot(DirectX::XMFLOAT3& outPivot) const;
     GizmoAxis PickGizmoAxis(int vpW, int vpH,
                             DirectX::XMFLOAT2 px,
                             DirectX::XMMATRIX viewProj) const;
@@ -98,6 +119,8 @@ private:
     // Index of road being drawn / edited
     int m_activeRoad  = -1;
     int m_activePoint = -1;   // selected point in PointEdit mode
+    int m_activeIntersection = -1;
+    int m_hoverSnapIntersection = -1;
 
     // Drag state
     bool              m_dragging          = false;
@@ -114,9 +137,11 @@ private:
 
     // Track left-button state for click detection
     bool m_prevLButton = false;
+    bool m_prevWKey    = false;
 
     // Default width for new points
     float m_defaultWidth = 3.0f;
+    bool  m_snapToTerrain = true;
 
     // Save/load path buffer
     char m_filePath[260] = "data/roads.json";

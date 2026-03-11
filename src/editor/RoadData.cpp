@@ -12,15 +12,32 @@ using namespace DirectX;
 int RoadNetwork::AddRoad(const std::string& name)
 {
     Road r;
+    r.id = "road_" + std::to_string(roads.size());
     r.name = name;
     roads.push_back(std::move(r));
     return static_cast<int>(roads.size()) - 1;
+}
+
+int RoadNetwork::AddIntersection(XMFLOAT3 pos, const std::string& name)
+{
+    Intersection i;
+    i.id   = "isec_" + std::to_string(intersections.size());
+    i.name = name + " " + std::to_string(intersections.size());
+    i.pos  = pos;
+    intersections.push_back(std::move(i));
+    return static_cast<int>(intersections.size()) - 1;
 }
 
 void RoadNetwork::RemoveRoad(int index)
 {
     if (index >= 0 && index < static_cast<int>(roads.size()))
         roads.erase(roads.begin() + index);
+}
+
+void RoadNetwork::RemoveIntersection(int index)
+{
+    if (index >= 0 && index < static_cast<int>(intersections.size()))
+        intersections.erase(intersections.begin() + index);
 }
 
 // ---------------------------------------------------------------------------
@@ -50,23 +67,51 @@ static nlohmann::json RoadToJson(const Road& r)
         pts.push_back(PointToJson(p));
 
     return {
+        { "id",     r.id     },
         { "name",   r.name   },
         { "closed", r.closed },
-        { "points", pts      }
+        { "points", pts      },
+        { "startIntersectionId", r.startIntersectionId },
+        { "endIntersectionId",   r.endIntersectionId   }
     };
 }
 
 static Road RoadFromJson(const nlohmann::json& j)
 {
     Road r;
+    r.id     = j.value("id", std::string());
     r.name   = j.value("name",   "Road");
     r.closed = j.value("closed", false);
+    r.startIntersectionId = j.value("startIntersectionId", std::string());
+    r.endIntersectionId   = j.value("endIntersectionId", std::string());
     if (j.contains("points"))
     {
         for (const auto& p : j["points"])
             r.points.push_back(PointFromJson(p));
     }
     return r;
+}
+
+static nlohmann::json IntersectionToJson(const Intersection& i)
+{
+    return {
+        { "id",     i.id     },
+        { "name",   i.name   },
+        { "x",      i.pos.x  },
+        { "y",      i.pos.y  },
+        { "z",      i.pos.z  },
+        { "radius", i.radius }
+    };
+}
+
+static Intersection IntersectionFromJson(const nlohmann::json& j)
+{
+    Intersection i;
+    i.id     = j.value("id", std::string());
+    i.name   = j.value("name", std::string("Intersection"));
+    i.pos    = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
+    i.radius = j.value("radius", 4.0f);
+    return i;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,8 +123,11 @@ bool RoadNetwork::SaveToFile(const char* path) const
         nlohmann::json root;
         root["version"] = 1;
         root["roads"]   = nlohmann::json::array();
+        root["intersections"] = nlohmann::json::array();
         for (const auto& r : roads)
             root["roads"].push_back(RoadToJson(r));
+        for (const auto& i : intersections)
+            root["intersections"].push_back(IntersectionToJson(i));
 
         std::ofstream ofs(path);
         if (!ofs)
@@ -105,10 +153,16 @@ bool RoadNetwork::LoadFromFile(const char* path)
         ifs >> root;
 
         roads.clear();
+        intersections.clear();
         if (root.contains("roads"))
         {
             for (const auto& r : root["roads"])
                 roads.push_back(RoadFromJson(r));
+        }
+        if (root.contains("intersections"))
+        {
+            for (const auto& i : root["intersections"])
+                intersections.push_back(IntersectionFromJson(i));
         }
         return true;
     }
