@@ -1,0 +1,40 @@
+# Build output
+build/
+out/
+bin/
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+
+# FetchContent dependencies
+_deps/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Visual Studio Code
+.vscode/
+
+# Compiled shader objects (runtime-compiled, not needed in repo)
+*.cso
+*.fxo
+
+# User data (heightmaps, road files)
+/data/
+
+# OS
+Thumbs.db
+.DS_Store
