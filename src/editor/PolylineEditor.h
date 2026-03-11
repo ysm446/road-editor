@@ -80,6 +80,7 @@ public:
     bool GetFocusTarget(DirectX::XMFLOAT3& outTarget) const;
     void SetShowRoadNames(bool show) { m_showRoadNames = show; }
     void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
+    void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }
     void RecordUndoState() { PushUndoState(); }
 
 private:
@@ -219,6 +220,7 @@ private:
     std::string m_statusMessage;
     bool m_showRoadNames = false;
     bool m_showIntersectionNames = true;
+    bool m_showRoadPreviewMetrics = false;
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
     bool m_prevUndoShortcut = false;

@@ -457,6 +457,7 @@ void App::LoadViewSettings()
 {
     m_showRoadNames = false;
     m_showIntersectionNames = true;
+    m_showRoadPreviewMetrics = false;
 
     try
     {
@@ -467,6 +468,7 @@ void App::LoadViewSettings()
             ifs >> root;
             m_showRoadNames = root.value("showRoadNames", false);
             m_showIntersectionNames = root.value("showIntersectionNames", true);
+            m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
         }
     }
     catch (...)
@@ -475,6 +477,7 @@ void App::LoadViewSettings()
 
     m_editor.SetShowRoadNames(m_showRoadNames);
     m_editor.SetShowIntersectionNames(m_showIntersectionNames);
+    m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
 }
 
 void App::SaveViewSettings() const
@@ -484,7 +487,8 @@ void App::SaveViewSettings() const
         nlohmann::json root =
         {
             { "showRoadNames", m_showRoadNames },
-            { "showIntersectionNames", m_showIntersectionNames }
+            { "showIntersectionNames", m_showIntersectionNames },
+            { "showRoadPreviewMetrics", m_showRoadPreviewMetrics }
         };
 
         std::ofstream ofs(kViewSettingsPath);
@@ -1060,6 +1064,12 @@ void App::Render()
             {
                 m_showIntersectionNames = !m_showIntersectionNames;
                 m_editor.SetShowIntersectionNames(m_showIntersectionNames);
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem("Road Preview Metrics", nullptr, m_showRoadPreviewMetrics))
+            {
+                m_showRoadPreviewMetrics = !m_showRoadPreviewMetrics;
+                m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
                 SaveViewSettings();
             }
             ImGui::MenuItem("ImGui Demo", nullptr, false, false);

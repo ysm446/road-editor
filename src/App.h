@@ -109,6 +109,7 @@ private:
     bool              m_prevFocusKey   = false;
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
+    bool              m_showRoadPreviewMetrics = false;
     bool              m_prevPathPickLButton = false;
     bool              m_showContours = false;
     float             m_contourInterval = 5.0f;

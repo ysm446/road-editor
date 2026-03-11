@@ -130,6 +130,55 @@ std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
     samples.push_back(road.points.back().pos);
     return samples;
 }
+
+float ComputePolylineLength(const std::vector<XMFLOAT3>& points)
+{
+    float length = 0.0f;
+    for (size_t i = 1; i < points.size(); ++i)
+        length += Distance3(points[i - 1], points[i]);
+    return length;
+}
+
+float ComputeAverageAbsoluteGradePercent(const std::vector<XMFLOAT3>& points)
+{
+    float totalHorizontalDistance = 0.0f;
+    float totalAbsoluteRise = 0.0f;
+    for (size_t i = 1; i < points.size(); ++i)
+    {
+        const float dx = points[i].x - points[i - 1].x;
+        const float dz = points[i].z - points[i - 1].z;
+        const float horizontalDistance = sqrtf(dx * dx + dz * dz);
+        if (horizontalDistance <= 1e-4f)
+            continue;
+
+        totalHorizontalDistance += horizontalDistance;
+        totalAbsoluteRise += fabsf(points[i].y - points[i - 1].y);
+    }
+
+    if (totalHorizontalDistance <= 1e-4f)
+        return 0.0f;
+
+    return (totalAbsoluteRise / totalHorizontalDistance) * 100.0f;
+}
+
+float ComputeMaxAbsoluteGradePercent(const std::vector<XMFLOAT3>& points)
+{
+    float maxGradePercent = 0.0f;
+    for (size_t i = 1; i < points.size(); ++i)
+    {
+        const float dx = points[i].x - points[i - 1].x;
+        const float dz = points[i].z - points[i - 1].z;
+        const float horizontalDistance = sqrtf(dx * dx + dz * dz);
+        if (horizontalDistance <= 1e-4f)
+            continue;
+
+        const float gradePercent =
+            (fabsf(points[i].y - points[i - 1].y) / horizontalDistance) * 100.0f;
+        maxGradePercent = (std::max)(maxGradePercent, gradePercent);
+    }
+
+    return maxGradePercent;
+}
 }
 
 bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
@@ -2422,7 +2471,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             dl->AddCircleFilled(sp, r, col, 20);
         }
 
-        if (m_showRoadNames && !road.name.empty() && !road.points.empty())
+        if ((m_showRoadNames || m_showRoadPreviewMetrics) && !road.points.empty())
         {
             XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
             for (const RoadPoint& point : road.points)
@@ -2438,8 +2487,33 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 
             ImVec2 labelPos;
             if (WorldToScreen(center, viewProj, vpW, vpH, labelPos))
-                dl->AddText(ImVec2(labelPos.x + 10.0f, labelPos.y - 8.0f),
-                            IM_COL32(255, 215, 90, 255), road.name.c_str());
+            {
+                const ImVec2 textPos(labelPos.x + 10.0f, labelPos.y - 8.0f);
+                if (m_showRoadNames && !road.name.empty())
+                    dl->AddText(textPos, IM_COL32(255, 215, 90, 255), road.name.c_str());
+
+                if (m_showRoadPreviewMetrics)
+                {
+                    const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+                    const float previewLength = ComputePolylineLength(previewCurve);
+                    const float averageGradePercent =
+                        ComputeAverageAbsoluteGradePercent(previewCurve);
+                    const float maxGradePercent =
+                        ComputeMaxAbsoluteGradePercent(previewCurve);
+                    char metricsBuf[128] = {};
+                    sprintf_s(
+                        metricsBuf,
+                        "%.0fm / %.1f%%(%.1f%%)",
+                        std::round(previewLength),
+                        averageGradePercent,
+                        maxGradePercent);
+                    const float metricsOffsetY = (m_showRoadNames && !road.name.empty()) ? 10.0f : 0.0f;
+                    dl->AddText(
+                        ImVec2(textPos.x, textPos.y + metricsOffsetY),
+                        IM_COL32(180, 245, 255, 255),
+                        metricsBuf);
+                }
+            }
         }
     }
 
