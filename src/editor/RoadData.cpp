@@ -37,6 +37,12 @@ void EnsureIntersectionId(Intersection& intersection)
     if (intersection.id.empty())
         intersection.id = GenerateUuidString();
 }
+
+void EnsureGroupId(RoadGroup& group)
+{
+    if (group.id.empty())
+        group.id = GenerateUuidString();
+}
 }
 
 // ---------------------------------------------------------------------------
@@ -45,22 +51,37 @@ void EnsureIntersectionId(Intersection& intersection)
 
 int RoadNetwork::AddRoad(const std::string& name)
 {
+    EnsureDefaultGroup();
+
     Road r;
     r.id = GenerateUuidString();
     r.name = name;
+    r.groupId = groups.front().id;
     roads.push_back(std::move(r));
     return static_cast<int>(roads.size()) - 1;
 }
 
 int RoadNetwork::AddIntersection(XMFLOAT3 pos, const std::string& name)
 {
+    EnsureDefaultGroup();
+
     Intersection i;
     i.id   = GenerateUuidString();
     i.name = name + " " + std::to_string(intersections.size());
+    i.groupId = groups.front().id;
     i.type = "intersection";
     i.pos  = pos;
     intersections.push_back(std::move(i));
     return static_cast<int>(intersections.size()) - 1;
+}
+
+int RoadNetwork::AddGroup(const std::string& name)
+{
+    RoadGroup group;
+    group.id = GenerateUuidString();
+    group.name = name;
+    groups.push_back(std::move(group));
+    return static_cast<int>(groups.size()) - 1;
 }
 
 void RoadNetwork::RemoveRoad(int index)
@@ -73,6 +94,79 @@ void RoadNetwork::RemoveIntersection(int index)
 {
     if (index >= 0 && index < static_cast<int>(intersections.size()))
         intersections.erase(intersections.begin() + index);
+}
+
+void RoadNetwork::RemoveGroup(int index)
+{
+    if (index < 0 || index >= static_cast<int>(groups.size()))
+        return;
+
+    EnsureDefaultGroup();
+    const std::string removedId = groups[index].id;
+    const std::string fallbackId =
+        (groups.size() > 1)
+        ? groups[(index == 0) ? 1 : 0].id
+        : groups[index].id;
+
+    if (groups.size() == 1)
+        return;
+
+    for (Road& road : roads)
+    {
+        if (road.groupId == removedId)
+            road.groupId = fallbackId;
+    }
+
+    for (Intersection& intersection : intersections)
+    {
+        if (intersection.groupId == removedId)
+            intersection.groupId = fallbackId;
+    }
+
+    groups.erase(groups.begin() + index);
+}
+
+int RoadNetwork::FindGroupIndexById(const std::string& id) const
+{
+    for (int i = 0; i < static_cast<int>(groups.size()); ++i)
+    {
+        if (groups[i].id == id)
+            return i;
+    }
+    return -1;
+}
+
+const RoadGroup* RoadNetwork::FindGroupById(const std::string& id) const
+{
+    const int index = FindGroupIndexById(id);
+    return (index >= 0) ? &groups[index] : nullptr;
+}
+
+RoadGroup* RoadNetwork::FindGroupById(const std::string& id)
+{
+    const int index = FindGroupIndexById(id);
+    return (index >= 0) ? &groups[index] : nullptr;
+}
+
+const RoadGroup* RoadNetwork::GetDefaultGroup() const
+{
+    return groups.empty() ? nullptr : &groups.front();
+}
+
+RoadGroup* RoadNetwork::GetDefaultGroup()
+{
+    return groups.empty() ? nullptr : &groups.front();
+}
+
+void RoadNetwork::EnsureDefaultGroup()
+{
+    if (!groups.empty())
+        return;
+
+    RoadGroup group;
+    group.id = GenerateUuidString();
+    group.name = "Default";
+    groups.push_back(std::move(group));
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +198,7 @@ static nlohmann::json RoadToJson(const Road& r)
     return {
         { "id",     r.id     },
         { "name",   r.name   },
+        { "groupId", r.groupId },
         { "closed", r.closed },
         { "points", pts      },
         { "startIntersectionId", r.startIntersectionId },
@@ -116,6 +211,7 @@ static Road RoadFromJson(const nlohmann::json& j)
     Road r;
     r.id     = j.value("id", std::string());
     r.name   = j.value("name",   "Road");
+    r.groupId = j.value("groupId", std::string());
     r.closed = j.value("closed", false);
     r.startIntersectionId = j.value("startIntersectionId", std::string());
     r.endIntersectionId   = j.value("endIntersectionId", std::string());
@@ -133,6 +229,7 @@ static nlohmann::json IntersectionToJson(const Intersection& i)
     return {
         { "id",     i.id     },
         { "name",   i.name   },
+        { "groupId", i.groupId },
         { "type",   i.type   },
         { "x",      i.pos.x  },
         { "y",      i.pos.y  },
@@ -146,11 +243,33 @@ static Intersection IntersectionFromJson(const nlohmann::json& j)
     Intersection i;
     i.id     = j.value("id", std::string());
     i.name   = j.value("name", std::string("Intersection"));
+    i.groupId = j.value("groupId", std::string());
     i.type   = j.value("type", std::string("intersection"));
     i.pos    = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
     i.radius = j.value("radius", 4.0f);
     EnsureIntersectionId(i);
     return i;
+}
+
+static nlohmann::json GroupToJson(const RoadGroup& group)
+{
+    return {
+        { "id", group.id },
+        { "name", group.name },
+        { "visible", group.visible },
+        { "locked", group.locked }
+    };
+}
+
+static RoadGroup GroupFromJson(const nlohmann::json& j)
+{
+    RoadGroup group;
+    group.id = j.value("id", std::string());
+    group.name = j.value("name", std::string("Group"));
+    group.visible = j.value("visible", true);
+    group.locked = j.value("locked", false);
+    EnsureGroupId(group);
+    return group;
 }
 
 // ---------------------------------------------------------------------------
@@ -160,9 +279,12 @@ bool RoadNetwork::SaveToFile(const char* path) const
     try
     {
         nlohmann::json root;
-        root["version"] = 1;
+        root["version"] = 2;
+        root["groups"] = nlohmann::json::array();
         root["roads"]   = nlohmann::json::array();
         root["intersections"] = nlohmann::json::array();
+        for (const auto& group : groups)
+            root["groups"].push_back(GroupToJson(group));
         for (const auto& r : roads)
             root["roads"].push_back(RoadToJson(r));
         for (const auto& i : intersections)
@@ -193,6 +315,13 @@ bool RoadNetwork::LoadFromFile(const char* path)
 
         roads.clear();
         intersections.clear();
+        groups.clear();
+        if (root.contains("groups"))
+        {
+            for (const auto& group : root["groups"])
+                groups.push_back(GroupFromJson(group));
+        }
+        EnsureDefaultGroup();
         if (root.contains("roads"))
         {
             for (const auto& r : root["roads"])
@@ -202,6 +331,18 @@ bool RoadNetwork::LoadFromFile(const char* path)
         {
             for (const auto& i : root["intersections"])
                 intersections.push_back(IntersectionFromJson(i));
+        }
+
+        const std::string defaultGroupId = groups.front().id;
+        for (Road& road : roads)
+        {
+            if (FindGroupIndexById(road.groupId) < 0)
+                road.groupId = defaultGroupId;
+        }
+        for (Intersection& intersection : intersections)
+        {
+            if (FindGroupIndexById(intersection.groupId) < 0)
+                intersection.groupId = defaultGroupId;
         }
         return true;
     }

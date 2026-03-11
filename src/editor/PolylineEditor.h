@@ -94,6 +94,10 @@ private:
     int FindNearestIntersection(int vpW, int vpH,
                                 DirectX::XMFLOAT2 px,
                                 DirectX::XMMATRIX viewProj) const;
+    int FindGroupIndexById(const std::string& id) const;
+    bool IsRoadVisible(const Road& road) const;
+    bool IsIntersectionVisible(const Intersection& intersection) const;
+    void SetActiveGroupById(const std::string& id);
     int FindIntersectionIndexById(const std::string& id) const;
     bool IsSelectedRoadEndpoint() const;
     bool GetSelectedRoadConnectionId(std::string& outId) const;
@@ -120,6 +124,7 @@ private:
     // Index of road being drawn / edited
     int m_activeRoad  = -1;
     int m_activePoint = -1;   // selected point in PointEdit mode
+    int m_activeGroup = -1;
     int m_activeIntersection = -1;
     int m_hoverSnapIntersection = -1;
 

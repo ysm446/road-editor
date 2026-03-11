@@ -19,6 +19,9 @@ bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
 
 void PolylineEditor::SanitizeSelection()
 {
+    if (m_activeGroup < 0 || m_activeGroup >= static_cast<int>(m_network->groups.size()))
+        m_activeGroup = m_network->groups.empty() ? -1 : 0;
+
     if (m_activeRoad < 0 || m_activeRoad >= static_cast<int>(m_network->roads.size()))
     {
         m_activeRoad = -1;
@@ -163,6 +166,8 @@ void PolylineEditor::FindNearestPoint(int vpW, int vpH, XMFLOAT2 px,
     for (int r = 0; r < static_cast<int>(m_network->roads.size()); ++r)
     {
         const Road& road = m_network->roads[r];
+        if (!IsRoadVisible(road))
+            continue;
         for (int p = 0; p < static_cast<int>(road.points.size()); ++p)
         {
             XMFLOAT2 sp = WorldToScreen(road.points[p].pos, viewProj, vpW, vpH);
@@ -217,6 +222,8 @@ int PolylineEditor::FindNearestRoad(
     for (int r = 0; r < static_cast<int>(m_network->roads.size()); ++r)
     {
         const Road& road = m_network->roads[r];
+        if (!IsRoadVisible(road))
+            continue;
         for (int p = 0; p + 1 < static_cast<int>(road.points.size()); ++p)
         {
             const XMFLOAT2 a = WorldToScreen(road.points[p].pos, viewProj, vpW, vpH);
@@ -245,6 +252,8 @@ int PolylineEditor::FindNearestIntersection(
 
     for (int i = 0; i < static_cast<int>(m_network->intersections.size()); ++i)
     {
+        if (!IsIntersectionVisible(m_network->intersections[i]))
+            continue;
         XMFLOAT2 sp = WorldToScreen(m_network->intersections[i].pos, viewProj, vpW, vpH);
         if (sp.x < 0.0f)
             continue;
@@ -258,6 +267,30 @@ int PolylineEditor::FindNearestIntersection(
     }
 
     return best;
+}
+
+int PolylineEditor::FindGroupIndexById(const std::string& id) const
+{
+    return m_network ? m_network->FindGroupIndexById(id) : -1;
+}
+
+bool PolylineEditor::IsRoadVisible(const Road& road) const
+{
+    const RoadGroup* group = m_network->FindGroupById(road.groupId);
+    return group == nullptr || group->visible;
+}
+
+bool PolylineEditor::IsIntersectionVisible(const Intersection& intersection) const
+{
+    const RoadGroup* group = m_network->FindGroupById(intersection.groupId);
+    return group == nullptr || group->visible;
+}
+
+void PolylineEditor::SetActiveGroupById(const std::string& id)
+{
+    m_activeGroup = FindGroupIndexById(id);
+    if (m_activeGroup < 0 && !m_network->groups.empty())
+        m_activeGroup = 0;
 }
 
 int PolylineEditor::FindIntersectionIndexById(const std::string& id) const
@@ -503,8 +536,16 @@ void PolylineEditor::SetMode(EditorMode mode)
 
 void PolylineEditor::StartNewRoad()
 {
+    m_network->EnsureDefaultGroup();
     m_activeRoad  = m_network->AddRoad("Road " +
         std::to_string(m_network->roads.size()));
+    if (m_activeGroup >= 0 &&
+        m_activeGroup < static_cast<int>(m_network->groups.size()) &&
+        m_activeRoad >= 0 &&
+        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        m_network->roads[m_activeRoad].groupId = m_network->groups[m_activeGroup].id;
+    }
     m_activePoint = -1;
     m_mode        = EditorMode::PolylineDraw;
 }
@@ -619,6 +660,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             if (selIntersection >= 0)
             {
                 m_activeIntersection = selIntersection;
+                SetActiveGroupById(m_network->intersections[selIntersection].groupId);
                 m_activeRoad = -1;
                 m_activePoint = -1;
                 return;
@@ -628,6 +670,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             if (selRoad >= 0)
             {
                 m_activeRoad = selRoad;
+                SetActiveGroupById(m_network->roads[selRoad].groupId);
                 m_activePoint = -1;
                 m_activeIntersection = -1;
                 return;
@@ -666,7 +709,16 @@ void PolylineEditor::Update(int vpW, int vpH,
     {
         if (lClick && hasHit)
         {
+            m_network->EnsureDefaultGroup();
             m_activeIntersection = m_network->AddIntersection(hitPos);
+            if (m_activeGroup >= 0 &&
+                m_activeGroup < static_cast<int>(m_network->groups.size()) &&
+                m_activeIntersection >= 0 &&
+                m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+            {
+                m_network->intersections[m_activeIntersection].groupId =
+                    m_network->groups[m_activeGroup].id;
+            }
             m_statusMessage = "Intersection placed";
         }
 
@@ -823,6 +875,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 {
                     m_activeRoad       = selRoad;
                     m_activePoint      = selPt;
+                    SetActiveGroupById(m_network->roads[selRoad].groupId);
                     m_dragging         = false;
                     m_activeGizmoAxis  = GizmoAxis::None;
                     m_hoverSnapIntersection = -1;
@@ -967,6 +1020,8 @@ void PolylineEditor::Update(int vpW, int vpH,
             else
             {
                 m_activeIntersection = FindNearestIntersection(vpW, vpH, mousePos, viewProj);
+                if (m_activeIntersection >= 0)
+                    SetActiveGroupById(m_network->intersections[m_activeIntersection].groupId);
                 m_activeGizmoAxis = GizmoAxis::None;
                 m_dragging = false;
                 if (m_activeIntersection < 0)
@@ -1016,6 +1071,8 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road))
+            continue;
         XMFLOAT4 col = (ri == m_activeRoad) ? colorSelected : colorRoad;
 
         for (int pi = 0; pi + 1 < static_cast<int>(road.points.size()); ++pi)
@@ -1026,15 +1083,19 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
 
         const int startIsec = FindIntersectionIndexById(road.startIntersectionId);
         const int endIsec   = FindIntersectionIndexById(road.endIntersectionId);
-        if (startIsec >= 0 && !road.points.empty())
+        if (startIsec >= 0 && !road.points.empty() &&
+            IsIntersectionVisible(m_network->intersections[startIsec]))
             dd.AddLine(road.points.front().pos, m_network->intersections[startIsec].pos, colorConnection);
-        if (endIsec >= 0 && !road.points.empty())
+        if (endIsec >= 0 && !road.points.empty() &&
+            IsIntersectionVisible(m_network->intersections[endIsec]))
             dd.AddLine(road.points.back().pos, m_network->intersections[endIsec].pos, colorConnection);
     }
 
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
     {
         const Intersection& isec = m_network->intersections[ii];
+        if (!IsIntersectionVisible(isec))
+            continue;
         const XMFLOAT4 col = (ii == m_activeIntersection)
             ? colorIntersectionSelected
             : colorIntersection;
@@ -1139,6 +1200,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road))
+            continue;
         for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
         {
             ImVec2 sp;
@@ -1154,6 +1217,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
     {
         const Intersection& isec = m_network->intersections[ii];
+        if (!IsIntersectionVisible(isec))
+            continue;
         ImVec2 sp;
         if (!WorldToScreen(isec.pos, viewProj, vpW, vpH, sp))
             continue;
@@ -1261,6 +1326,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 // ---------------------------------------------------------------------------
 void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
 {
+    m_network->EnsureDefaultGroup();
     SanitizeSelection();
 
     ImGui::SetNextWindowPos(ImVec2(10, 360), ImGuiCond_FirstUseEver);
@@ -1372,51 +1438,180 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         : "Points and intersections move freely in 3D");
     ImGui::Separator();
 
-    // Road list
-    ImGui::Text("Roads (%d)", static_cast<int>(m_network->roads.size()));
-    ImGui::BeginChild("RoadList", ImVec2(0, 110), true);
-    for (int i = 0; i < static_cast<int>(m_network->roads.size()); ++i)
+    ImGui::Text("Groups (%d)", static_cast<int>(m_network->groups.size()));
+    if (ImGui::Button("Add Group"))
     {
-        Road& road = m_network->roads[i];
-        bool selected = (i == m_activeRoad);
-        if (ImGui::Selectable(road.name.c_str(), selected))
-        {
-            m_activeRoad  = i;
-            m_activePoint = -1;
-        }
-        if (selected && ImGui::BeginPopupContextItem())
-        {
-            if (ImGui::MenuItem("Delete Road"))
-            {
-                m_network->RemoveRoad(i);
-                if (m_activeRoad >= static_cast<int>(m_network->roads.size()))
-                    m_activeRoad = -1;
-            }
-            ImGui::EndPopup();
-        }
+        const int newIndex = m_network->AddGroup(
+            "Group " + std::to_string(m_network->groups.size()));
+        m_activeGroup = newIndex;
+        m_statusMessage = "Group created";
     }
-    ImGui::EndChild();
 
-    ImGui::Text("Intersections (%d)", static_cast<int>(m_network->intersections.size()));
-    ImGui::BeginChild("IntersectionList", ImVec2(0, 90), true);
-    for (int i = 0; i < static_cast<int>(m_network->intersections.size()); ++i)
+    ImGui::BeginChild("GroupTree", ImVec2(0, 210), true);
+    int groupToDelete = -1;
+    for (int gi = 0; gi < static_cast<int>(m_network->groups.size()); ++gi)
     {
-        Intersection& isec = m_network->intersections[i];
-        const bool selected = (i == m_activeIntersection);
-        if (ImGui::Selectable(isec.name.c_str(), selected))
-            m_activeIntersection = i;
-        if (selected && ImGui::BeginPopupContextItem())
+        RoadGroup& group = m_network->groups[gi];
+        ImGui::PushID(group.id.c_str());
+
+        ImGuiTreeNodeFlags groupFlags =
+            ImGuiTreeNodeFlags_DefaultOpen |
+            ImGuiTreeNodeFlags_OpenOnArrow |
+            ((gi == m_activeGroup) ? ImGuiTreeNodeFlags_Selected : 0);
+        const bool groupOpen = ImGui::TreeNodeEx("Group", groupFlags, "%s", group.name.c_str());
+        if (ImGui::IsItemClicked())
+            m_activeGroup = gi;
+
+        ImGui::SameLine();
+        ImGui::Checkbox("##visible", &group.visible);
+        ImGui::SameLine();
+        ImGui::Checkbox("##locked", &group.locked);
+
+        if (ImGui::BeginPopupContextItem("GroupContext"))
         {
-            if (ImGui::MenuItem("Delete Intersection"))
+            if (ImGui::MenuItem("Delete Group", nullptr, false,
+                                static_cast<int>(m_network->groups.size()) > 1))
             {
-                m_network->RemoveIntersection(i);
-                if (m_activeIntersection >= static_cast<int>(m_network->intersections.size()))
-                    m_activeIntersection = -1;
+                groupToDelete = gi;
             }
             ImGui::EndPopup();
         }
+
+        if (groupOpen)
+        {
+            if (ImGui::TreeNodeEx("Roads", ImGuiTreeNodeFlags_DefaultOpen,
+                                  "Roads (%d)",
+                                  static_cast<int>(std::count_if(
+                                      m_network->roads.begin(),
+                                      m_network->roads.end(),
+                                      [&group](const Road& road)
+                                      {
+                                          return road.groupId == group.id;
+                                      }))))
+            {
+                for (int i = 0; i < static_cast<int>(m_network->roads.size()); ++i)
+                {
+                    Road& road = m_network->roads[i];
+                    if (road.groupId != group.id)
+                        continue;
+
+                    const bool selected = (i == m_activeRoad);
+                    if (ImGui::Selectable(road.name.c_str(), selected))
+                    {
+                        m_activeRoad = i;
+                        m_activePoint = -1;
+                        m_activeIntersection = -1;
+                        m_activeGroup = gi;
+                    }
+                    if (selected && ImGui::BeginPopupContextItem())
+                    {
+                        if (ImGui::MenuItem("Delete Road"))
+                        {
+                            m_network->RemoveRoad(i);
+                            if (m_activeRoad >= static_cast<int>(m_network->roads.size()))
+                                m_activeRoad = -1;
+                        }
+                        ImGui::EndPopup();
+                    }
+                }
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNodeEx("Intersections", ImGuiTreeNodeFlags_DefaultOpen,
+                                  "Intersections (%d)",
+                                  static_cast<int>(std::count_if(
+                                      m_network->intersections.begin(),
+                                      m_network->intersections.end(),
+                                      [&group](const Intersection& intersection)
+                                      {
+                                          return intersection.groupId == group.id;
+                                      }))))
+            {
+                for (int i = 0; i < static_cast<int>(m_network->intersections.size()); ++i)
+                {
+                    Intersection& isec = m_network->intersections[i];
+                    if (isec.groupId != group.id)
+                        continue;
+
+                    const bool selected = (i == m_activeIntersection);
+                    if (ImGui::Selectable(isec.name.c_str(), selected))
+                    {
+                        m_activeIntersection = i;
+                        m_activeRoad = -1;
+                        m_activePoint = -1;
+                        m_activeGroup = gi;
+                    }
+                    if (selected && ImGui::BeginPopupContextItem())
+                    {
+                        if (ImGui::MenuItem("Delete Intersection"))
+                        {
+                            m_network->RemoveIntersection(i);
+                            if (m_activeIntersection >= static_cast<int>(m_network->intersections.size()))
+                                m_activeIntersection = -1;
+                        }
+                        ImGui::EndPopup();
+                    }
+                }
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
     }
     ImGui::EndChild();
+    if (groupToDelete >= 0)
+    {
+        m_network->RemoveGroup(groupToDelete);
+        SanitizeSelection();
+        m_statusMessage = "Group deleted";
+    }
+
+    if (m_activeGroup >= 0 &&
+        m_activeGroup < static_cast<int>(m_network->groups.size()))
+    {
+        RoadGroup& group = m_network->groups[m_activeGroup];
+        char groupNameBuf[128] = {};
+        strncpy_s(groupNameBuf, sizeof(groupNameBuf), group.name.c_str(), _TRUNCATE);
+        ImGui::Text("Active Group");
+        if (ImGui::InputText("Name##group", groupNameBuf, sizeof(groupNameBuf)))
+            group.name = groupNameBuf;
+        ImGui::Checkbox("Visible##group", &group.visible);
+        ImGui::SameLine();
+        ImGui::Checkbox("Locked##group", &group.locked);
+    }
+
+    if (m_activeRoad >= 0 &&
+        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        Road& road = m_network->roads[m_activeRoad];
+        ImGui::Separator();
+        ImGui::Text("Road");
+
+        char roadNameBuf[128] = {};
+        strncpy_s(roadNameBuf, sizeof(roadNameBuf), road.name.c_str(), _TRUNCATE);
+        if (ImGui::InputText("Name##road", roadNameBuf, sizeof(roadNameBuf)))
+            road.name = roadNameBuf;
+
+        const RoadGroup* currentGroup = m_network->FindGroupById(road.groupId);
+        const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
+        if (ImGui::BeginCombo("Group##road", preview))
+        {
+            for (int gi = 0; gi < static_cast<int>(m_network->groups.size()); ++gi)
+            {
+                const RoadGroup& group = m_network->groups[gi];
+                const bool selected = (road.groupId == group.id);
+                if (ImGui::Selectable(group.name.c_str(), selected))
+                {
+                    road.groupId = group.id;
+                    m_activeGroup = gi;
+                }
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+    }
 
     // Selected point info
     if (m_activeRoad  >= 0 &&
@@ -1462,6 +1657,24 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         ImGui::Text("Intersection");
         if (ImGui::InputText("Name##isec", nameBuf, sizeof(nameBuf)))
             isec.name = nameBuf;
+        const RoadGroup* currentGroup = m_network->FindGroupById(isec.groupId);
+        const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
+        if (ImGui::BeginCombo("Group##isec", preview))
+        {
+            for (int gi = 0; gi < static_cast<int>(m_network->groups.size()); ++gi)
+            {
+                const RoadGroup& group = m_network->groups[gi];
+                const bool selected = (isec.groupId == group.id);
+                if (ImGui::Selectable(group.name.c_str(), selected))
+                {
+                    isec.groupId = group.id;
+                    m_activeGroup = gi;
+                }
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
         if (ImGui::Combo("Type##isec", &typeIndex, kIntersectionTypes, IM_ARRAYSIZE(kIntersectionTypes)))
             isec.type = kIntersectionTypes[typeIndex];
         if (ImGui::InputFloat3("Pos##isec", &isec.pos.x) &&
