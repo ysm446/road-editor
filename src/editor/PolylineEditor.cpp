@@ -81,6 +81,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.mode = m_mode;
     snapshot.activeRoad = m_activeRoad;
     snapshot.activePoint = m_activePoint;
+    snapshot.selectedPoints = m_selectedPoints;
     snapshot.activeGroup = m_activeGroup;
     snapshot.activeIntersection = m_activeIntersection;
     snapshot.hoverSnapIntersection = m_hoverSnapIntersection;
@@ -95,6 +96,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_mode = snapshot.mode;
     m_activeRoad = snapshot.activeRoad;
     m_activePoint = snapshot.activePoint;
+    m_selectedPoints = snapshot.selectedPoints;
     m_activeGroup = snapshot.activeGroup;
     m_activeIntersection = snapshot.activeIntersection;
     m_hoverSnapIntersection = snapshot.hoverSnapIntersection;
@@ -103,6 +105,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
 
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
+    m_pointDragStartPositions.clear();
     SanitizeSelection();
 }
 
@@ -151,6 +154,7 @@ void PolylineEditor::ResetState()
     m_mode = EditorMode::Navigate;
     m_activeRoad = -1;
     m_activePoint = -1;
+    m_selectedPoints.clear();
     m_activeGroup = -1;
     m_activeIntersection = -1;
     m_hoverSnapIntersection = -1;
@@ -161,6 +165,7 @@ void PolylineEditor::ResetState()
     m_axisDragStartMouse = { 0, 0 };
     m_planeDragStartHit = { 0, 0, 0 };
     m_planeDragNormal = { 0, 0, 1 };
+    m_pointDragStartPositions.clear();
     m_hasCursorPos = false;
     m_cursorPos = { 0, 0, 0 };
     m_prevLButton = false;
@@ -182,12 +187,25 @@ void PolylineEditor::SanitizeSelection()
     {
         m_activeRoad = -1;
         m_activePoint = -1;
+        m_selectedPoints.clear();
     }
     else
     {
         const int pointCount = static_cast<int>(m_network->roads[m_activeRoad].points.size());
-        if (m_activePoint < 0 || m_activePoint >= pointCount)
-            m_activePoint = -1;
+        m_selectedPoints.erase(
+            std::remove_if(
+                m_selectedPoints.begin(),
+                m_selectedPoints.end(),
+                [pointCount](int pointIndex)
+                {
+                    return pointIndex < 0 || pointIndex >= pointCount;
+                }),
+            m_selectedPoints.end());
+
+        if (m_activePoint < 0 || m_activePoint >= pointCount || !IsPointSelected(m_activePoint))
+        {
+            m_activePoint = m_selectedPoints.empty() ? -1 : m_selectedPoints.front();
+        }
     }
 
     if (m_activeIntersection < 0 ||
@@ -493,6 +511,9 @@ int PolylineEditor::FindIntersectionIndexById(const std::string& id) const
 
 bool PolylineEditor::IsSelectedRoadEndpoint() const
 {
+    if (m_selectedPoints.size() != 1)
+        return false;
+
     if (m_activeRoad < 0 || m_activePoint < 0 ||
         m_activeRoad >= static_cast<int>(m_network->roads.size()))
         return false;
@@ -603,11 +624,32 @@ bool PolylineEditor::GetActiveGizmoPivot(XMFLOAT3& outPivot) const
 {
     if (m_mode == EditorMode::PointEdit &&
         m_activeRoad >= 0 &&
-        m_activePoint >= 0 &&
         m_activeRoad < static_cast<int>(m_network->roads.size()))
     {
         const Road& road = m_network->roads[m_activeRoad];
-        if (m_activePoint < static_cast<int>(road.points.size()))
+        if (!m_selectedPoints.empty())
+        {
+            XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+            int validCount = 0;
+            for (int pointIndex : m_selectedPoints)
+            {
+                if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
+                    continue;
+                const XMFLOAT3& pos = road.points[pointIndex].pos;
+                center.x += pos.x;
+                center.y += pos.y;
+                center.z += pos.z;
+                ++validCount;
+            }
+            if (validCount > 0)
+            {
+                const float invCount = 1.0f / static_cast<float>(validCount);
+                outPivot = { center.x * invCount, center.y * invCount, center.z * invCount };
+                return true;
+            }
+        }
+
+        if (m_activePoint >= 0 && m_activePoint < static_cast<int>(road.points.size()))
         {
             outPivot = road.points[m_activePoint].pos;
             return true;
@@ -623,6 +665,44 @@ bool PolylineEditor::GetActiveGizmoPivot(XMFLOAT3& outPivot) const
     }
 
     return false;
+}
+
+bool PolylineEditor::IsPointSelected(int pointIndex) const
+{
+    return std::find(m_selectedPoints.begin(), m_selectedPoints.end(), pointIndex) != m_selectedPoints.end();
+}
+
+void PolylineEditor::ClearPointSelection()
+{
+    m_selectedPoints.clear();
+    m_activePoint = -1;
+}
+
+void PolylineEditor::SelectSinglePoint(int pointIndex)
+{
+    m_selectedPoints.clear();
+    if (pointIndex >= 0)
+        m_selectedPoints.push_back(pointIndex);
+    m_activePoint = pointIndex;
+}
+
+void PolylineEditor::TogglePointSelection(int pointIndex)
+{
+    if (pointIndex < 0)
+        return;
+
+    std::vector<int>::iterator it = std::find(
+        m_selectedPoints.begin(), m_selectedPoints.end(), pointIndex);
+    if (it != m_selectedPoints.end())
+    {
+        m_selectedPoints.erase(it);
+        if (m_activePoint == pointIndex)
+            m_activePoint = m_selectedPoints.empty() ? -1 : m_selectedPoints.front();
+        return;
+    }
+
+    m_selectedPoints.push_back(pointIndex);
+    m_activePoint = pointIndex;
 }
 
 PolylineEditor::GizmoAxis PolylineEditor::PickGizmoAxis(
@@ -711,9 +791,10 @@ void PolylineEditor::SetMode(EditorMode mode)
     m_mode = mode;
     if (mode != EditorMode::PointEdit)
     {
-        m_activePoint = -1;
+        ClearPointSelection();
         m_dragging    = false;
         m_activeGizmoAxis = GizmoAxis::None;
+        m_pointDragStartPositions.clear();
     }
     if (mode != EditorMode::IntersectionEdit)
         m_activeIntersection = -1;
@@ -733,6 +814,7 @@ void PolylineEditor::StartNewRoad()
         m_network->roads[m_activeRoad].groupId = m_network->groups[m_activeGroup].id;
     }
     m_activePoint = -1;
+    m_selectedPoints.clear();
     m_mode        = EditorMode::PolylineDraw;
 }
 
@@ -751,7 +833,7 @@ void PolylineEditor::ConfirmRoad()
             }
         }
         m_activeRoad  = -1;
-        m_activePoint = -1;
+        ClearPointSelection();
         m_mode        = EditorMode::Navigate;
     }
 }
@@ -767,7 +849,7 @@ void PolylineEditor::CancelRoad()
             m_network->RemoveRoad(m_activeRoad);
         }
         m_activeRoad  = -1;
-        m_activePoint = -1;
+        ClearPointSelection();
         m_mode        = EditorMode::Navigate;
     }
 }
@@ -859,7 +941,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             SetMode(EditorMode::IntersectionEdit);
         }
-        else if (m_activeRoad >= 0 && m_activePoint >= 0)
+        else if (m_activeRoad >= 0 && !m_selectedPoints.empty())
         {
             SetMode(EditorMode::PointEdit);
         }
@@ -896,7 +978,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             PushUndoState();
             m_network->RemoveRoad(m_activeRoad);
             m_activeRoad = -1;
-            m_activePoint = -1;
+            ClearPointSelection();
             m_hoverSnapIntersection = -1;
             m_statusMessage = "Road deleted";
             return;
@@ -910,7 +992,10 @@ void PolylineEditor::Update(int vpW, int vpH,
                     m_activeRoad, vpW, vpH, mousePos, viewProj);
                 if (selPoint >= 0)
                 {
-                    m_activePoint = selPoint;
+                    if (ctrlDown)
+                        TogglePointSelection(selPoint);
+                    else
+                        SelectSinglePoint(selPoint);
                     m_activeIntersection = -1;
                     return;
                 }
@@ -922,7 +1007,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 m_activeIntersection = selIntersection;
                 SetActiveGroupById(m_network->intersections[selIntersection].groupId);
                 m_activeRoad = -1;
-                m_activePoint = -1;
+                ClearPointSelection();
                 return;
             }
 
@@ -931,13 +1016,13 @@ void PolylineEditor::Update(int vpW, int vpH,
             {
                 m_activeRoad = selRoad;
                 SetActiveGroupById(m_network->roads[selRoad].groupId);
-                m_activePoint = -1;
+                ClearPointSelection();
                 m_activeIntersection = -1;
                 return;
             }
 
             m_activeRoad = -1;
-            m_activePoint = -1;
+            ClearPointSelection();
             m_activeIntersection = -1;
         }
         return;
@@ -981,6 +1066,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 m_network->intersections[m_activeIntersection].groupId =
                     m_network->groups[m_activeGroup].id;
             }
+            ClearPointSelection();
             m_statusMessage = "Intersection placed";
         }
 
@@ -1000,18 +1086,24 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             if (m_activeGizmoAxis != GizmoAxis::None &&
                 m_activeRoad  >= 0 &&
-                m_activePoint >= 0 &&
                 m_activeRoad  < static_cast<int>(m_network->roads.size()))
             {
                 Road& road = m_network->roads[m_activeRoad];
-                if (m_activePoint < static_cast<int>(road.points.size()))
+                if (!m_selectedPoints.empty() &&
+                    m_pointDragStartPositions.size() == m_selectedPoints.size())
                 {
+                    XMFLOAT3 pivotStart = m_axisDragStartPos;
+                    XMFLOAT3 delta = { 0.0f, 0.0f, 0.0f };
                     if (m_snapToTerrain &&
                         hasHit &&
                         m_activeGizmoAxis == GizmoAxis::Center)
                     {
-                        RoadPoint& point = road.points[m_activePoint];
-                        point.pos = hitPos;
+                        delta =
+                        {
+                            hitPos.x - pivotStart.x,
+                            hitPos.y - pivotStart.y,
+                            hitPos.z - pivotStart.z
+                        };
                     }
                     else if (m_activeGizmoAxis == GizmoAxis::Center)
                     {
@@ -1019,12 +1111,11 @@ void PolylineEditor::Update(int vpW, int vpH,
                         if (IntersectRayPlane(rayOrig, rayDir, m_axisDragStartPos,
                                               m_planeDragNormal, planeHit))
                         {
-                            RoadPoint& point = road.points[m_activePoint];
-                            point.pos =
+                            delta =
                             {
-                                m_axisDragStartPos.x + (planeHit.x - m_planeDragStartHit.x),
-                                m_axisDragStartPos.y + (planeHit.y - m_planeDragStartHit.y),
-                                m_axisDragStartPos.z + (planeHit.z - m_planeDragStartHit.z)
+                                planeHit.x - m_planeDragStartHit.x,
+                                planeHit.y - m_planeDragStartHit.y,
+                                planeHit.z - m_planeDragStartHit.z
                             };
                         }
                     }
@@ -1060,27 +1151,34 @@ void PolylineEditor::Update(int vpW, int vpH,
                                 mouseDelta.x * axisScreenDir.x +
                                 mouseDelta.y * axisScreenDir.y;
                             const float deltaWorld = (deltaPixels / axisScreenLen) * axisLen;
-                            RoadPoint& point = road.points[m_activePoint];
-                            point.pos =
-                            {
-                                m_axisDragStartPos.x + axisDir.x * deltaWorld,
-                                m_axisDragStartPos.y + axisDir.y * deltaWorld,
-                                m_axisDragStartPos.z + axisDir.z * deltaWorld
-                            };
+                            delta = { axisDir.x * deltaWorld, axisDir.y * deltaWorld, axisDir.z * deltaWorld };
                         }
                     }
 
-                    if (m_snapToTerrain &&
-                        m_terrain && m_terrain->IsReady() &&
-                        m_activeGizmoAxis != GizmoAxis::Y)
+                    for (size_t selectionIndex = 0; selectionIndex < m_selectedPoints.size(); ++selectionIndex)
                     {
-                        road.points[m_activePoint].pos.y =
-                            m_terrain->GetHeightAt(
-                                road.points[m_activePoint].pos.x,
-                                road.points[m_activePoint].pos.z);
+                        const int pointIndex = m_selectedPoints[selectionIndex];
+                        if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
+                            continue;
+
+                        XMFLOAT3 newPos =
+                        {
+                            m_pointDragStartPositions[selectionIndex].x + delta.x,
+                            m_pointDragStartPositions[selectionIndex].y + delta.y,
+                            m_pointDragStartPositions[selectionIndex].z + delta.z
+                        };
+
+                        if (m_snapToTerrain &&
+                            m_terrain && m_terrain->IsReady() &&
+                            m_activeGizmoAxis != GizmoAxis::Y)
+                        {
+                            newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                        }
+
+                        road.points[pointIndex].pos = newPos;
                     }
 
-                    if (IsSelectedRoadEndpoint())
+                    if (m_selectedPoints.size() == 1 && IsSelectedRoadEndpoint())
                         m_hoverSnapIntersection = FindSnapIntersectionForSelectedEndpoint(vpW, vpH, viewProj);
                     else
                         m_hoverSnapIntersection = -1;
@@ -1106,26 +1204,33 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_dragging = false;
             m_activeGizmoAxis = GizmoAxis::None;
             m_hoverSnapIntersection = -1;
+            m_pointDragStartPositions.clear();
         }
         else if (lClick)
         {
             GizmoAxis gizmoAxis = PickGizmoAxis(vpW, vpH, mousePos, viewProj);
             if (gizmoAxis != GizmoAxis::None &&
                 m_activeRoad >= 0 &&
-                m_activePoint >= 0 &&
                 m_activeRoad < static_cast<int>(m_network->roads.size()))
             {
                 Road& road = m_network->roads[m_activeRoad];
-                if (m_activePoint < static_cast<int>(road.points.size()))
+                if (!m_selectedPoints.empty())
                 {
                     m_activeGizmoAxis  = gizmoAxis;
-                    m_axisDragStartPos = road.points[m_activePoint].pos;
+                    if (!GetActiveGizmoPivot(m_axisDragStartPos))
+                        m_axisDragStartPos = road.points[m_activePoint].pos;
                     m_axisDragStartMouse = mousePos;
                     m_planeDragNormal = rayDir;
                     if (!IntersectRayPlane(rayOrig, rayDir, m_axisDragStartPos,
                                            m_planeDragNormal, m_planeDragStartHit))
                     {
                         m_planeDragStartHit = m_axisDragStartPos;
+                    }
+                    m_pointDragStartPositions.clear();
+                    for (int pointIndex : m_selectedPoints)
+                    {
+                        if (pointIndex >= 0 && pointIndex < static_cast<int>(road.points.size()))
+                            m_pointDragStartPositions.push_back(road.points[pointIndex].pos);
                     }
                     PushUndoState();
                     m_dragging         = true;
@@ -1138,9 +1243,21 @@ void PolylineEditor::Update(int vpW, int vpH,
                 FindNearestPoint(vpW, vpH, mousePos, viewProj, selRoad, selPt);
                 if (selRoad >= 0)
                 {
+                    const int previousRoad = m_activeRoad;
+                    if (previousRoad >= 0 && selRoad != previousRoad)
+                        selRoad = -1;
+                }
+
+                if (selRoad >= 0)
+                {
+                    const int previousRoad = m_activeRoad;
                     m_activeRoad       = selRoad;
-                    m_activePoint      = selPt;
                     SetActiveGroupById(m_network->roads[selRoad].groupId);
+                    if (ctrlDown && selRoad == previousRoad)
+                        TogglePointSelection(selPt);
+                    else
+                        SelectSinglePoint(selPt);
+                    m_activeIntersection = -1;
                     m_dragging         = false;
                     m_activeGizmoAxis  = GizmoAxis::None;
                     m_hoverSnapIntersection = -1;
@@ -1170,7 +1287,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                         }
 
                         road.points.insert(road.points.begin() + segmentIndex + 1, newPoint);
-                        m_activePoint = segmentIndex + 1;
+                        SelectSinglePoint(segmentIndex + 1);
                         m_dragging = false;
                         m_activeGizmoAxis = GizmoAxis::None;
                         m_hoverSnapIntersection = -1;
@@ -1178,7 +1295,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                     }
                     else
                     {
-                        m_activePoint      = -1;
+                        ClearPointSelection();
                         m_dragging         = false;
                         m_activeGizmoAxis  = GizmoAxis::None;
                         m_hoverSnapIntersection = -1;
@@ -1188,7 +1305,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 else
                 {
                     m_activeRoad       = -1;
-                    m_activePoint      = -1;
+                    ClearPointSelection();
                     m_dragging         = false;
                     m_activeGizmoAxis  = GizmoAxis::None;
                     m_hoverSnapIntersection = -1;
@@ -1200,22 +1317,33 @@ void PolylineEditor::Update(int vpW, int vpH,
         // Delete selected point
         if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
             m_activeRoad  >= 0 &&
-            m_activePoint >= 0 &&
+            !m_selectedPoints.empty() &&
             m_activeRoad  < static_cast<int>(m_network->roads.size()))
         {
             PushUndoState();
             Road& road = m_network->roads[m_activeRoad];
-            if (m_activePoint < static_cast<int>(road.points.size()))
+            std::vector<int> pointsToDelete = m_selectedPoints;
+            std::sort(pointsToDelete.begin(), pointsToDelete.end());
+            pointsToDelete.erase(std::unique(pointsToDelete.begin(), pointsToDelete.end()), pointsToDelete.end());
+            bool removedAny = false;
+            for (auto it = pointsToDelete.rbegin(); it != pointsToDelete.rend(); ++it)
             {
-                if (m_activePoint == 0)
+                const int pointIndex = *it;
+                if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
+                    continue;
+                if (pointIndex == 0)
                     road.startIntersectionId.clear();
-                if (m_activePoint == static_cast<int>(road.points.size()) - 1)
+                if (pointIndex == static_cast<int>(road.points.size()) - 1)
                     road.endIntersectionId.clear();
-                road.points.erase(road.points.begin() + m_activePoint);
-                m_activePoint = -1;
-                m_activeGizmoAxis = GizmoAxis::None;
-                m_hoverSnapIntersection = -1;
+                road.points.erase(road.points.begin() + pointIndex);
+                removedAny = true;
             }
+            if (removedAny)
+                m_statusMessage = pointsToDelete.size() > 1 ? "Points deleted" : "Point deleted";
+            ClearPointSelection();
+            m_activeGizmoAxis = GizmoAxis::None;
+            m_hoverSnapIntersection = -1;
+            m_pointDragStartPositions.clear();
         }
     }
 
@@ -1329,6 +1457,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 m_activeIntersection = FindNearestIntersection(vpW, vpH, mousePos, viewProj);
                 if (m_activeIntersection >= 0)
                     SetActiveGroupById(m_network->intersections[m_activeIntersection].groupId);
+                ClearPointSelection();
                 m_activeGizmoAxis = GizmoAxis::None;
                 m_dragging = false;
                 if (m_activeIntersection < 0)
@@ -1438,17 +1567,15 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
 
     if (m_mode == EditorMode::PointEdit &&
         m_activeRoad >= 0 &&
-        m_activePoint >= 0 &&
         m_activeRoad < static_cast<int>(m_network->roads.size()))
     {
-        const Road& road = m_network->roads[m_activeRoad];
-        if (m_activePoint < static_cast<int>(road.points.size()))
+        XMFLOAT3 pivot;
+        if (GetActiveGizmoPivot(pivot))
         {
-            const RoadPoint& point = road.points[m_activePoint];
-            const float axisLenX = ComputeGizmoAxisLength(point.pos, GizmoAxis::X, viewProj, vpW, vpH);
-            const float axisLenY = ComputeGizmoAxisLength(point.pos, GizmoAxis::Y, viewProj, vpW, vpH);
-            const float axisLenZ = ComputeGizmoAxisLength(point.pos, GizmoAxis::Z, viewProj, vpW, vpH);
-            const XMFLOAT3 p = point.pos;
+            const float axisLenX = ComputeGizmoAxisLength(pivot, GizmoAxis::X, viewProj, vpW, vpH);
+            const float axisLenY = ComputeGizmoAxisLength(pivot, GizmoAxis::Y, viewProj, vpW, vpH);
+            const float axisLenZ = ComputeGizmoAxisLength(pivot, GizmoAxis::Z, viewProj, vpW, vpH);
+            const XMFLOAT3 p = pivot;
             dd.AddLine({ p.x - 0.15f, p.y, p.z }, { p.x + 0.15f, p.y, p.z }, colorPivot);
             dd.AddLine({ p.x, p.y - 0.15f, p.z }, { p.x, p.y + 0.15f, p.z }, colorPivot);
             dd.AddLine({ p.x, p.y, p.z - 0.15f }, { p.x, p.y, p.z + 0.15f }, colorPivot);
@@ -1515,7 +1642,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             ImVec2 sp;
             if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, sp))
                 continue;
-            bool isActive = (ri == m_activeRoad && pi == m_activePoint);
+            bool isActive = (ri == m_activeRoad && IsPointSelected(pi));
             ImU32 col = isActive ? colSelected : colPoint;
             float r   = isActive ? kRadius + 2.0f : kRadius;
             dl->AddCircleFilled(sp, r, col, 20);
@@ -1574,14 +1701,11 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 
     if (m_mode == EditorMode::PointEdit &&
         m_activeRoad >= 0 &&
-        m_activePoint >= 0 &&
         m_activeRoad < static_cast<int>(m_network->roads.size()))
     {
-        const Road& road = m_network->roads[m_activeRoad];
-        if (m_activePoint < static_cast<int>(road.points.size()))
+        XMFLOAT3 p;
+        if (GetActiveGizmoPivot(p))
         {
-            const RoadPoint& point = road.points[m_activePoint];
-            const XMFLOAT3 p = point.pos;
             ImVec2 pivot;
             if (WorldToScreen(p, viewProj, vpW, vpH, pivot))
             {
@@ -1722,6 +1846,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     case EditorMode::PointEdit:
         ImGui::TextColored(ImVec4(1,0.8f,0.2f,1), "Edit Points");
         ImGui::TextDisabled("Click point: select");
+        ImGui::TextDisabled("Ctrl+Click: multi-select on active road");
         ImGui::TextDisabled("Drag center: pan in screen plane");
         ImGui::TextDisabled("Click X/Y/Z axis: move on that axis");
         ImGui::TextDisabled("Endpoint near intersection: snap/connect");
@@ -1748,14 +1873,18 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         if (m_snapToTerrain && m_terrain && m_terrain->IsReady())
         {
             if (m_activeRoad >= 0 &&
-                m_activePoint >= 0 &&
+                !m_selectedPoints.empty() &&
                 m_activeRoad < static_cast<int>(m_network->roads.size()))
             {
                 Road& road = m_network->roads[m_activeRoad];
-                if (m_activePoint < static_cast<int>(road.points.size()))
-                    road.points[m_activePoint].pos.y =
-                        m_terrain->GetHeightAt(road.points[m_activePoint].pos.x,
-                                               road.points[m_activePoint].pos.z);
+                for (int pointIndex : m_selectedPoints)
+                {
+                    if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
+                        continue;
+                    road.points[pointIndex].pos.y =
+                        m_terrain->GetHeightAt(road.points[pointIndex].pos.x,
+                                               road.points[pointIndex].pos.z);
+                }
             }
 
             if (m_activeIntersection >= 0 &&

@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <DirectXMath.h>
+#include <vector>
 #include <string>
 
 #include "EditorState.h"
@@ -116,6 +117,10 @@ private:
     void SnapSelectedEndpointToIntersection(int intersectionIndex);
     void SyncRoadConnectionsForIntersection(int intersectionIndex);
     bool GetActiveGizmoPivot(DirectX::XMFLOAT3& outPivot) const;
+    bool IsPointSelected(int pointIndex) const;
+    void ClearPointSelection();
+    void SelectSinglePoint(int pointIndex);
+    void TogglePointSelection(int pointIndex);
     GizmoAxis PickGizmoAxis(int vpW, int vpH,
                             DirectX::XMFLOAT2 px,
                             DirectX::XMMATRIX viewProj) const;
@@ -134,6 +139,7 @@ private:
         EditorMode  mode = EditorMode::Navigate;
         int activeRoad = -1;
         int activePoint = -1;
+        std::vector<int> selectedPoints;
         int activeGroup = -1;
         int activeIntersection = -1;
         int hoverSnapIntersection = -1;
@@ -151,6 +157,7 @@ private:
     // Index of road being drawn / edited
     int m_activeRoad  = -1;
     int m_activePoint = -1;   // selected point in PointEdit mode
+    std::vector<int> m_selectedPoints;
     int m_activeGroup = -1;
     int m_activeIntersection = -1;
     int m_hoverSnapIntersection = -1;
@@ -163,6 +170,7 @@ private:
     DirectX::XMFLOAT2 m_axisDragStartMouse = { 0,0 };
     DirectX::XMFLOAT3 m_planeDragStartHit = { 0,0,0 };
     DirectX::XMFLOAT3 m_planeDragNormal   = { 0,0,1 };
+    std::vector<DirectX::XMFLOAT3> m_pointDragStartPositions;
 
     // Cursor preview position (hover on terrain)
     bool              m_hasCursorPos = false;
