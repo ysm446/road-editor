@@ -2,6 +2,7 @@
 build/
 out/
 bin/
+dist/
 *.exe
 *.pdb
 *.ilk
@@ -34,6 +35,7 @@ _deps/
 
 # User data (heightmaps, road files)
 /data/
+imgui.ini
 
 # OS
 Thumbs.db

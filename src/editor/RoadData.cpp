@@ -180,8 +180,7 @@ void RoadNetwork::EnsureDefaultGroup()
 static nlohmann::json PointToJson(const RoadPoint& p)
 {
     return {
-        { "x", p.pos.x }, { "y", p.pos.y }, { "z", p.pos.z },
-        { "width", p.width }
+        { "x", p.pos.x }, { "y", p.pos.y }, { "z", p.pos.z }
     };
 }
 
@@ -240,6 +239,9 @@ static nlohmann::json RoadToJson(const Road& r)
         { "points", legacyPoints },
         { "startIntersectionId", r.startIntersectionId },
         { "endIntersectionId", r.endIntersectionId },
+        { "laneWidth", r.laneWidth },
+        { "laneLeft", r.laneLeft },
+        { "laneRight", r.laneRight },
         { "roadType", kCurveRoadTypeDefault },
         { "defaultTargetSpeed", kCurveDefaultTargetSpeed },
         { "defaultFriction", kCurveDefaultFriction },
@@ -260,6 +262,9 @@ static Road RoadFromJson(const nlohmann::json& j)
     r.closed = j.value("closed", false);
     r.startIntersectionId = j.value("startIntersectionId", std::string());
     r.endIntersectionId = j.value("endIntersectionId", std::string());
+    r.laneWidth = j.value("laneWidth", 3.0f);
+    r.laneLeft = j.value("laneLeft", 1);
+    r.laneRight = j.value("laneRight", 1);
     if (j.contains("points"))
     {
         for (const auto& p : j["points"])

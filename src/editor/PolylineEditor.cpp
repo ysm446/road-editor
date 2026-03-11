@@ -2274,7 +2274,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         bool isecEditActive = (m_mode == EditorMode::IntersectionEdit);
 
         if (navActive)  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Navigate")) SetMode(EditorMode::Navigate);
+        if (ImGui::Button("Object")) SetMode(EditorMode::Navigate);
         if (navActive)  ImGui::PopStyleColor();
 
         ImGui::SameLine();
@@ -2308,7 +2308,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     switch (m_mode)
     {
     case EditorMode::Navigate:
-        ImGui::TextDisabled("Camera navigation only");
+        ImGui::TextDisabled("Object selection mode");
         ImGui::TextDisabled("Click road: select road");
         ImGui::TextDisabled("Selected road points can be picked directly");
         ImGui::TextDisabled("Drag empty area: marquee select points");
@@ -2337,7 +2337,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     case EditorMode::IntersectionDraw:
         ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), "Draw Intersections");
         ImGui::TextDisabled("Left click: place intersection");
-        ImGui::TextDisabled("Esc: back to navigate");
+        ImGui::TextDisabled("Esc: back to object mode");
         break;
     case EditorMode::IntersectionEdit:
         ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), "Edit Intersections");
@@ -2573,6 +2573,27 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             road.name = roadNameBuf;
         }
 
+        float laneWidth = road.laneWidth;
+        if (ImGui::InputFloat("Lane Width", &laneWidth, 0.1f, 1.0f, "%.2f"))
+        {
+            PushUndoState();
+            road.laneWidth = (std::max)(0.1f, laneWidth);
+        }
+
+        int laneLeft = road.laneLeft;
+        if (ImGui::InputInt("Lane Left", &laneLeft))
+        {
+            PushUndoState();
+            road.laneLeft = (std::max)(0, laneLeft);
+        }
+
+        int laneRight = road.laneRight;
+        if (ImGui::InputInt("Lane Right", &laneRight))
+        {
+            PushUndoState();
+            road.laneRight = (std::max)(0, laneRight);
+        }
+
         const RoadGroup* currentGroup = m_network->FindGroupById(road.groupId);
         const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
         if (ImGui::BeginCombo("Group##road", preview))
@@ -2612,12 +2633,6 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                 rp.pos = { pointPos[0], pointPos[1], pointPos[2] };
                 if (m_snapToTerrain && m_terrain && m_terrain->IsReady())
                     rp.pos.y = m_terrain->GetHeightAt(rp.pos.x, rp.pos.z);
-            }
-            float pointWidth = rp.width;
-            if (ImGui::SliderFloat("Width##pt", &pointWidth, 0.5f, 20.0f))
-            {
-                PushUndoState();
-                rp.width = pointWidth;
             }
             if (IsSelectedRoadEndpoint())
             {

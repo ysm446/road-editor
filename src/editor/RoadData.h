@@ -22,6 +22,9 @@ struct Road
     bool                   closed = false;  // Loop road?
     std::string            startIntersectionId;
     std::string            endIntersectionId;
+    float                  laneWidth = 3.0f;
+    int                    laneLeft = 1;
+    int                    laneRight = 1;
 
     // Convenience
     bool IsValid() const { return points.size() >= 2; }
