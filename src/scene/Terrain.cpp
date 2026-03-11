@@ -23,6 +23,7 @@ bool Terrain::Initialize(ID3D11Device* device)
     D3D11_RASTERIZER_DESC rd = {};
     rd.FillMode        = D3D11_FILL_SOLID;
     rd.CullMode        = D3D11_CULL_BACK;
+    rd.FrontCounterClockwise = TRUE;
     rd.DepthClipEnable = TRUE;
     device->CreateRasterizerState(&rd, &m_rsSolid);
 
@@ -378,4 +379,28 @@ void Terrain::Shutdown()
     m_inputLayout.Reset();
     m_rsSolid.Reset();
     m_rsWireframe.Reset();
+}
+
+void Terrain::Reset()
+{
+    m_vb.Reset();
+    m_ib.Reset();
+    m_inputLayout.Reset();
+    m_rawHeights.clear();
+    m_rawW = 0;
+    m_rawH = 0;
+    m_meshW = 0;
+    m_meshH = 0;
+    m_indexCount = 0;
+    m_ready = false;
+
+    heightScale = 100.0f;
+    horizontalScaleX = 1.0f;
+    horizontalScaleZ = 1.0f;
+    offsetX = 0.0f;
+    offsetZ = 0.0f;
+    meshSubdivW = 0;
+    meshSubdivH = 0;
+    wireframe = false;
+    visible = true;
 }

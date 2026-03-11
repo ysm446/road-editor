@@ -34,13 +34,13 @@ DirectX::XMMATRIX Camera::GetViewMatrix() const
     if (fabsf(m_elevation) > 1.56f)
         up = XMVectorSet(0.0f, 0.0f, (m_elevation > 0.0f) ? -1.0f : 1.0f, 0.0f);
 
-    return XMMatrixLookAtLH(eye, tgt, up);
+    return XMMatrixLookAtRH(eye, tgt, up);
 }
 
 DirectX::XMMATRIX Camera::GetProjMatrix(float aspect, float fovY,
                                          float nearZ, float farZ) const
 {
-    return XMMatrixPerspectiveFovLH(fovY, aspect, nearZ, farZ);
+    return XMMatrixPerspectiveFovRH(fovY, aspect, nearZ, farZ);
 }
 
 void Camera::SetOrbitState(XMFLOAT3 target, float distance,
@@ -76,7 +76,7 @@ void Camera::HandleInput(bool wantMouse)
     {
         // Alt + LMB : Orbit (rotate)
         const float sensitivity = 0.005f;
-        m_azimuth   += dx * sensitivity;
+        m_azimuth   -= dx * sensitivity;
         m_elevation += dy * sensitivity;
         m_elevation  = std::clamp(m_elevation, -1.55f, 1.55f);
     }
@@ -93,7 +93,7 @@ void Camera::HandleInput(bool wantMouse)
 
         float panScale = m_distance * 0.001f;
         XMVECTOR delta = XMVectorAdd(
-            XMVectorScale(right,     dx * panScale),
+            XMVectorScale(right,    -dx * panScale),
             XMVectorScale(upOrtho,   dy * panScale));
 
         XMFLOAT3 d;

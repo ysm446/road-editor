@@ -32,6 +32,7 @@ public:
 
     void Render(ID3D11DeviceContext* ctx, ID3D11Buffer* perFrameCB);
     void Shutdown();
+    void Reset();
 
     bool IsReady()    const { return m_ready;  }
     int  GetRawW()    const { return m_rawW;   }  // native image resolution

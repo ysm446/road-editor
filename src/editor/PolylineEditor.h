@@ -62,6 +62,7 @@ public:
     void StartNewRoad();
     void ConfirmRoad();    // Enter pressed
     void CancelRoad();     // Esc pressed
+    void ResetState();
 
     // Save / load
     bool Save(const char* path) const { return m_network->SaveToFile(path); }
@@ -69,6 +70,9 @@ public:
     const char* GetFilePath() const { return m_filePath; }
     void SetFilePath(const char* path) { strncpy_s(m_filePath, sizeof(m_filePath), path, _TRUNCATE); }
     bool ConsumeStatusMessage(std::string& outMessage);
+    bool GetFocusTarget(DirectX::XMFLOAT3& outTarget) const;
+    void SetShowRoadNames(bool show) { m_showRoadNames = show; }
+    void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
 
 private:
     // Unproject a screen pixel to a world-space ray
@@ -175,6 +179,8 @@ private:
     // Save/load path buffer
     char m_filePath[260] = "data/roads.json";
     std::string m_statusMessage;
+    bool m_showRoadNames = false;
+    bool m_showIntersectionNames = true;
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
     bool m_prevUndoShortcut = false;

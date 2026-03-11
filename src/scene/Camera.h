@@ -25,7 +25,7 @@ public:
     DirectX::XMMATRIX   GetProjMatrix(float aspect,
                                       float fovY  = DirectX::XM_PIDIV4,
                                       float nearZ = 0.1f,
-                                      float farZ  = 2000.0f) const;
+                                      float farZ  = 10000.0f) const;
     DirectX::XMFLOAT3   GetPosition()  const;
     DirectX::XMFLOAT3   GetTarget()    const { return m_target; }
     float               GetDistance()  const { return m_distance; }

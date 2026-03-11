@@ -32,6 +32,48 @@ bool PolylineEditor::Load(const char* path)
     return true;
 }
 
+bool PolylineEditor::GetFocusTarget(XMFLOAT3& outTarget) const
+{
+    if (!m_network)
+        return false;
+
+    if (m_activeRoad >= 0 &&
+        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        const Road& road = m_network->roads[m_activeRoad];
+        if (m_activePoint >= 0 &&
+            m_activePoint < static_cast<int>(road.points.size()))
+        {
+            outTarget = road.points[m_activePoint].pos;
+            return true;
+        }
+
+        if (!road.points.empty())
+        {
+            XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+            for (const RoadPoint& point : road.points)
+            {
+                center.x += point.pos.x;
+                center.y += point.pos.y;
+                center.z += point.pos.z;
+            }
+
+            const float invCount = 1.0f / static_cast<float>(road.points.size());
+            outTarget = { center.x * invCount, center.y * invCount, center.z * invCount };
+            return true;
+        }
+    }
+
+    if (m_activeIntersection >= 0 &&
+        m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+    {
+        outTarget = m_network->intersections[m_activeIntersection].pos;
+        return true;
+    }
+
+    return false;
+}
+
 PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
 {
     EditorSnapshot snapshot;
@@ -102,6 +144,33 @@ void PolylineEditor::ClearHistory()
 {
     m_undoStack.clear();
     m_redoStack.clear();
+}
+
+void PolylineEditor::ResetState()
+{
+    m_mode = EditorMode::Navigate;
+    m_activeRoad = -1;
+    m_activePoint = -1;
+    m_activeGroup = -1;
+    m_activeIntersection = -1;
+    m_hoverSnapIntersection = -1;
+    m_dragging = false;
+    m_activeGizmoAxis = GizmoAxis::None;
+    m_dragOffset = { 0, 0, 0 };
+    m_axisDragStartPos = { 0, 0, 0 };
+    m_axisDragStartMouse = { 0, 0 };
+    m_planeDragStartHit = { 0, 0, 0 };
+    m_planeDragNormal = { 0, 0, 1 };
+    m_hasCursorPos = false;
+    m_cursorPos = { 0, 0, 0 };
+    m_prevLButton = false;
+    m_prevWKey = false;
+    m_prevUndoShortcut = false;
+    m_prevRedoShortcut = false;
+    m_defaultWidth = 3.0f;
+    m_snapToTerrain = true;
+    m_statusMessage.clear();
+    ClearHistory();
 }
 
 void PolylineEditor::SanitizeSelection()
@@ -736,8 +805,19 @@ void PolylineEditor::Update(int vpW, int vpH,
 
     // Terrain intersection for cursor preview and placement
     XMFLOAT3 hitPos = {};
-    bool hasHit = m_terrain && m_terrain->IsReady() &&
-                  m_terrain->Raycast(rayOrig, rayDir, hitPos);
+    bool hasHit = false;
+    if (m_terrain && m_terrain->IsReady())
+    {
+        hasHit = m_terrain->Raycast(rayOrig, rayDir, hitPos);
+    }
+    else
+    {
+        hasHit = IntersectRayPlane(
+            rayOrig, rayDir,
+            { 0.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f },
+            hitPos);
+    }
     m_hasCursorPos = hasHit;
     m_cursorPos    = hitPos;
 
@@ -1440,6 +1520,26 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             float r   = isActive ? kRadius + 2.0f : kRadius;
             dl->AddCircleFilled(sp, r, col, 20);
         }
+
+        if (m_showRoadNames && !road.name.empty() && !road.points.empty())
+        {
+            XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+            for (const RoadPoint& point : road.points)
+            {
+                center.x += point.pos.x;
+                center.y += point.pos.y;
+                center.z += point.pos.z;
+            }
+            const float invCount = 1.0f / static_cast<float>(road.points.size());
+            center.x *= invCount;
+            center.y *= invCount;
+            center.z *= invCount;
+
+            ImVec2 labelPos;
+            if (WorldToScreen(center, viewProj, vpW, vpH, labelPos))
+                dl->AddText(ImVec2(labelPos.x + 10.0f, labelPos.y - 8.0f),
+                            IM_COL32(255, 215, 90, 255), road.name.c_str());
+        }
     }
 
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
@@ -1455,7 +1555,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         dl->AddCircle(sp, 10.0f, col, 24, 2.0f);
         dl->AddLine(ImVec2(sp.x - 8.0f, sp.y), ImVec2(sp.x + 8.0f, sp.y), col, 2.0f);
         dl->AddLine(ImVec2(sp.x, sp.y - 8.0f), ImVec2(sp.x, sp.y + 8.0f), col, 2.0f);
-        dl->AddText(ImVec2(sp.x + 12.0f, sp.y - 8.0f), col, isec.name.c_str());
+        if (m_showIntersectionNames)
+            dl->AddText(ImVec2(sp.x + 12.0f, sp.y - 8.0f), col, isec.name.c_str());
     }
 
     if (m_hoverSnapIntersection >= 0 &&

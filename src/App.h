@@ -38,7 +38,10 @@ private:
     bool    CreateAppWindow(HINSTANCE hInstance, int nCmdShow);
     bool    SaveProject(const char* path);
     bool    LoadProject(const char* path);
+    void    NewProject();
     void    ApplyTerrainSettings();
+    void    LoadViewSettings();
+    void    SaveViewSettings() const;
     void    SetStatusMessage(const std::string& message);
     void    Render();
 
@@ -70,6 +73,9 @@ private:
     bool              m_cursorHitValid = false;
     DirectX::XMFLOAT3 m_cursorHitPos   = {};
     std::string       m_statusMessage  = "Ready";
+    bool              m_prevFocusKey   = false;
+    bool              m_showRoadNames = false;
+    bool              m_showIntersectionNames = true;
 
     DebugDraw      m_debugDraw;
     RoadNetwork    m_roadNetwork;

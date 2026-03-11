@@ -2,6 +2,8 @@
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <commdlg.h>
 #include <DirectXMath.h>
@@ -14,6 +16,88 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
     HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 using namespace DirectX;
+
+namespace
+{
+constexpr const char* kViewSettingsPath = "data/view_settings.json";
+
+bool IntersectRayWithGroundPlane(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir, XMFLOAT3& outHit)
+{
+    const XMVECTOR ro = XMLoadFloat3(&rayOrigin);
+    const XMVECTOR rd = XMVector3Normalize(XMLoadFloat3(&rayDir));
+    const XMVECTOR planePoint = XMVectorZero();
+    const XMVECTOR planeNormal = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+    const float denom = XMVectorGetX(XMVector3Dot(rd, planeNormal));
+    if (fabsf(denom) < 1e-5f)
+        return false;
+
+    const float t = XMVectorGetX(XMVector3Dot(XMVectorSubtract(planePoint, ro), planeNormal)) / denom;
+    if (t < 0.0f)
+        return false;
+
+    XMStoreFloat3(&outHit, XMVectorAdd(ro, XMVectorScale(rd, t)));
+    return true;
+}
+
+void DrawViewAxisGizmo(XMMATRIX view)
+{
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    const ImVec2 center(
+        viewport->WorkPos.x + 58.0f,
+        viewport->WorkPos.y + viewport->WorkSize.y - 92.0f);
+    const float axisLength = 28.0f;
+
+    struct AxisLine
+    {
+        const char* label;
+        ImU32 color;
+        XMFLOAT3 dir;
+        float depth;
+    };
+
+    std::array<AxisLine, 3> axes =
+    {{
+        { "X", IM_COL32(255, 90, 90, 255), {}, 0.0f },
+        { "Y", IM_COL32(90, 255, 120, 255), {}, 0.0f },
+        { "Z", IM_COL32(90, 160, 255, 255), {}, 0.0f }
+    }};
+
+    const std::array<XMVECTOR, 3> basis =
+    {{
+        XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f),
+        XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f),
+        XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)
+    }};
+
+    for (size_t i = 0; i < axes.size(); ++i)
+    {
+        XMFLOAT3 dir;
+        XMStoreFloat3(&dir, XMVector3TransformNormal(basis[i], view));
+        axes[i].dir = dir;
+        axes[i].depth = dir.z;
+    }
+
+    std::sort(axes.begin(), axes.end(),
+        [](const AxisLine& a, const AxisLine& b)
+        {
+            return a.depth < b.depth;
+        });
+
+    dl->AddCircleFilled(center, 4.0f, IM_COL32(235, 235, 235, 220), 16);
+
+    for (const AxisLine& axis : axes)
+    {
+        const ImVec2 end(
+            center.x + axis.dir.x * axisLength,
+            center.y - axis.dir.y * axisLength);
+        const float thickness = (axis.depth >= 0.0f) ? 2.6f : 1.8f;
+        dl->AddLine(center, end, axis.color, thickness);
+        dl->AddText(ImVec2(end.x + 8.0f, end.y - 8.0f), axis.color, axis.label);
+    }
+}
+}
 
 // ---------------------------------------------------------------------------
 // Open a Windows file-picker and write the result into buf (MAX_PATH chars).
@@ -80,9 +164,77 @@ void App::ApplyTerrainSettings()
     m_terrain->Rebuild(m_d3d->GetDevice());
 }
 
+void App::LoadViewSettings()
+{
+    m_showRoadNames = false;
+    m_showIntersectionNames = true;
+
+    try
+    {
+        std::ifstream ifs(kViewSettingsPath);
+        if (ifs)
+        {
+            nlohmann::json root;
+            ifs >> root;
+            m_showRoadNames = root.value("showRoadNames", false);
+            m_showIntersectionNames = root.value("showIntersectionNames", true);
+        }
+    }
+    catch (...)
+    {
+    }
+
+    m_editor.SetShowRoadNames(m_showRoadNames);
+    m_editor.SetShowIntersectionNames(m_showIntersectionNames);
+}
+
+void App::SaveViewSettings() const
+{
+    try
+    {
+        nlohmann::json root =
+        {
+            { "showRoadNames", m_showRoadNames },
+            { "showIntersectionNames", m_showIntersectionNames }
+        };
+
+        std::ofstream ofs(kViewSettingsPath);
+        if (ofs)
+            ofs << root.dump(2);
+    }
+    catch (...)
+    {
+    }
+}
+
 void App::SetStatusMessage(const std::string& message)
 {
     m_statusMessage = message;
+}
+
+void App::NewProject()
+{
+    strncpy_s(m_terrainPath, sizeof(m_terrainPath), "data/heightmap.png", _TRUNCATE);
+    strncpy_s(m_projectPath, sizeof(m_projectPath), "data/project.json", _TRUNCATE);
+
+    m_loadResW = 0;
+    m_loadResH = 0;
+    m_loadWidthM = 255.0f;
+    m_loadDepthM = 255.0f;
+    m_loadHeightM = 100.0f;
+    m_loadOffsetX = 0.0f;
+    m_loadOffsetZ = 0.0f;
+
+    m_cursorHitValid = false;
+    m_cursorHitPos = {};
+
+    m_terrain->Reset();
+    m_roadNetwork = RoadNetwork();
+    m_editor.SetNetwork(&m_roadNetwork);
+    m_editor.SetFilePath("data/roads.json");
+    m_editor.ResetState();
+    m_camera->SetOrbitState({ 0.0f, 0.0f, 0.0f }, 20.0f, 0.785f, 0.4f);
+    SetStatusMessage("New project");
 }
 
 bool App::SaveProject(const char* path)
@@ -287,6 +439,7 @@ bool App::Initialize(HINSTANCE hInstance, int nCmdShow)
 
     m_editor.SetTerrain(m_terrain.get());
     m_editor.SetNetwork(&m_roadNetwork);
+    LoadViewSettings();
 
     return true;
 }
@@ -319,6 +472,10 @@ int App::Run()
         bool wantMouse = ImGui::GetIO().WantCaptureMouse;
         m_camera->HandleInput(wantMouse);
 
+        const bool focusKeyDown = (GetAsyncKeyState('F') & 0x8000) != 0;
+        const bool focusPressed = focusKeyDown && !m_prevFocusKey;
+        m_prevFocusKey = focusKeyDown;
+
         // Editor update (must happen after camera input, before render)
         {
             RECT rc = {};
@@ -340,9 +497,23 @@ int App::Run()
                               static_cast<float>(cursor.y) },
                             invVP, wantMouse);
 
-            // Terrain cursor raycast
+            if (focusPressed && !ImGui::GetIO().WantTextInput)
+            {
+                XMFLOAT3 focusTarget;
+                if (m_editor.GetFocusTarget(focusTarget))
+                {
+                    m_camera->SetOrbitState(
+                        focusTarget,
+                        m_camera->GetDistance(),
+                        m_camera->GetAzimuth(),
+                        m_camera->GetElevation());
+                    SetStatusMessage("Camera focused");
+                }
+            }
+
+            // Terrain cursor raycast or XZ ground plane fallback
             m_cursorHitValid = false;
-            if (m_terrain->IsReady() && vpW > 0 && vpH > 0)
+            if (vpW > 0 && vpH > 0)
             {
                 float ndcX =  (static_cast<float>(cursor.x) / vpW) * 2.0f - 1.0f;
                 float ndcY = -(static_cast<float>(cursor.y) / vpH) * 2.0f + 1.0f;
@@ -359,7 +530,10 @@ int App::Run()
                 XMStoreFloat3(&rayO, nearH);
                 XMStoreFloat3(&rayD3, XMVector3Normalize(farH - nearH));
 
-                m_cursorHitValid = m_terrain->Raycast(rayO, rayD3, m_cursorHitPos);
+                if (m_terrain->IsReady())
+                    m_cursorHitValid = m_terrain->Raycast(rayO, rayD3, m_cursorHitPos);
+                else
+                    m_cursorHitValid = IntersectRayWithGroundPlane(rayO, rayD3, m_cursorHitPos);
             }
         }
 
@@ -404,6 +578,7 @@ void App::Render()
 
     // ImGui
     m_imgui->BeginFrame();
+    DrawViewAxisGizmo(view);
 
     if (ImGui::GetIO().KeyCtrl &&
         ImGui::IsKeyPressed(ImGuiKey_S, false) &&
@@ -417,6 +592,8 @@ void App::Render()
     {
         if (ImGui::BeginMenu("File"))
         {
+            if (ImGui::MenuItem("New Project"))
+                NewProject();
             if (ImGui::MenuItem("Open Project..."))
             {
                 if (OpenFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
@@ -446,6 +623,18 @@ void App::Render()
         }
         if (ImGui::BeginMenu("View"))
         {
+            if (ImGui::MenuItem("Road Names", nullptr, m_showRoadNames))
+            {
+                m_showRoadNames = !m_showRoadNames;
+                m_editor.SetShowRoadNames(m_showRoadNames);
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem("Intersection Names", nullptr, m_showIntersectionNames))
+            {
+                m_showIntersectionNames = !m_showIntersectionNames;
+                m_editor.SetShowIntersectionNames(m_showIntersectionNames);
+                SaveViewSettings();
+            }
             ImGui::MenuItem("ImGui Demo", nullptr, false, false);
             ImGui::EndMenu();
         }
@@ -571,6 +760,18 @@ void App::Render()
                 ApplyTerrainSettings();
                 SetStatusMessage(std::string("Terrain loaded: ") + m_terrainPath);
             }
+        }
+        if (ImGui::Button("Clear Height Field", ImVec2(-1, 0)))
+        {
+            m_terrain->Reset();
+            m_loadResW = 0;
+            m_loadResH = 0;
+            m_loadWidthM = 255.0f;
+            m_loadDepthM = 255.0f;
+            m_loadHeightM = 100.0f;
+            m_loadOffsetX = 0.0f;
+            m_loadOffsetZ = 0.0f;
+            SetStatusMessage("Height field cleared");
         }
         if (ImGui::BeginPopup("LoadError"))
         {
