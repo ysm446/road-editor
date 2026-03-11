@@ -30,6 +30,7 @@ struct Intersection
 {
     std::string         id;
     std::string         name;
+    std::string         type = "intersection";
     DirectX::XMFLOAT3   pos = { 0.0f, 0.0f, 0.0f };
     float               radius = 4.0f;
 };

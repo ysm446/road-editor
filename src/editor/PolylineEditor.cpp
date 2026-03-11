@@ -17,6 +17,33 @@ bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
     return true;
 }
 
+void PolylineEditor::SanitizeSelection()
+{
+    if (m_activeRoad < 0 || m_activeRoad >= static_cast<int>(m_network->roads.size()))
+    {
+        m_activeRoad = -1;
+        m_activePoint = -1;
+    }
+    else
+    {
+        const int pointCount = static_cast<int>(m_network->roads[m_activeRoad].points.size());
+        if (m_activePoint < 0 || m_activePoint >= pointCount)
+            m_activePoint = -1;
+    }
+
+    if (m_activeIntersection < 0 ||
+        m_activeIntersection >= static_cast<int>(m_network->intersections.size()))
+    {
+        m_activeIntersection = -1;
+    }
+
+    if (m_hoverSnapIntersection < 0 ||
+        m_hoverSnapIntersection >= static_cast<int>(m_network->intersections.size()))
+    {
+        m_hoverSnapIntersection = -1;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -522,6 +549,8 @@ void PolylineEditor::Update(int vpW, int vpH,
                              XMMATRIX invViewProj,
                              bool wantMouse)
 {
+    SanitizeSelection();
+
     bool alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
     bool lDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
     bool lClick = lDown && !m_prevLButton;  // rising edge
@@ -554,7 +583,10 @@ void PolylineEditor::Update(int vpW, int vpH,
     {
         if (m_mode == EditorMode::PointEdit || m_mode == EditorMode::IntersectionEdit)
         {
-            SetMode(EditorMode::Navigate);
+            m_mode = EditorMode::Navigate;
+            m_dragging = false;
+            m_activeGizmoAxis = GizmoAxis::None;
+            m_hoverSnapIntersection = -1;
         }
         else if (m_activeIntersection >= 0)
         {
@@ -662,25 +694,10 @@ void PolylineEditor::Update(int vpW, int vpH,
                 {
                     if (m_snapToTerrain &&
                         hasHit &&
-                        (m_activeGizmoAxis == GizmoAxis::Center ||
-                         m_activeGizmoAxis == GizmoAxis::X ||
-                         m_activeGizmoAxis == GizmoAxis::Z))
+                        m_activeGizmoAxis == GizmoAxis::Center)
                     {
                         RoadPoint& point = road.points[m_activePoint];
-                        if (m_activeGizmoAxis == GizmoAxis::Center)
-                        {
-                            point.pos = hitPos;
-                        }
-                        else if (m_activeGizmoAxis == GizmoAxis::X)
-                        {
-                            point.pos.x = hitPos.x;
-                            point.pos.y = hitPos.y;
-                        }
-                        else if (m_activeGizmoAxis == GizmoAxis::Z)
-                        {
-                            point.pos.z = hitPos.z;
-                            point.pos.y = hitPos.y;
-                        }
+                        point.pos = hitPos;
                     }
                     else if (m_activeGizmoAxis == GizmoAxis::Center)
                     {
@@ -858,24 +875,9 @@ void PolylineEditor::Update(int vpW, int vpH,
 
                 if (m_snapToTerrain &&
                     hasHit &&
-                    (m_activeGizmoAxis == GizmoAxis::Center ||
-                     m_activeGizmoAxis == GizmoAxis::X ||
-                     m_activeGizmoAxis == GizmoAxis::Z))
+                    m_activeGizmoAxis == GizmoAxis::Center)
                 {
-                    if (m_activeGizmoAxis == GizmoAxis::Center)
-                    {
-                        newPos = hitPos;
-                    }
-                    else if (m_activeGizmoAxis == GizmoAxis::X)
-                    {
-                        newPos.x = hitPos.x;
-                        newPos.y = hitPos.y;
-                    }
-                    else if (m_activeGizmoAxis == GizmoAxis::Z)
-                    {
-                        newPos.z = hitPos.z;
-                        newPos.y = hitPos.y;
-                    }
+                    newPos = hitPos;
                 }
                 else if (m_activeGizmoAxis == GizmoAxis::Center)
                 {
@@ -997,6 +999,8 @@ void PolylineEditor::Update(int vpW, int vpH,
 
 void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int vpH) const
 {
+    const_cast<PolylineEditor*>(this)->SanitizeSelection();
+
     static const XMFLOAT4 colorRoad     = { 1.0f, 0.8f, 0.1f, 1.0f };
     static const XMFLOAT4 colorSelected = { 1.0f, 0.3f, 0.3f, 1.0f };
     static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.4f };
@@ -1118,6 +1122,8 @@ static bool WorldToScreen(XMFLOAT3 world, XMMATRIX viewProj,
 
 void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 {
+    const_cast<PolylineEditor*>(this)->SanitizeSelection();
+
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     const float kRadius    = 4.0f;
     const ImU32 colPoint    = IM_COL32(255, 255, 255, 220);
@@ -1255,6 +1261,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 // ---------------------------------------------------------------------------
 void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
 {
+    SanitizeSelection();
+
     ImGui::SetNextWindowPos(ImVec2(10, 360), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(320, 420), ImGuiCond_FirstUseEver);
     ImGui::Begin("Road Editor");
@@ -1449,9 +1457,13 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         Intersection& isec = m_network->intersections[m_activeIntersection];
         char nameBuf[128] = {};
         strncpy_s(nameBuf, sizeof(nameBuf), isec.name.c_str(), _TRUNCATE);
+        static const char* kIntersectionTypes[] = { "intersection", "roundabout" };
+        int typeIndex = (isec.type == "roundabout") ? 1 : 0;
         ImGui::Text("Intersection");
         if (ImGui::InputText("Name##isec", nameBuf, sizeof(nameBuf)))
             isec.name = nameBuf;
+        if (ImGui::Combo("Type##isec", &typeIndex, kIntersectionTypes, IM_ARRAYSIZE(kIntersectionTypes)))
+            isec.type = kIntersectionTypes[typeIndex];
         if (ImGui::InputFloat3("Pos##isec", &isec.pos.x) &&
             m_snapToTerrain && m_terrain && m_terrain->IsReady())
         {

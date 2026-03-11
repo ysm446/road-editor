@@ -76,6 +76,7 @@ private:
                      DirectX::XMMATRIX invVP,
                      DirectX::XMFLOAT3& outOrigin,
                      DirectX::XMFLOAT3& outDir) const;
+    void SanitizeSelection();
 
     // Find nearest road point within screenspace threshold
     // Returns road index and point index, or {-1,-1}

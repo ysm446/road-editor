@@ -23,6 +23,7 @@ int RoadNetwork::AddIntersection(XMFLOAT3 pos, const std::string& name)
     Intersection i;
     i.id   = "isec_" + std::to_string(intersections.size());
     i.name = name + " " + std::to_string(intersections.size());
+    i.type = "intersection";
     i.pos  = pos;
     intersections.push_back(std::move(i));
     return static_cast<int>(intersections.size()) - 1;
@@ -97,6 +98,7 @@ static nlohmann::json IntersectionToJson(const Intersection& i)
     return {
         { "id",     i.id     },
         { "name",   i.name   },
+        { "type",   i.type   },
         { "x",      i.pos.x  },
         { "y",      i.pos.y  },
         { "z",      i.pos.z  },
@@ -109,6 +111,7 @@ static Intersection IntersectionFromJson(const nlohmann::json& j)
     Intersection i;
     i.id     = j.value("id", std::string());
     i.name   = j.value("name", std::string("Intersection"));
+    i.type   = j.value("type", std::string("intersection"));
     i.pos    = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
     i.radius = j.value("radius", 4.0f);
     return i;
