@@ -43,6 +43,15 @@ DirectX::XMMATRIX Camera::GetProjMatrix(float aspect, float fovY,
     return XMMatrixPerspectiveFovLH(fovY, aspect, nearZ, farZ);
 }
 
+void Camera::SetOrbitState(XMFLOAT3 target, float distance,
+                           float azimuth, float elevation)
+{
+    m_target    = target;
+    m_distance  = std::clamp(distance, 0.5f, 2000.0f);
+    m_azimuth   = azimuth;
+    m_elevation = std::clamp(elevation, -1.55f, 1.55f);
+}
+
 void Camera::HandleInput(bool wantMouse)
 {
     POINT cur;

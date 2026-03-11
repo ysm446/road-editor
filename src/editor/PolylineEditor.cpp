@@ -7,6 +7,16 @@
 
 using namespace DirectX;
 
+bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
+{
+    if (m_statusMessage.empty())
+        return false;
+
+    outMessage = m_statusMessage;
+    m_statusMessage.clear();
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -15,6 +25,55 @@ static float Dist2D(XMFLOAT2 a, XMFLOAT2 b)
 {
     float dx = a.x - b.x, dy = a.y - b.y;
     return sqrtf(dx * dx + dy * dy);
+}
+
+static float DistPointToSegment2D(XMFLOAT2 p, XMFLOAT2 a, XMFLOAT2 b)
+{
+    float abx = b.x - a.x;
+    float aby = b.y - a.y;
+    float ab2 = abx * abx + aby * aby;
+    if (ab2 <= 1e-6f)
+        return Dist2D(p, a);
+
+    float apx = p.x - a.x;
+    float apy = p.y - a.y;
+    float t = (apx * abx + apy * aby) / ab2;
+    t = std::clamp(t, 0.0f, 1.0f);
+    XMFLOAT2 q = { a.x + abx * t, a.y + aby * t };
+    return Dist2D(p, q);
+}
+
+static XMFLOAT3 AxisDirection(PolylineEditor::GizmoAxis axis)
+{
+    switch (axis)
+    {
+    case PolylineEditor::GizmoAxis::Center: return { 0.0f, 0.0f, 0.0f };
+    case PolylineEditor::GizmoAxis::X: return { 1.0f, 0.0f, 0.0f };
+    case PolylineEditor::GizmoAxis::Y: return { 0.0f, 1.0f, 0.0f };
+    case PolylineEditor::GizmoAxis::Z: return { 0.0f, 0.0f, 1.0f };
+    default:                           return { 0.0f, 0.0f, 0.0f };
+    }
+}
+
+static bool IntersectRayPlane(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
+                              XMFLOAT3 planePoint, XMFLOAT3 planeNormal,
+                              XMFLOAT3& outHit)
+{
+    const XMVECTOR ro = XMLoadFloat3(&rayOrigin);
+    const XMVECTOR rd = XMVector3Normalize(XMLoadFloat3(&rayDir));
+    const XMVECTOR pp = XMLoadFloat3(&planePoint);
+    const XMVECTOR pn = XMVector3Normalize(XMLoadFloat3(&planeNormal));
+
+    const float denom = XMVectorGetX(XMVector3Dot(rd, pn));
+    if (fabsf(denom) < 1e-5f)
+        return false;
+
+    const float t = XMVectorGetX(XMVector3Dot(XMVectorSubtract(pp, ro), pn)) / denom;
+    if (t < 0.0f)
+        return false;
+
+    XMStoreFloat3(&outHit, XMVectorAdd(ro, XMVectorScale(rd, t)));
+    return true;
 }
 
 // Project a world point to screen pixels (returns {-1,-1} if behind camera)
@@ -93,6 +152,86 @@ void PolylineEditor::FindNearestPoint(int vpW, int vpH, XMFLOAT2 px,
     }
 }
 
+PolylineEditor::GizmoAxis PolylineEditor::PickGizmoAxis(
+    int vpW, int vpH, XMFLOAT2 px, XMMATRIX viewProj) const
+{
+    if (m_activeRoad < 0 || m_activePoint < 0 ||
+        m_activeRoad >= static_cast<int>(m_network->roads.size()))
+        return GizmoAxis::None;
+
+    const Road& road = m_network->roads[m_activeRoad];
+    if (m_activePoint >= static_cast<int>(road.points.size()))
+        return GizmoAxis::None;
+
+    const RoadPoint& point = road.points[m_activePoint];
+    const float threshold = 10.0f;
+
+    XMFLOAT2 pivotScreen = WorldToScreen(point.pos, viewProj, vpW, vpH);
+    if (pivotScreen.x < 0.0f)
+        return GizmoAxis::None;
+
+    if (Dist2D(px, pivotScreen) <= threshold)
+        return GizmoAxis::Center;
+
+    struct Candidate
+    {
+        GizmoAxis axis;
+        float dist;
+    };
+
+    Candidate best = { GizmoAxis::None, threshold };
+
+    for (GizmoAxis axis : { GizmoAxis::X, GizmoAxis::Y, GizmoAxis::Z })
+    {
+        XMFLOAT3 dir = AxisDirection(axis);
+        const float axisLen = ComputeGizmoAxisLength(point.pos, axis, viewProj, vpW, vpH);
+        XMFLOAT3 end =
+        {
+            point.pos.x + dir.x * axisLen,
+            point.pos.y + dir.y * axisLen,
+            point.pos.z + dir.z * axisLen
+        };
+
+        XMFLOAT2 endScreen = WorldToScreen(end, viewProj, vpW, vpH);
+        if (endScreen.x < 0.0f)
+            continue;
+
+        float d = DistPointToSegment2D(px,
+            pivotScreen,
+            endScreen);
+        if (d < best.dist)
+            best = { axis, d };
+    }
+
+    return best.axis;
+}
+
+float PolylineEditor::ComputeGizmoAxisLength(
+    XMFLOAT3 pivot, GizmoAxis axis, XMMATRIX viewProj, int vpW, int vpH) const
+{
+    const float targetPixels = 72.0f;
+    const XMFLOAT3 dir = AxisDirection(axis);
+    const XMFLOAT2 pivotScreen = WorldToScreen(pivot, viewProj, vpW, vpH);
+    if (pivotScreen.x < 0.0f)
+        return 2.0f;
+
+    const XMFLOAT3 unitEnd =
+    {
+        pivot.x + dir.x,
+        pivot.y + dir.y,
+        pivot.z + dir.z
+    };
+    const XMFLOAT2 unitScreen = WorldToScreen(unitEnd, viewProj, vpW, vpH);
+    if (unitScreen.x < 0.0f)
+        return 2.0f;
+
+    const float pixelsPerUnit = Dist2D(pivotScreen, unitScreen);
+    if (pixelsPerUnit <= 1e-3f)
+        return 2.0f;
+
+    return std::clamp(targetPixels / pixelsPerUnit, 0.5f, 1000.0f);
+}
+
 // ---------------------------------------------------------------------------
 // SetMode
 // ---------------------------------------------------------------------------
@@ -107,6 +246,7 @@ void PolylineEditor::SetMode(EditorMode mode)
     {
         m_activePoint = -1;
         m_dragging    = false;
+        m_activeGizmoAxis = GizmoAxis::None;
     }
 }
 
@@ -212,36 +352,119 @@ void PolylineEditor::Update(int vpW, int vpH,
 
         if (m_dragging && lDown)
         {
-            // Move selected point to terrain hit
-            if (hasHit &&
+            if (m_activeGizmoAxis != GizmoAxis::None &&
                 m_activeRoad  >= 0 &&
                 m_activePoint >= 0 &&
                 m_activeRoad  < static_cast<int>(m_network->roads.size()))
             {
                 Road& road = m_network->roads[m_activeRoad];
                 if (m_activePoint < static_cast<int>(road.points.size()))
-                    road.points[m_activePoint].pos = hitPos;
+                {
+                    if (m_activeGizmoAxis == GizmoAxis::Center)
+                    {
+                        XMFLOAT3 planeHit;
+                        if (IntersectRayPlane(rayOrig, rayDir, m_axisDragStartPos,
+                                              m_planeDragNormal, planeHit))
+                        {
+                            RoadPoint& point = road.points[m_activePoint];
+                            point.pos =
+                            {
+                                m_axisDragStartPos.x + (planeHit.x - m_planeDragStartHit.x),
+                                m_axisDragStartPos.y + (planeHit.y - m_planeDragStartHit.y),
+                                m_axisDragStartPos.z + (planeHit.z - m_planeDragStartHit.z)
+                            };
+                        }
+                    }
+                    else
+                    {
+                        XMFLOAT3 axisDir = AxisDirection(m_activeGizmoAxis);
+                        const float axisLen = ComputeGizmoAxisLength(
+                            m_axisDragStartPos, m_activeGizmoAxis, viewProj, vpW, vpH);
+                        const XMFLOAT2 startScreen =
+                            WorldToScreen(m_axisDragStartPos, viewProj, vpW, vpH);
+                        const XMFLOAT2 endScreen = WorldToScreen(
+                            {
+                                m_axisDragStartPos.x + axisDir.x * axisLen,
+                                m_axisDragStartPos.y + axisDir.y * axisLen,
+                                m_axisDragStartPos.z + axisDir.z * axisLen
+                            },
+                            viewProj, vpW, vpH);
+
+                        const float axisScreenLen = Dist2D(startScreen, endScreen);
+                        if (axisScreenLen > 1e-3f)
+                        {
+                            const XMFLOAT2 axisScreenDir =
+                            {
+                                (endScreen.x - startScreen.x) / axisScreenLen,
+                                (endScreen.y - startScreen.y) / axisScreenLen
+                            };
+                            const XMFLOAT2 mouseDelta =
+                            {
+                                mousePos.x - m_axisDragStartMouse.x,
+                                mousePos.y - m_axisDragStartMouse.y
+                            };
+                            const float deltaPixels =
+                                mouseDelta.x * axisScreenDir.x +
+                                mouseDelta.y * axisScreenDir.y;
+                            const float deltaWorld = (deltaPixels / axisScreenLen) * axisLen;
+                            RoadPoint& point = road.points[m_activePoint];
+                            point.pos =
+                            {
+                                m_axisDragStartPos.x + axisDir.x * deltaWorld,
+                                m_axisDragStartPos.y + axisDir.y * deltaWorld,
+                                m_axisDragStartPos.z + axisDir.z * deltaWorld
+                            };
+                        }
+                    }
+                }
             }
         }
         else if (m_dragging && !lDown)
         {
             m_dragging = false;
+            m_activeGizmoAxis = GizmoAxis::None;
         }
         else if (lClick)
         {
-            // Try to select a point
-            int selRoad, selPt;
-            FindNearestPoint(vpW, vpH, mousePos, viewProj, selRoad, selPt);
-            if (selRoad >= 0)
+            GizmoAxis gizmoAxis = PickGizmoAxis(vpW, vpH, mousePos, viewProj);
+            if (gizmoAxis != GizmoAxis::None &&
+                m_activeRoad >= 0 &&
+                m_activePoint >= 0 &&
+                m_activeRoad < static_cast<int>(m_network->roads.size()))
             {
-                m_activeRoad  = selRoad;
-                m_activePoint = selPt;
-                m_dragging    = true;
+                Road& road = m_network->roads[m_activeRoad];
+                if (m_activePoint < static_cast<int>(road.points.size()))
+                {
+                    m_activeGizmoAxis  = gizmoAxis;
+                    m_axisDragStartPos = road.points[m_activePoint].pos;
+                    m_axisDragStartMouse = mousePos;
+                    m_planeDragNormal = rayDir;
+                    if (!IntersectRayPlane(rayOrig, rayDir, m_axisDragStartPos,
+                                           m_planeDragNormal, m_planeDragStartHit))
+                    {
+                        m_planeDragStartHit = m_axisDragStartPos;
+                    }
+                    m_dragging         = true;
+                }
             }
             else
             {
-                m_activePoint = -1;
-                m_dragging    = false;
+                // Try to select a point
+                int selRoad, selPt;
+                FindNearestPoint(vpW, vpH, mousePos, viewProj, selRoad, selPt);
+                if (selRoad >= 0)
+                {
+                    m_activeRoad       = selRoad;
+                    m_activePoint      = selPt;
+                    m_dragging         = false;
+                    m_activeGizmoAxis  = GizmoAxis::None;
+                }
+                else
+                {
+                    m_activePoint      = -1;
+                    m_dragging         = false;
+                    m_activeGizmoAxis  = GizmoAxis::None;
+                }
             }
         }
 
@@ -256,6 +479,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             {
                 road.points.erase(road.points.begin() + m_activePoint);
                 m_activePoint = -1;
+                m_activeGizmoAxis = GizmoAxis::None;
             }
         }
     }
@@ -265,11 +489,15 @@ void PolylineEditor::Update(int vpW, int vpH,
 // DrawNetwork / DrawOverlay
 // ---------------------------------------------------------------------------
 
-void PolylineEditor::DrawNetwork(DebugDraw& dd) const
+void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int vpH) const
 {
     static const XMFLOAT4 colorRoad     = { 1.0f, 0.8f, 0.1f, 1.0f };
     static const XMFLOAT4 colorSelected = { 1.0f, 0.3f, 0.3f, 1.0f };
     static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.4f };
+    static const XMFLOAT4 colorAxisX    = { 1.0f, 0.2f, 0.2f, 1.0f };
+    static const XMFLOAT4 colorAxisY    = { 0.2f, 1.0f, 0.2f, 1.0f };
+    static const XMFLOAT4 colorAxisZ    = { 0.2f, 0.6f, 1.0f, 1.0f };
+    static const XMFLOAT4 colorPivot    = { 1.0f, 1.0f, 1.0f, 0.9f };
 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
@@ -293,6 +521,28 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd) const
         if (!road.points.empty())
             dd.AddLine(road.points.back().pos, m_cursorPos, colorCursor);
     }
+
+    if (m_mode == EditorMode::PointEdit &&
+        m_activeRoad >= 0 &&
+        m_activePoint >= 0 &&
+        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        const Road& road = m_network->roads[m_activeRoad];
+        if (m_activePoint < static_cast<int>(road.points.size()))
+        {
+            const RoadPoint& point = road.points[m_activePoint];
+            const float axisLenX = ComputeGizmoAxisLength(point.pos, GizmoAxis::X, viewProj, vpW, vpH);
+            const float axisLenY = ComputeGizmoAxisLength(point.pos, GizmoAxis::Y, viewProj, vpW, vpH);
+            const float axisLenZ = ComputeGizmoAxisLength(point.pos, GizmoAxis::Z, viewProj, vpW, vpH);
+            const XMFLOAT3 p = point.pos;
+            dd.AddLine({ p.x - 0.15f, p.y, p.z }, { p.x + 0.15f, p.y, p.z }, colorPivot);
+            dd.AddLine({ p.x, p.y - 0.15f, p.z }, { p.x, p.y + 0.15f, p.z }, colorPivot);
+            dd.AddLine({ p.x, p.y, p.z - 0.15f }, { p.x, p.y, p.z + 0.15f }, colorPivot);
+            dd.AddLine(p, { p.x + axisLenX, p.y, p.z }, colorAxisX);
+            dd.AddLine(p, { p.x, p.y + axisLenY, p.z }, colorAxisY);
+            dd.AddLine(p, { p.x, p.y, p.z + axisLenZ }, colorAxisZ);
+        }
+    }
 }
 
 // Project a world-space point to screen pixels. Returns false if behind camera.
@@ -315,6 +565,9 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const ImU32 colPoint    = IM_COL32(255, 255, 255, 220);
     const ImU32 colSelected = IM_COL32(255,  80,  80, 255);
     const ImU32 colCursor   = IM_COL32( 60, 255, 110, 220);
+    const ImU32 colAxisX    = IM_COL32(255,  80,  80, 255);
+    const ImU32 colAxisY    = IM_COL32( 80, 255, 120, 255);
+    const ImU32 colAxisZ    = IM_COL32( 80, 150, 255, 255);
 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
@@ -331,6 +584,46 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         }
     }
 
+    if (m_mode == EditorMode::PointEdit &&
+        m_activeRoad >= 0 &&
+        m_activePoint >= 0 &&
+        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    {
+        const Road& road = m_network->roads[m_activeRoad];
+        if (m_activePoint < static_cast<int>(road.points.size()))
+        {
+            const RoadPoint& point = road.points[m_activePoint];
+            const XMFLOAT3 p = point.pos;
+            ImVec2 pivot;
+            if (WorldToScreen(p, viewProj, vpW, vpH, pivot))
+            {
+                dl->AddCircle(pivot, 8.0f, IM_COL32(255,255,255,220), 24, 2.0f);
+                dl->AddCircleFilled(pivot, 3.0f, IM_COL32(255,255,255,220), 16);
+
+                struct AxisOverlay
+                {
+                    XMFLOAT3 end;
+                    ImU32 color;
+                    const char* label;
+                };
+                AxisOverlay axes[] =
+                {
+                    { { p.x + ComputeGizmoAxisLength(p, GizmoAxis::X, viewProj, vpW, vpH), p.y, p.z }, colAxisX, "X" },
+                    { { p.x, p.y + ComputeGizmoAxisLength(p, GizmoAxis::Y, viewProj, vpW, vpH), p.z }, colAxisY, "Y" },
+                    { { p.x, p.y, p.z + ComputeGizmoAxisLength(p, GizmoAxis::Z, viewProj, vpW, vpH) }, colAxisZ, "Z" },
+                };
+
+                for (const AxisOverlay& axis : axes)
+                {
+                    ImVec2 end;
+                    if (!WorldToScreen(axis.end, viewProj, vpW, vpH, end))
+                        continue;
+                    dl->AddLine(pivot, end, axis.color, 2.0f);
+                    dl->AddText(ImVec2(end.x + 4.0f, end.y - 8.0f), axis.color, axis.label);
+                }
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -384,7 +677,9 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         break;
     case EditorMode::PointEdit:
         ImGui::TextColored(ImVec4(1,0.8f,0.2f,1), "Edit Points");
-        ImGui::TextDisabled("Click: select/drag point");
+        ImGui::TextDisabled("Click point: select");
+        ImGui::TextDisabled("Drag center: pan in screen plane");
+        ImGui::TextDisabled("Click X/Y/Z axis: move on that axis");
         ImGui::TextDisabled("Delete: remove point");
         break;
     }
@@ -438,13 +733,27 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     if (ImGui::Button("Save"))
     {
         if (!Save(m_filePath))
+        {
+            m_statusMessage = std::string("Road save failed: ") + m_filePath;
             ImGui::OpenPopup("SaveError");
+        }
+        else
+        {
+            m_statusMessage = std::string("Roads saved: ") + m_filePath;
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Load"))
     {
         if (!Load(m_filePath))
+        {
+            m_statusMessage = std::string("Road load failed: ") + m_filePath;
             ImGui::OpenPopup("LoadError");
+        }
+        else
+        {
+            m_statusMessage = std::string("Roads loaded: ") + m_filePath;
+        }
     }
     if (ImGui::BeginPopup("SaveError"))
     {

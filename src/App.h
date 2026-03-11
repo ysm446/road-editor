@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <memory>
+#include <string>
 #include <DirectXMath.h>
 
 #include "renderer/D3D11Context.h"
@@ -35,6 +36,10 @@ public:
 private:
     LRESULT WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     bool    CreateAppWindow(HINSTANCE hInstance, int nCmdShow);
+    bool    SaveProject(const char* path);
+    bool    LoadProject(const char* path);
+    void    ApplyTerrainSettings();
+    void    SetStatusMessage(const std::string& message);
     void    Render();
 
     HWND m_hwnd    = nullptr;
@@ -50,6 +55,7 @@ private:
     ConstantBuffer<PerFrameData> m_perFrameCB;
 
     char m_terrainPath[260] = "data/heightmap.png";
+    char m_projectPath[260] = "data/project.json";
 
     // Load mesh divisions (cell counts, 0 = native image resolution - 1)
     int m_loadResW = 0;
@@ -61,6 +67,7 @@ private:
     // Mouse-terrain intersection (updated each frame)
     bool              m_cursorHitValid = false;
     DirectX::XMFLOAT3 m_cursorHitPos   = {};
+    std::string       m_statusMessage  = "Ready";
 
     DebugDraw      m_debugDraw;
     RoadNetwork    m_roadNetwork;

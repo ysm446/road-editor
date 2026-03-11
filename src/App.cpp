@@ -5,6 +5,9 @@
 #include <chrono>
 #include <commdlg.h>
 #include <DirectXMath.h>
+#include <fstream>
+
+#include <nlohmann/json.hpp>
 
 // Forward declaration required by imgui_impl_win32
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
@@ -37,6 +40,174 @@ static bool OpenFileDialog(HWND owner, char* buf, DWORD bufSize,
         return true;
     }
     return false;
+}
+
+static bool SaveFileDialog(HWND owner, char* buf, DWORD bufSize,
+                           const char* filter, const char* title)
+{
+    char tmp[MAX_PATH] = {};
+    strncpy_s(tmp, bufSize, buf, _TRUNCATE);
+
+    OPENFILENAMEA ofn  = {};
+    ofn.lStructSize    = sizeof(ofn);
+    ofn.hwndOwner      = owner;
+    ofn.lpstrFilter    = filter;
+    ofn.lpstrFile      = tmp;
+    ofn.nMaxFile       = MAX_PATH;
+    ofn.lpstrTitle     = title;
+    ofn.Flags          = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
+
+    if (GetSaveFileNameA(&ofn))
+    {
+        strncpy_s(buf, bufSize, tmp, _TRUNCATE);
+        return true;
+    }
+    return false;
+}
+
+void App::ApplyTerrainSettings()
+{
+    m_terrain->meshSubdivW = m_loadResW;
+    m_terrain->meshSubdivH = m_loadResH;
+
+    const int cellsW = (m_loadResW > 0) ? m_loadResW : (m_terrain->GetRawW() - 1);
+    const int cellsH = (m_loadResH > 0) ? m_loadResH : (m_terrain->GetRawH() - 1);
+    m_terrain->horizontalScaleX = m_loadWidthM / static_cast<float>((cellsW > 0) ? cellsW : 1);
+    m_terrain->horizontalScaleZ = m_loadDepthM / static_cast<float>((cellsH > 0) ? cellsH : 1);
+    m_terrain->heightScale      = m_loadHeightM;
+    m_terrain->Rebuild(m_d3d->GetDevice());
+}
+
+void App::SetStatusMessage(const std::string& message)
+{
+    m_statusMessage = message;
+}
+
+bool App::SaveProject(const char* path)
+{
+    try
+    {
+        if (m_editor.GetFilePath()[0] != '\0' && !m_editor.Save(m_editor.GetFilePath()))
+        {
+            SetStatusMessage(std::string("Road save failed: ") + m_editor.GetFilePath());
+            return false;
+        }
+
+        nlohmann::json root;
+        root["version"] = 1;
+        root["terrain"] =
+        {
+            { "path",        m_terrainPath            },
+            { "divisionsX",  m_loadResW               },
+            { "divisionsY",  m_loadResH               },
+            { "widthM",      m_loadWidthM             },
+            { "depthM",      m_loadDepthM             },
+            { "heightM",     m_loadHeightM            },
+            { "visible",     m_terrain->visible       },
+            { "wireframe",   m_terrain->wireframe     }
+        };
+        root["roads"] =
+        {
+            { "path", m_editor.GetFilePath() }
+        };
+        root["camera"] =
+        {
+            { "targetX",   m_camera->GetTarget().x    },
+            { "targetY",   m_camera->GetTarget().y    },
+            { "targetZ",   m_camera->GetTarget().z    },
+            { "distance",  m_camera->GetDistance()    },
+            { "azimuth",   m_camera->GetAzimuth()     },
+            { "elevation", m_camera->GetElevation()   }
+        };
+
+        std::ofstream ofs(path);
+        if (!ofs)
+            return false;
+
+        ofs << root.dump(2);
+        SetStatusMessage(std::string("Project saved: ") + path);
+        return true;
+    }
+    catch (...)
+    {
+        SetStatusMessage(std::string("Project save failed: ") + path);
+        return false;
+    }
+}
+
+bool App::LoadProject(const char* path)
+{
+    try
+    {
+        std::ifstream ifs(path);
+        if (!ifs)
+            return false;
+
+        nlohmann::json root;
+        ifs >> root;
+
+        if (root.contains("terrain"))
+        {
+            const auto& t = root["terrain"];
+            std::string terrainPath = t.value("path", std::string());
+            strncpy_s(m_terrainPath, sizeof(m_terrainPath), terrainPath.c_str(), _TRUNCATE);
+            m_loadResW    = t.value("divisionsX", 0);
+            m_loadResH    = t.value("divisionsY", 0);
+            m_loadWidthM  = t.value("widthM", 255.0f);
+            m_loadDepthM  = t.value("depthM", 255.0f);
+            m_loadHeightM = t.value("heightM", 100.0f);
+            m_terrain->visible   = t.value("visible", true);
+            m_terrain->wireframe = t.value("wireframe", false);
+
+            if (m_terrainPath[0] != '\0')
+            {
+                if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
+                {
+                    SetStatusMessage(std::string("Terrain load failed: ") + m_terrainPath);
+                    return false;
+                }
+                ApplyTerrainSettings();
+            }
+        }
+
+        if (root.contains("roads"))
+        {
+            const auto& r = root["roads"];
+            std::string roadPath = r.value("path", std::string());
+            m_editor.SetFilePath(roadPath.c_str());
+            if (roadPath.empty())
+            {
+                m_roadNetwork.roads.clear();
+            }
+            else if (!m_editor.Load(roadPath.c_str()))
+            {
+                SetStatusMessage(std::string("Road load failed: ") + roadPath);
+                return false;
+            }
+        }
+
+        if (root.contains("camera"))
+        {
+            const auto& c = root["camera"];
+            m_camera->SetOrbitState(
+                {
+                    c.value("targetX", 0.0f),
+                    c.value("targetY", 0.0f),
+                    c.value("targetZ", 0.0f)
+                },
+                c.value("distance", 20.0f),
+                c.value("azimuth", 0.785f),
+                c.value("elevation", 0.4f));
+        }
+
+        SetStatusMessage(std::string("Project loaded: ") + path);
+        return true;
+    }
+    catch (...)
+    {
+        SetStatusMessage(std::string("Project load failed: ") + path);
+        return false;
+    }
 }
 
 // --- Window ------------------------------------------------------------------
@@ -219,14 +390,51 @@ void App::Render()
     m_terrain->Render(m_d3d->GetContext(), m_perFrameCB.Get());
     m_grid->Render(m_d3d->GetContext(), m_perFrameCB.Get());
 
-    m_editor.DrawNetwork(m_debugDraw);
+    m_editor.DrawNetwork(m_debugDraw, vp, m_d3d->GetWidth(), m_d3d->GetHeight());
     m_debugDraw.Flush(m_d3d->GetContext(), m_perFrameCB.Get());
 
     // ImGui
     m_imgui->BeginFrame();
 
+    if (ImGui::GetIO().KeyCtrl &&
+        ImGui::IsKeyPressed(ImGuiKey_S, false) &&
+        !ImGui::GetIO().WantTextInput)
+    {
+        if (!SaveProject(m_projectPath))
+            ImGui::OpenPopup("ProjectSaveError");
+    }
+
     if (ImGui::BeginMainMenuBar())
     {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open Project..."))
+            {
+                if (OpenFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
+                                   "Project Files\0*.json\0All Files\0*.*\0",
+                                   "Open Project"))
+                {
+                    if (!LoadProject(m_projectPath))
+                        ImGui::OpenPopup("ProjectLoadError");
+                }
+            }
+            if (ImGui::MenuItem("Save Project"))
+            {
+                if (!SaveProject(m_projectPath))
+                    ImGui::OpenPopup("ProjectSaveError");
+            }
+            if (ImGui::MenuItem("Save Project As..."))
+            {
+                if (SaveFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
+                                   "Project Files\0*.json\0All Files\0*.*\0",
+                                   "Save Project"))
+                {
+                    if (!SaveProject(m_projectPath))
+                        ImGui::OpenPopup("ProjectSaveError");
+                }
+            }
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("View"))
         {
             ImGui::MenuItem("ImGui Demo", nullptr, false, false);
@@ -234,6 +442,19 @@ void App::Render()
         }
         ImGui::Text("  FPS: %.0f", ImGui::GetIO().Framerate);
         ImGui::EndMainMenuBar();
+    }
+
+    if (ImGui::BeginPopup("ProjectSaveError"))
+    {
+        ImGui::Text("Project save failed: %s", m_projectPath);
+        if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+    if (ImGui::BeginPopup("ProjectLoadError"))
+    {
+        ImGui::Text("Project load failed: %s", m_projectPath);
+        if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
     }
 
     // Camera panel
@@ -319,31 +540,20 @@ void App::Render()
         if (m_loadDepthM < 1.0f) m_loadDepthM = 1.0f;
         if (m_loadHeightM < 1.0f) m_loadHeightM = 1.0f;
 
-        auto applyTerrainSettings = [&]()
-        {
-            m_terrain->meshSubdivW = m_loadResW;
-            m_terrain->meshSubdivH = m_loadResH;
-
-            const int cellsW = (m_loadResW > 0) ? m_loadResW : (m_terrain->GetRawW() - 1);
-            const int cellsH = (m_loadResH > 0) ? m_loadResH : (m_terrain->GetRawH() - 1);
-            m_terrain->horizontalScaleX = m_loadWidthM / static_cast<float>((cellsW > 0) ? cellsW : 1);
-            m_terrain->horizontalScaleZ = m_loadDepthM / static_cast<float>((cellsH > 0) ? cellsH : 1);
-            m_terrain->heightScale      = m_loadHeightM;
-            m_terrain->Rebuild(m_d3d->GetDevice());
-        };
-
         if (applyToCurrentTerrain && m_terrain->IsReady())
-            applyTerrainSettings();
+            ApplyTerrainSettings();
 
         if (ImGui::Button("Load", ImVec2(-1, 0)))
         {
             if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
             {
+                SetStatusMessage(std::string("Terrain load failed: ") + m_terrainPath);
                 ImGui::OpenPopup("LoadError");
             }
             else
             {
-                applyTerrainSettings();
+                ApplyTerrainSettings();
+                SetStatusMessage(std::string("Terrain loaded: ") + m_terrainPath);
             }
         }
         if (ImGui::BeginPopup("LoadError"))
@@ -367,6 +577,27 @@ void App::Render()
 
     // Road editor panel
     m_editor.DrawUI(m_d3d->GetDevice());
+
+    std::string editorStatus;
+    if (m_editor.ConsumeStatusMessage(editorStatus))
+        SetStatusMessage(editorStatus);
+
+    {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        const float statusBarHeight = ImGui::GetFrameHeight();
+        ImGui::SetNextWindowPos(
+            ImVec2(viewport->WorkPos.x,
+                   viewport->WorkPos.y + viewport->WorkSize.y - statusBarHeight));
+        ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x, statusBarHeight));
+        ImGui::Begin("StatusBar", nullptr,
+                     ImGuiWindowFlags_NoDecoration |
+                     ImGuiWindowFlags_NoMove |
+                     ImGuiWindowFlags_NoSavedSettings |
+                     ImGuiWindowFlags_NoNav |
+                     ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGui::TextUnformatted(m_statusMessage.c_str());
+        ImGui::End();
+    }
 
     m_imgui->EndFrame();
     m_d3d->EndFrame();

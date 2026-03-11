@@ -27,6 +27,14 @@ public:
                                       float nearZ = 0.1f,
                                       float farZ  = 2000.0f) const;
     DirectX::XMFLOAT3   GetPosition()  const;
+    DirectX::XMFLOAT3   GetTarget()    const { return m_target; }
+    float               GetDistance()  const { return m_distance; }
+    float               GetAzimuth()   const { return m_azimuth; }
+    float               GetElevation() const { return m_elevation; }
+    void SetOrbitState(DirectX::XMFLOAT3 target,
+                       float distance,
+                       float azimuth,
+                       float elevation);
 
 private:
     DirectX::XMFLOAT3 m_target    = { 0.0f, 0.0f, 0.0f };
