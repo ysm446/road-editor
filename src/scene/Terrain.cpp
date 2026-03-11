@@ -112,7 +112,8 @@ void Terrain::BuildMesh(ID3D11Device* device)
 
     const int   W      = m_rawW;
     const int   H      = m_rawH;
-    const float hScale = horizontalScale;
+    const float sX     = horizontalScaleX;
+    const float sZ     = horizontalScaleZ;
     const float vScale = heightScale;
 
     auto getH = [&](int col, int row) -> float
@@ -131,17 +132,17 @@ void Terrain::BuildMesh(ID3D11Device* device)
         for (int col = 0; col < W; ++col)
         {
             float y = getH(col, row);
-            float x = (col - W * 0.5f) * hScale;
-            float z = (row - H * 0.5f) * hScale;
+            float x = (col - W * 0.5f) * sX;
+            float z = (row - H * 0.5f) * sZ;
 
-            // Finite-difference normal
+            // Finite-difference normal (tangents scaled by cell size)
             float hL = getH(col - 1, row);
             float hR = getH(col + 1, row);
             float hD = getH(col, row - 1);
             float hU = getH(col, row + 1);
 
-            XMVECTOR tx = XMVectorSet(2.0f * hScale, hR - hL, 0.0f, 0.0f);
-            XMVECTOR tz = XMVectorSet(0.0f, hU - hD, 2.0f * hScale, 0.0f);
+            XMVECTOR tx = XMVectorSet(2.0f * sX, hR - hL, 0.0f, 0.0f);
+            XMVECTOR tz = XMVectorSet(0.0f, hU - hD, 2.0f * sZ, 0.0f);
             XMVECTOR n  = XMVector3Normalize(XMVector3Cross(tz, tx));
 
             Vertex v;
@@ -218,12 +219,11 @@ float Terrain::GetHeightAt(float worldX, float worldZ) const
     if (!m_ready || m_rawW < 2 || m_rawH < 2)
         return 0.0f;
 
-    const float hScale = horizontalScale;
     const float vScale = heightScale;
 
     // Convert world XZ -> normalised grid col/row
-    float col = worldX / hScale + m_rawW * 0.5f;
-    float row  = worldZ / hScale + m_rawH * 0.5f;
+    float col = worldX / horizontalScaleX + m_rawW * 0.5f;
+    float row  = worldZ / horizontalScaleZ + m_rawH * 0.5f;
 
     int c0 = static_cast<int>(col);
     int r0 = static_cast<int>(row);
@@ -263,7 +263,8 @@ bool Terrain::Raycast(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
 
     // March along the ray with a coarse step, then refine
     const float maxDist  = 2000.0f;
-    const float coarse   = horizontalScale * 0.5f;
+    const float coarse   = (horizontalScaleX < horizontalScaleZ
+                            ? horizontalScaleX : horizontalScaleZ) * 0.5f;
 
     float t = 0.0f;
     float prevDiff = 0.0f;

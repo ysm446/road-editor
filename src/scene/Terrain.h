@@ -46,11 +46,14 @@ public:
     bool Raycast(DirectX::XMFLOAT3 rayOrigin, DirectX::XMFLOAT3 rayDir,
                  DirectX::XMFLOAT3& hitPos) const;
 
-    // Adjustable parameters (change then call Rebuild)
-    float heightScale     = 15.0f;
-    float horizontalScale = 0.5f;
-    bool  wireframe       = false;
-    bool  visible         = true;
+    // Adjustable parameters (change then call Rebuild).
+    // horizontalScaleX/Z: metres per pixel in X and Z.
+    // heightScale: maps normalised height [0,1] to metres.
+    float heightScale      = 100.0f;
+    float horizontalScaleX =   1.0f;
+    float horizontalScaleZ =   1.0f;
+    bool  wireframe        = false;
+    bool  visible          = true;
 
 private:
     struct Vertex

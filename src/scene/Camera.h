@@ -3,11 +3,11 @@
 #include <DirectXMath.h>
 #include <Windows.h>
 
-// Orbit camera: rotates / pans / zooms around a target point.
+// Orbit camera (Maya-style controls):
 //
-//  MMB drag          : rotate (azimuth / elevation)
-//  Shift + MMB drag  : pan target
-//  Scroll wheel      : zoom (distance)
+//  Alt + LMB drag : rotate (azimuth / elevation)
+//  Alt + MMB drag : pan target
+//  Scroll wheel   : zoom (distance)
 class Camera
 {
 public:

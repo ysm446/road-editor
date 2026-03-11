@@ -51,10 +51,6 @@ private:
 
     char m_terrainPath[260] = "data/heightmap.png";
 
-    // Procedural terrain resolution
-    int m_terrainW = 256;
-    int m_terrainH = 256;
-
     DebugDraw      m_debugDraw;
     RoadNetwork    m_roadNetwork;
     PolylineEditor m_editor;

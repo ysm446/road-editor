@@ -158,7 +158,9 @@ void PolylineEditor::Update(int vpW, int vpH,
                              XMMATRIX invViewProj,
                              bool wantMouse)
 {
-    if (wantMouse || m_mode == EditorMode::Navigate)
+    bool alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+
+    if (wantMouse || m_mode == EditorMode::Navigate || alt)
     {
         m_hasCursorPos = false;
         m_prevLButton  = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;

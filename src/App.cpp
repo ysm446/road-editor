@@ -101,7 +101,6 @@ bool App::Initialize(HINSTANCE hInstance, int nCmdShow)
     m_terrain = std::make_unique<Terrain>();
     if (!m_terrain->Initialize(m_d3d->GetDevice()))
         return false;
-    m_terrain->GenerateProcedural(m_d3d->GetDevice(), 256, 256);
 
     if (!m_perFrameCB.Initialize(m_d3d->GetDevice()))
         return false;
@@ -223,15 +222,15 @@ void App::Render()
         auto p = m_camera->GetPosition();
         ImGui::Text("Position  %.2f  %.2f  %.2f", p.x, p.y, p.z);
         ImGui::Separator();
-        ImGui::TextDisabled("MMB drag        : rotate");
-        ImGui::TextDisabled("Shift+MMB drag  : pan");
-        ImGui::TextDisabled("Scroll wheel    : zoom");
+        ImGui::TextDisabled("Alt + LMB drag : rotate");
+        ImGui::TextDisabled("Alt + MMB drag : pan");
+        ImGui::TextDisabled("Scroll wheel   : zoom");
     }
     ImGui::End();
 
     // Terrain panel
     ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(290, 320), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(290, 240), ImGuiCond_Always);
     ImGui::Begin("Terrain");
     {
         ImGui::Checkbox("Visible",   &m_terrain->visible);
@@ -240,19 +239,46 @@ void App::Render()
 
         ImGui::Separator();
 
-        // --- Scale (applies to both procedural and loaded heightmap) ---
+        // --- Size / scale in metres ---
         if (m_terrain->IsReady())
-            ImGui::Text("Resolution: %d x %d", m_terrain->GetRawW(), m_terrain->GetRawH());
-        else
-            ImGui::TextDisabled("No terrain loaded");
+        {
+            int W = m_terrain->GetRawW();
+            int H = m_terrain->GetRawH();
+            ImGui::Text("Resolution: %d x %d px", W, H);
 
-        bool scaleChanged = false;
-        scaleChanged |= ImGui::DragFloat("Height Scale",     &m_terrain->heightScale,
-                                         0.1f, 0.5f, 80.0f,  "%.1f");
-        scaleChanged |= ImGui::DragFloat("Horizontal Scale", &m_terrain->horizontalScale,
-                                         0.005f, 0.05f, 5.0f, "%.3f");
-        if (scaleChanged)
-            m_terrain->Rebuild(m_d3d->GetDevice());
+            // Derive current size in metres (editing buffers, not committed yet)
+            float widthM  = (W - 1) * m_terrain->horizontalScaleX;
+            float depthM  = (H - 1) * m_terrain->horizontalScaleZ;
+            float heightM = m_terrain->heightScale;
+
+            // Rebuild when editing is confirmed (Enter or focus lost)
+            bool changed = false;
+            ImGui::InputFloat("Width (m)",  &widthM,  0, 0, "%.0f");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                if (widthM  >= 1.0f) m_terrain->horizontalScaleX = widthM  / (W - 1);
+                changed = true;
+            }
+            ImGui::InputFloat("Depth (m)",  &depthM,  0, 0, "%.0f");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                if (depthM  >= 1.0f) m_terrain->horizontalScaleZ = depthM  / (H - 1);
+                changed = true;
+            }
+            ImGui::InputFloat("Height (m)", &heightM, 0, 0, "%.0f");
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                if (heightM >= 1.0f) m_terrain->heightScale = heightM;
+                changed = true;
+            }
+            ImGui::TextDisabled("Enter or click away to apply");
+            if (changed)
+                m_terrain->Rebuild(m_d3d->GetDevice());
+        }
+        else
+        {
+            ImGui::TextDisabled("No terrain loaded");
+        }
 
         ImGui::Separator();
 
@@ -279,21 +305,6 @@ void App::Render()
             ImGui::EndPopup();
         }
 
-        ImGui::Separator();
-
-        // --- Procedural generation ---
-        ImGui::Text("Procedural Generation");
-        ImGui::SetNextItemWidth(110);
-        ImGui::InputInt("W##proc", &m_terrainW, 16, 64);
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(110);
-        ImGui::InputInt("H##proc", &m_terrainH, 16, 64);
-        if (m_terrainW < 2)    m_terrainW = 2;
-        if (m_terrainW > 2048) m_terrainW = 2048;
-        if (m_terrainH < 2)    m_terrainH = 2;
-        if (m_terrainH > 2048) m_terrainH = 2048;
-        if (ImGui::Button("Generate", ImVec2(-1, 0)))
-            m_terrain->GenerateProcedural(m_d3d->GetDevice(), m_terrainW, m_terrainH);
     }
     ImGui::End();
 
@@ -335,6 +346,21 @@ LRESULT App::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         if (m_d3d && wParam != SIZE_MINIMIZED)
             m_d3d->Resize(LOWORD(lParam), HIWORD(lParam));
         return 0;
+
+    case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT && !ImGui::GetIO().WantCaptureMouse)
+        {
+            bool alt  = (GetAsyncKeyState(VK_MENU)    & 0x8000) != 0;
+            bool lmb  = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+            bool mmb  = (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0;
+            if (alt)
+            {
+                LPCTSTR id = (lmb || mmb) ? IDC_SIZEALL : IDC_HAND;
+                SetCursor(LoadCursor(nullptr, id));
+                return TRUE;
+            }
+        }
+        break;
 
     case WM_MOUSEWHEEL:
         if (!ImGui::GetIO().WantCaptureMouse)

@@ -55,15 +55,25 @@ void Camera::HandleInput(bool wantMouse)
     if (wantMouse)
         return;
 
-    bool mmb   = (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0;
-    bool shift = (GetAsyncKeyState(VK_SHIFT)   & 0x8000) != 0;
+    // Maya-style: Alt must be held for all camera operations
+    bool alt = (GetAsyncKeyState(VK_MENU)   & 0x8000) != 0;
+    bool lmb = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    bool mmb = (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0;
 
-    if (!mmb)
+    if (!alt)
         return;
 
-    if (shift)
+    if (lmb)
     {
-        // Pan: move target in the camera's local XY plane
+        // Alt + LMB : Orbit (rotate)
+        const float sensitivity = 0.005f;
+        m_azimuth   += dx * sensitivity;
+        m_elevation += dy * sensitivity;
+        m_elevation  = std::clamp(m_elevation, -1.55f, 1.55f);
+    }
+    else if (mmb)
+    {
+        // Alt + MMB : Pan
         XMFLOAT3 pos  = GetPosition();
         XMVECTOR eye  = XMLoadFloat3(&pos);
         XMVECTOR tgt  = XMLoadFloat3(&m_target);
@@ -82,14 +92,6 @@ void Camera::HandleInput(bool wantMouse)
         m_target.x += d.x;
         m_target.y += d.y;
         m_target.z += d.z;
-    }
-    else
-    {
-        // Rotate
-        const float sensitivity = 0.005f;
-        m_azimuth   += dx * sensitivity;
-        m_elevation += dy * sensitivity;
-        m_elevation  = std::clamp(m_elevation, -1.55f, 1.55f);
     }
 }
 
