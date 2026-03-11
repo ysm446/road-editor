@@ -82,6 +82,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.activeRoad = m_activeRoad;
     snapshot.activePoint = m_activePoint;
     snapshot.selectedPoints = m_selectedPoints;
+    snapshot.selectedIntersections = m_selectedIntersections;
     snapshot.activeGroup = m_activeGroup;
     snapshot.activeIntersection = m_activeIntersection;
     snapshot.hoverSnapIntersection = m_hoverSnapIntersection;
@@ -97,6 +98,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_activeRoad = snapshot.activeRoad;
     m_activePoint = snapshot.activePoint;
     m_selectedPoints = snapshot.selectedPoints;
+    m_selectedIntersections = snapshot.selectedIntersections;
     m_activeGroup = snapshot.activeGroup;
     m_activeIntersection = snapshot.activeIntersection;
     m_hoverSnapIntersection = snapshot.hoverSnapIntersection;
@@ -106,6 +108,8 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
     m_pointDragStartPositions.clear();
+    m_intersectionDragStartPositions.clear();
+    m_marqueeSelecting = false;
     SanitizeSelection();
 }
 
@@ -155,6 +159,7 @@ void PolylineEditor::ResetState()
     m_activeRoad = -1;
     m_activePoint = -1;
     m_selectedPoints.clear();
+    m_selectedIntersections.clear();
     m_activeGroup = -1;
     m_activeIntersection = -1;
     m_hoverSnapIntersection = -1;
@@ -166,6 +171,12 @@ void PolylineEditor::ResetState()
     m_planeDragStartHit = { 0, 0, 0 };
     m_planeDragNormal = { 0, 0, 1 };
     m_pointDragStartPositions.clear();
+    m_intersectionDragStartPositions.clear();
+    m_marqueeSelecting = false;
+    m_marqueeStart = { 0, 0 };
+    m_marqueeEnd = { 0, 0 };
+    m_marqueeAdditive = false;
+    m_marqueeSubtractive = false;
     m_hasCursorPos = false;
     m_cursorPos = { 0, 0, 0 };
     m_prevLButton = false;
@@ -191,20 +202,31 @@ void PolylineEditor::SanitizeSelection()
     }
     else
     {
-        const int pointCount = static_cast<int>(m_network->roads[m_activeRoad].points.size());
         m_selectedPoints.erase(
             std::remove_if(
                 m_selectedPoints.begin(),
                 m_selectedPoints.end(),
-                [pointCount](int pointIndex)
+                [this](const PointRef& pointRef)
                 {
-                    return pointIndex < 0 || pointIndex >= pointCount;
+                    if (pointRef.roadIndex < 0 ||
+                        pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                        return true;
+
+                    const int pointCount = static_cast<int>(
+                        m_network->roads[pointRef.roadIndex].points.size());
+                    return pointRef.pointIndex < 0 || pointRef.pointIndex >= pointCount;
                 }),
             m_selectedPoints.end());
 
-        if (m_activePoint < 0 || m_activePoint >= pointCount || !IsPointSelected(m_activePoint))
+        PointRef primaryPoint;
+        if (!GetPrimarySelectedPoint(primaryPoint))
         {
-            m_activePoint = m_selectedPoints.empty() ? -1 : m_selectedPoints.front();
+            m_activePoint = -1;
+        }
+        else
+        {
+            m_activeRoad = primaryPoint.roadIndex;
+            m_activePoint = primaryPoint.pointIndex;
         }
     }
 
@@ -213,6 +235,18 @@ void PolylineEditor::SanitizeSelection()
     {
         m_activeIntersection = -1;
     }
+    m_selectedIntersections.erase(
+        std::remove_if(
+            m_selectedIntersections.begin(),
+            m_selectedIntersections.end(),
+            [this](int intersectionIndex)
+            {
+                return intersectionIndex < 0 ||
+                    intersectionIndex >= static_cast<int>(m_network->intersections.size());
+            }),
+        m_selectedIntersections.end());
+    if (m_activeIntersection >= 0 && !IsIntersectionSelected(m_activeIntersection))
+        m_activeIntersection = m_selectedIntersections.empty() ? -1 : m_selectedIntersections.front();
 
     if (m_hoverSnapIntersection < 0 ||
         m_hoverSnapIntersection >= static_cast<int>(m_network->intersections.size()))
@@ -514,13 +548,13 @@ bool PolylineEditor::IsSelectedRoadEndpoint() const
     if (m_selectedPoints.size() != 1)
         return false;
 
-    if (m_activeRoad < 0 || m_activePoint < 0 ||
-        m_activeRoad >= static_cast<int>(m_network->roads.size()))
+    PointRef selectedPoint;
+    if (!GetPrimarySelectedPoint(selectedPoint))
         return false;
 
-    const Road& road = m_network->roads[m_activeRoad];
+    const Road& road = m_network->roads[selectedPoint.roadIndex];
     const int last = static_cast<int>(road.points.size()) - 1;
-    return m_activePoint == 0 || m_activePoint == last;
+    return selectedPoint.pointIndex == 0 || selectedPoint.pointIndex == last;
 }
 
 bool PolylineEditor::GetSelectedRoadConnectionId(std::string& outId) const
@@ -528,8 +562,12 @@ bool PolylineEditor::GetSelectedRoadConnectionId(std::string& outId) const
     if (!IsSelectedRoadEndpoint())
         return false;
 
-    const Road& road = m_network->roads[m_activeRoad];
-    outId = (m_activePoint == 0) ? road.startIntersectionId : road.endIntersectionId;
+    PointRef selectedPoint;
+    if (!GetPrimarySelectedPoint(selectedPoint))
+        return false;
+
+    const Road& road = m_network->roads[selectedPoint.roadIndex];
+    outId = (selectedPoint.pointIndex == 0) ? road.startIntersectionId : road.endIntersectionId;
     return !outId.empty();
 }
 
@@ -538,8 +576,12 @@ void PolylineEditor::SetSelectedRoadConnectionId(const std::string& intersection
     if (!IsSelectedRoadEndpoint())
         return;
 
-    Road& road = m_network->roads[m_activeRoad];
-    if (m_activePoint == 0)
+    PointRef selectedPoint;
+    if (!GetPrimarySelectedPoint(selectedPoint))
+        return;
+
+    Road& road = m_network->roads[selectedPoint.roadIndex];
+    if (selectedPoint.pointIndex == 0)
         road.startIntersectionId = intersectionId;
     else
         road.endIntersectionId = intersectionId;
@@ -556,8 +598,12 @@ int PolylineEditor::FindSnapIntersectionForSelectedEndpoint(
     if (!IsSelectedRoadEndpoint())
         return -1;
 
-    const Road& road = m_network->roads[m_activeRoad];
-    const XMFLOAT3 pointPos = road.points[m_activePoint].pos;
+    PointRef selectedPoint;
+    if (!GetPrimarySelectedPoint(selectedPoint))
+        return -1;
+
+    const Road& road = m_network->roads[selectedPoint.roadIndex];
+    const XMFLOAT3 pointPos = road.points[selectedPoint.pointIndex].pos;
     const XMFLOAT2 pointScreen = WorldToScreen(pointPos, viewProj, vpW, vpH);
     if (pointScreen.x < 0.0f)
         return -1;
@@ -591,8 +637,12 @@ void PolylineEditor::SnapSelectedEndpointToIntersection(int intersectionIndex)
         intersectionIndex >= static_cast<int>(m_network->intersections.size()))
         return;
 
-    Road& road = m_network->roads[m_activeRoad];
-    road.points[m_activePoint].pos = m_network->intersections[intersectionIndex].pos;
+    PointRef selectedPoint;
+    if (!GetPrimarySelectedPoint(selectedPoint))
+        return;
+
+    Road& road = m_network->roads[selectedPoint.roadIndex];
+    road.points[selectedPoint.pointIndex].pos = m_network->intersections[intersectionIndex].pos;
     SetSelectedRoadConnectionId(m_network->intersections[intersectionIndex].id);
 }
 
@@ -623,35 +673,41 @@ void PolylineEditor::SyncRoadConnectionsForIntersection(int intersectionIndex)
 bool PolylineEditor::GetActiveGizmoPivot(XMFLOAT3& outPivot) const
 {
     if (m_mode == EditorMode::PointEdit &&
-        m_activeRoad >= 0 &&
-        m_activeRoad < static_cast<int>(m_network->roads.size()))
+        (!m_selectedPoints.empty() || !m_selectedIntersections.empty()))
     {
-        const Road& road = m_network->roads[m_activeRoad];
-        if (!m_selectedPoints.empty())
+        XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+        int validCount = 0;
+        for (const PointRef& pointRef : m_selectedPoints)
         {
-            XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
-            int validCount = 0;
-            for (int pointIndex : m_selectedPoints)
-            {
-                if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
-                    continue;
-                const XMFLOAT3& pos = road.points[pointIndex].pos;
-                center.x += pos.x;
-                center.y += pos.y;
-                center.z += pos.z;
-                ++validCount;
-            }
-            if (validCount > 0)
-            {
-                const float invCount = 1.0f / static_cast<float>(validCount);
-                outPivot = { center.x * invCount, center.y * invCount, center.z * invCount };
-                return true;
-            }
-        }
+            if (pointRef.roadIndex < 0 ||
+                pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                continue;
 
-        if (m_activePoint >= 0 && m_activePoint < static_cast<int>(road.points.size()))
+            const Road& road = m_network->roads[pointRef.roadIndex];
+            if (pointRef.pointIndex < 0 || pointRef.pointIndex >= static_cast<int>(road.points.size()))
+                continue;
+
+            const XMFLOAT3& pos = road.points[pointRef.pointIndex].pos;
+            center.x += pos.x;
+            center.y += pos.y;
+            center.z += pos.z;
+            ++validCount;
+        }
+        for (int intersectionIndex : m_selectedIntersections)
         {
-            outPivot = road.points[m_activePoint].pos;
+            if (intersectionIndex < 0 ||
+                intersectionIndex >= static_cast<int>(m_network->intersections.size()))
+                continue;
+            const XMFLOAT3& pos = m_network->intersections[intersectionIndex].pos;
+            center.x += pos.x;
+            center.y += pos.y;
+            center.z += pos.z;
+            ++validCount;
+        }
+        if (validCount > 0)
+        {
+            const float invCount = 1.0f / static_cast<float>(validCount);
+            outPivot = { center.x * invCount, center.y * invCount, center.z * invCount };
             return true;
         }
     }
@@ -667,9 +723,32 @@ bool PolylineEditor::GetActiveGizmoPivot(XMFLOAT3& outPivot) const
     return false;
 }
 
-bool PolylineEditor::IsPointSelected(int pointIndex) const
+bool PolylineEditor::IsPointSelected(int roadIndex, int pointIndex) const
 {
-    return std::find(m_selectedPoints.begin(), m_selectedPoints.end(), pointIndex) != m_selectedPoints.end();
+    return std::find_if(
+        m_selectedPoints.begin(),
+        m_selectedPoints.end(),
+        [roadIndex, pointIndex](const PointRef& pointRef)
+        {
+            return pointRef.roadIndex == roadIndex && pointRef.pointIndex == pointIndex;
+        }) != m_selectedPoints.end();
+}
+
+bool PolylineEditor::GetPrimarySelectedPoint(PointRef& outPoint) const
+{
+    if (m_selectedPoints.empty())
+        return false;
+
+    outPoint = m_selectedPoints.front();
+    return true;
+}
+
+bool PolylineEditor::IsIntersectionSelected(int intersectionIndex) const
+{
+    return std::find(
+        m_selectedIntersections.begin(),
+        m_selectedIntersections.end(),
+        intersectionIndex) != m_selectedIntersections.end();
 }
 
 void PolylineEditor::ClearPointSelection()
@@ -678,31 +757,168 @@ void PolylineEditor::ClearPointSelection()
     m_activePoint = -1;
 }
 
-void PolylineEditor::SelectSinglePoint(int pointIndex)
+void PolylineEditor::ClearIntersectionSelection()
+{
+    m_selectedIntersections.clear();
+    m_activeIntersection = -1;
+}
+
+void PolylineEditor::SelectSinglePoint(int roadIndex, int pointIndex)
 {
     m_selectedPoints.clear();
-    if (pointIndex >= 0)
-        m_selectedPoints.push_back(pointIndex);
+    if (roadIndex >= 0 && pointIndex >= 0)
+        m_selectedPoints.push_back({ roadIndex, pointIndex });
+    m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
 }
 
-void PolylineEditor::TogglePointSelection(int pointIndex)
+void PolylineEditor::TogglePointSelection(int roadIndex, int pointIndex)
 {
-    if (pointIndex < 0)
+    if (roadIndex < 0 || pointIndex < 0)
         return;
 
-    std::vector<int>::iterator it = std::find(
-        m_selectedPoints.begin(), m_selectedPoints.end(), pointIndex);
+    std::vector<PointRef>::iterator it = std::find_if(
+        m_selectedPoints.begin(),
+        m_selectedPoints.end(),
+        [roadIndex, pointIndex](const PointRef& pointRef)
+        {
+            return pointRef.roadIndex == roadIndex && pointRef.pointIndex == pointIndex;
+        });
     if (it != m_selectedPoints.end())
     {
         m_selectedPoints.erase(it);
-        if (m_activePoint == pointIndex)
-            m_activePoint = m_selectedPoints.empty() ? -1 : m_selectedPoints.front();
+        PointRef primaryPoint;
+        if (GetPrimarySelectedPoint(primaryPoint))
+        {
+            m_activeRoad = primaryPoint.roadIndex;
+            m_activePoint = primaryPoint.pointIndex;
+        }
+        else
+        {
+            m_activePoint = -1;
+        }
         return;
     }
 
-    m_selectedPoints.push_back(pointIndex);
+    m_selectedPoints.push_back({ roadIndex, pointIndex });
+    m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
+}
+
+void PolylineEditor::SelectSingleIntersection(int intersectionIndex)
+{
+    m_selectedIntersections.clear();
+    if (intersectionIndex >= 0)
+        m_selectedIntersections.push_back(intersectionIndex);
+    m_activeIntersection = intersectionIndex;
+}
+
+void PolylineEditor::ToggleIntersectionSelection(int intersectionIndex)
+{
+    if (intersectionIndex < 0)
+        return;
+
+    std::vector<int>::iterator it = std::find(
+        m_selectedIntersections.begin(),
+        m_selectedIntersections.end(),
+        intersectionIndex);
+    if (it != m_selectedIntersections.end())
+    {
+        m_selectedIntersections.erase(it);
+        m_activeIntersection = m_selectedIntersections.empty() ? -1 : m_selectedIntersections.front();
+        return;
+    }
+
+    m_selectedIntersections.push_back(intersectionIndex);
+    m_activeIntersection = intersectionIndex;
+}
+
+void PolylineEditor::ApplyMarqueeSelection(
+    int vpW, int vpH, XMMATRIX viewProj, bool addToSelection, bool removeFromSelection)
+{
+    const float minX = (std::min)(m_marqueeStart.x, m_marqueeEnd.x);
+    const float maxX = (std::max)(m_marqueeStart.x, m_marqueeEnd.x);
+    const float minY = (std::min)(m_marqueeStart.y, m_marqueeEnd.y);
+    const float maxY = (std::max)(m_marqueeStart.y, m_marqueeEnd.y);
+
+    if (!addToSelection && !removeFromSelection)
+        m_selectedPoints.clear();
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road))
+            continue;
+
+        for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
+        {
+            const XMFLOAT2 pointScreen = WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH);
+            if (pointScreen.x < 0.0f)
+                continue;
+            if (pointScreen.x < minX || pointScreen.x > maxX ||
+                pointScreen.y < minY || pointScreen.y > maxY)
+                continue;
+
+            if (removeFromSelection)
+            {
+                auto it = std::remove_if(
+                    m_selectedPoints.begin(),
+                    m_selectedPoints.end(),
+                    [ri, pi](const PointRef& pointRef)
+                    {
+                        return pointRef.roadIndex == ri && pointRef.pointIndex == pi;
+                    });
+                m_selectedPoints.erase(it, m_selectedPoints.end());
+            }
+            else if (!IsPointSelected(ri, pi))
+            {
+                m_selectedPoints.push_back({ ri, pi });
+            }
+        }
+    }
+
+    for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
+    {
+        const Intersection& isec = m_network->intersections[ii];
+        if (!IsIntersectionVisible(isec))
+            continue;
+
+        const XMFLOAT2 pointScreen = WorldToScreen(isec.pos, viewProj, vpW, vpH);
+        if (pointScreen.x < 0.0f)
+            continue;
+        if (pointScreen.x < minX || pointScreen.x > maxX ||
+            pointScreen.y < minY || pointScreen.y > maxY)
+            continue;
+
+        if (removeFromSelection)
+        {
+            auto it = std::remove(
+                m_selectedIntersections.begin(),
+                m_selectedIntersections.end(),
+                ii);
+            m_selectedIntersections.erase(it, m_selectedIntersections.end());
+        }
+        else if (!IsIntersectionSelected(ii))
+        {
+            m_selectedIntersections.push_back(ii);
+        }
+    }
+
+    PointRef primaryPoint;
+    if (GetPrimarySelectedPoint(primaryPoint))
+    {
+        m_activeRoad = primaryPoint.roadIndex;
+        m_activePoint = primaryPoint.pointIndex;
+    }
+    else
+    {
+        m_activeRoad = -1;
+        m_activePoint = -1;
+    }
+    if (!m_selectedIntersections.empty())
+        m_activeIntersection = m_selectedIntersections.front();
+    else if (m_selectedPoints.empty())
+        m_activeIntersection = -1;
 }
 
 PolylineEditor::GizmoAxis PolylineEditor::PickGizmoAxis(
@@ -795,6 +1011,7 @@ void PolylineEditor::SetMode(EditorMode mode)
         m_dragging    = false;
         m_activeGizmoAxis = GizmoAxis::None;
         m_pointDragStartPositions.clear();
+        m_intersectionDragStartPositions.clear();
     }
     if (mode != EditorMode::IntersectionEdit)
         m_activeIntersection = -1;
@@ -937,14 +1154,37 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_activeGizmoAxis = GizmoAxis::None;
             m_hoverSnapIntersection = -1;
         }
+        else if (!m_selectedPoints.empty() || !m_selectedIntersections.empty())
+        {
+            SetMode(EditorMode::PointEdit);
+        }
         else if (m_activeIntersection >= 0)
         {
             SetMode(EditorMode::IntersectionEdit);
         }
-        else if (m_activeRoad >= 0 && !m_selectedPoints.empty())
+    }
+
+    if (m_marqueeSelecting)
+    {
+        m_marqueeEnd = mousePos;
+        if (!lDown)
         {
-            SetMode(EditorMode::PointEdit);
+            const XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
+            const float width = fabsf(m_marqueeEnd.x - m_marqueeStart.x);
+            const float height = fabsf(m_marqueeEnd.y - m_marqueeStart.y);
+            if (width >= 4.0f || height >= 4.0f)
+            {
+                ApplyMarqueeSelection(vpW, vpH, viewProj, m_marqueeAdditive, m_marqueeSubtractive);
+            }
+            else if (!m_marqueeAdditive && !m_marqueeSubtractive)
+            {
+                m_activeRoad = -1;
+                ClearPointSelection();
+                ClearIntersectionSelection();
+            }
+            m_marqueeSelecting = false;
         }
+        return;
     }
 
     if (m_mode == EditorMode::Navigate)
@@ -993,10 +1233,12 @@ void PolylineEditor::Update(int vpW, int vpH,
                 if (selPoint >= 0)
                 {
                     if (ctrlDown)
-                        TogglePointSelection(selPoint);
+                        TogglePointSelection(m_activeRoad, selPoint);
                     else
-                        SelectSinglePoint(selPoint);
-                    m_activeIntersection = -1;
+                    {
+                        SelectSinglePoint(m_activeRoad, selPoint);
+                        ClearIntersectionSelection();
+                    }
                     return;
                 }
             }
@@ -1004,10 +1246,15 @@ void PolylineEditor::Update(int vpW, int vpH,
             const int selIntersection = FindNearestIntersection(vpW, vpH, mousePos, viewProj);
             if (selIntersection >= 0)
             {
-                m_activeIntersection = selIntersection;
+                if (ctrlDown)
+                    ToggleIntersectionSelection(selIntersection);
+                else
+                {
+                    SelectSingleIntersection(selIntersection);
+                    ClearPointSelection();
+                }
                 SetActiveGroupById(m_network->intersections[selIntersection].groupId);
                 m_activeRoad = -1;
-                ClearPointSelection();
                 return;
             }
 
@@ -1017,13 +1264,19 @@ void PolylineEditor::Update(int vpW, int vpH,
                 m_activeRoad = selRoad;
                 SetActiveGroupById(m_network->roads[selRoad].groupId);
                 ClearPointSelection();
-                m_activeIntersection = -1;
+                ClearIntersectionSelection();
                 return;
             }
 
             m_activeRoad = -1;
-            ClearPointSelection();
-            m_activeIntersection = -1;
+            m_dragging = false;
+            m_activeGizmoAxis = GizmoAxis::None;
+            m_hoverSnapIntersection = -1;
+            m_marqueeSelecting = true;
+            m_marqueeStart = mousePos;
+            m_marqueeEnd = mousePos;
+            m_marqueeAdditive = ctrlDown && (GetAsyncKeyState(VK_SHIFT) & 0x8000) == 0;
+            m_marqueeSubtractive = ctrlDown && (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
         }
         return;
     }
@@ -1084,13 +1337,11 @@ void PolylineEditor::Update(int vpW, int vpH,
 
         if (m_dragging && lDown)
         {
-            if (m_activeGizmoAxis != GizmoAxis::None &&
-                m_activeRoad  >= 0 &&
-                m_activeRoad  < static_cast<int>(m_network->roads.size()))
+            if (m_activeGizmoAxis != GizmoAxis::None)
             {
-                Road& road = m_network->roads[m_activeRoad];
-                if (!m_selectedPoints.empty() &&
-                    m_pointDragStartPositions.size() == m_selectedPoints.size())
+                if ((!m_selectedPoints.empty() || !m_selectedIntersections.empty()) &&
+                    m_pointDragStartPositions.size() == m_selectedPoints.size() &&
+                    m_intersectionDragStartPositions.size() == m_selectedIntersections.size())
                 {
                     XMFLOAT3 pivotStart = m_axisDragStartPos;
                     XMFLOAT3 delta = { 0.0f, 0.0f, 0.0f };
@@ -1157,7 +1408,12 @@ void PolylineEditor::Update(int vpW, int vpH,
 
                     for (size_t selectionIndex = 0; selectionIndex < m_selectedPoints.size(); ++selectionIndex)
                     {
-                        const int pointIndex = m_selectedPoints[selectionIndex];
+                        const PointRef& pointRef = m_selectedPoints[selectionIndex];
+                        if (pointRef.roadIndex < 0 ||
+                            pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                            continue;
+                        Road& road = m_network->roads[pointRef.roadIndex];
+                        const int pointIndex = pointRef.pointIndex;
                         if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
                             continue;
 
@@ -1176,6 +1432,32 @@ void PolylineEditor::Update(int vpW, int vpH,
                         }
 
                         road.points[pointIndex].pos = newPos;
+                    }
+
+                    for (size_t selectionIndex = 0; selectionIndex < m_selectedIntersections.size(); ++selectionIndex)
+                    {
+                        const int intersectionIndex = m_selectedIntersections[selectionIndex];
+                        if (intersectionIndex < 0 ||
+                            intersectionIndex >= static_cast<int>(m_network->intersections.size()) ||
+                            selectionIndex >= m_intersectionDragStartPositions.size())
+                            continue;
+
+                        XMFLOAT3 newPos =
+                        {
+                            m_intersectionDragStartPositions[selectionIndex].x + delta.x,
+                            m_intersectionDragStartPositions[selectionIndex].y + delta.y,
+                            m_intersectionDragStartPositions[selectionIndex].z + delta.z
+                        };
+
+                        if (m_snapToTerrain &&
+                            m_terrain && m_terrain->IsReady() &&
+                            m_activeGizmoAxis != GizmoAxis::Y)
+                        {
+                            newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                        }
+
+                        m_network->intersections[intersectionIndex].pos = newPos;
+                        SyncRoadConnectionsForIntersection(intersectionIndex);
                     }
 
                     if (m_selectedPoints.size() == 1 && IsSelectedRoadEndpoint())
@@ -1205,20 +1487,18 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_activeGizmoAxis = GizmoAxis::None;
             m_hoverSnapIntersection = -1;
             m_pointDragStartPositions.clear();
+            m_intersectionDragStartPositions.clear();
         }
         else if (lClick)
         {
             GizmoAxis gizmoAxis = PickGizmoAxis(vpW, vpH, mousePos, viewProj);
-            if (gizmoAxis != GizmoAxis::None &&
-                m_activeRoad >= 0 &&
-                m_activeRoad < static_cast<int>(m_network->roads.size()))
+            if (gizmoAxis != GizmoAxis::None)
             {
-                Road& road = m_network->roads[m_activeRoad];
-                if (!m_selectedPoints.empty())
+                if (!m_selectedPoints.empty() || !m_selectedIntersections.empty())
                 {
                     m_activeGizmoAxis  = gizmoAxis;
                     if (!GetActiveGizmoPivot(m_axisDragStartPos))
-                        m_axisDragStartPos = road.points[m_activePoint].pos;
+                        return;
                     m_axisDragStartMouse = mousePos;
                     m_planeDragNormal = rayDir;
                     if (!IntersectRayPlane(rayOrig, rayDir, m_axisDragStartPos,
@@ -1227,10 +1507,27 @@ void PolylineEditor::Update(int vpW, int vpH,
                         m_planeDragStartHit = m_axisDragStartPos;
                     }
                     m_pointDragStartPositions.clear();
-                    for (int pointIndex : m_selectedPoints)
+                    for (const PointRef& pointRef : m_selectedPoints)
                     {
-                        if (pointIndex >= 0 && pointIndex < static_cast<int>(road.points.size()))
-                            m_pointDragStartPositions.push_back(road.points[pointIndex].pos);
+                        if (pointRef.roadIndex < 0 ||
+                            pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                            continue;
+                        const Road& road = m_network->roads[pointRef.roadIndex];
+                        if (pointRef.pointIndex >= 0 &&
+                            pointRef.pointIndex < static_cast<int>(road.points.size()))
+                        {
+                            m_pointDragStartPositions.push_back(road.points[pointRef.pointIndex].pos);
+                        }
+                    }
+                    m_intersectionDragStartPositions.clear();
+                    for (int intersectionIndex : m_selectedIntersections)
+                    {
+                        if (intersectionIndex >= 0 &&
+                            intersectionIndex < static_cast<int>(m_network->intersections.size()))
+                        {
+                            m_intersectionDragStartPositions.push_back(
+                                m_network->intersections[intersectionIndex].pos);
+                        }
                     }
                     PushUndoState();
                     m_dragging         = true;
@@ -1243,92 +1540,126 @@ void PolylineEditor::Update(int vpW, int vpH,
                 FindNearestPoint(vpW, vpH, mousePos, viewProj, selRoad, selPt);
                 if (selRoad >= 0)
                 {
-                    const int previousRoad = m_activeRoad;
-                    if (previousRoad >= 0 && selRoad != previousRoad)
-                        selRoad = -1;
-                }
-
-                if (selRoad >= 0)
-                {
-                    const int previousRoad = m_activeRoad;
-                    m_activeRoad       = selRoad;
                     SetActiveGroupById(m_network->roads[selRoad].groupId);
-                    if (ctrlDown && selRoad == previousRoad)
-                        TogglePointSelection(selPt);
+                    if (ctrlDown)
+                        TogglePointSelection(selRoad, selPt);
                     else
-                        SelectSinglePoint(selPt);
+                    {
+                        SelectSinglePoint(selRoad, selPt);
+                        ClearIntersectionSelection();
+                    }
                     m_activeIntersection = -1;
                     m_dragging         = false;
                     m_activeGizmoAxis  = GizmoAxis::None;
                     m_hoverSnapIntersection = -1;
                 }
-                else if (m_activeRoad >= 0 &&
-                         m_activeRoad < static_cast<int>(m_network->roads.size()) &&
-                         hasHit)
+                else
                 {
-                    Road& road = m_network->roads[m_activeRoad];
-                    const int segmentIndex =
-                        FindNearestSegmentOnRoad(m_activeRoad, vpW, vpH, mousePos, viewProj);
-                    if (segmentIndex >= 0)
+                    const int selIntersection = FindNearestIntersection(vpW, vpH, mousePos, viewProj);
+                    if (selIntersection >= 0)
                     {
-                        PushUndoState();
-                        RoadPoint newPoint;
-                        newPoint.pos = hitPos;
-                        if (segmentIndex >= 0 &&
-                            segmentIndex + 1 < static_cast<int>(road.points.size()))
-                        {
-                            newPoint.width =
-                                0.5f * (road.points[segmentIndex].width +
-                                        road.points[segmentIndex + 1].width);
-                        }
+                        SetActiveGroupById(m_network->intersections[selIntersection].groupId);
+                        if (ctrlDown)
+                            ToggleIntersectionSelection(selIntersection);
                         else
                         {
-                            newPoint.width = m_defaultWidth;
+                            SelectSingleIntersection(selIntersection);
+                            ClearPointSelection();
                         }
-
-                        road.points.insert(road.points.begin() + segmentIndex + 1, newPoint);
-                        SelectSinglePoint(segmentIndex + 1);
                         m_dragging = false;
                         m_activeGizmoAxis = GizmoAxis::None;
                         m_hoverSnapIntersection = -1;
-                        m_statusMessage = "Point inserted";
+                    }
+                    else if (m_activeRoad >= 0 &&
+                             m_activeRoad < static_cast<int>(m_network->roads.size()) &&
+                             hasHit)
+                    {
+                        Road& road = m_network->roads[m_activeRoad];
+                        const int segmentIndex =
+                            FindNearestSegmentOnRoad(m_activeRoad, vpW, vpH, mousePos, viewProj);
+                        if (segmentIndex >= 0)
+                        {
+                            PushUndoState();
+                            RoadPoint newPoint;
+                            newPoint.pos = hitPos;
+                            if (segmentIndex >= 0 &&
+                                segmentIndex + 1 < static_cast<int>(road.points.size()))
+                            {
+                                newPoint.width =
+                                    0.5f * (road.points[segmentIndex].width +
+                                            road.points[segmentIndex + 1].width);
+                            }
+                            else
+                            {
+                                newPoint.width = m_defaultWidth;
+                            }
+
+                            road.points.insert(road.points.begin() + segmentIndex + 1, newPoint);
+                            SelectSinglePoint(m_activeRoad, segmentIndex + 1);
+                            ClearIntersectionSelection();
+                            m_dragging = false;
+                            m_activeGizmoAxis = GizmoAxis::None;
+                            m_hoverSnapIntersection = -1;
+                            m_statusMessage = "Point inserted";
+                        }
+                        else
+                        {
+                            m_dragging         = false;
+                            m_activeGizmoAxis  = GizmoAxis::None;
+                            m_hoverSnapIntersection = -1;
+                            m_marqueeSelecting = true;
+                            m_marqueeStart = mousePos;
+                            m_marqueeEnd = mousePos;
+                            m_marqueeAdditive = ctrlDown && (GetAsyncKeyState(VK_SHIFT) & 0x8000) == 0;
+                            m_marqueeSubtractive = ctrlDown && (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+                        }
                     }
                     else
                     {
-                        ClearPointSelection();
                         m_dragging         = false;
                         m_activeGizmoAxis  = GizmoAxis::None;
                         m_hoverSnapIntersection = -1;
-                        m_mode             = EditorMode::Navigate;
+                        m_marqueeSelecting = true;
+                        m_marqueeStart = mousePos;
+                        m_marqueeEnd = mousePos;
+                        m_marqueeAdditive = ctrlDown && (GetAsyncKeyState(VK_SHIFT) & 0x8000) == 0;
+                        m_marqueeSubtractive = ctrlDown && (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
                     }
-                }
-                else
-                {
-                    m_activeRoad       = -1;
-                    ClearPointSelection();
-                    m_dragging         = false;
-                    m_activeGizmoAxis  = GizmoAxis::None;
-                    m_hoverSnapIntersection = -1;
-                    m_mode             = EditorMode::Navigate;
                 }
             }
         }
 
         // Delete selected point
         if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
-            m_activeRoad  >= 0 &&
-            !m_selectedPoints.empty() &&
-            m_activeRoad  < static_cast<int>(m_network->roads.size()))
+            !m_selectedPoints.empty())
         {
             PushUndoState();
-            Road& road = m_network->roads[m_activeRoad];
-            std::vector<int> pointsToDelete = m_selectedPoints;
-            std::sort(pointsToDelete.begin(), pointsToDelete.end());
-            pointsToDelete.erase(std::unique(pointsToDelete.begin(), pointsToDelete.end()), pointsToDelete.end());
+            std::vector<PointRef> pointsToDelete = m_selectedPoints;
+            std::sort(
+                pointsToDelete.begin(),
+                pointsToDelete.end(),
+                [](const PointRef& lhs, const PointRef& rhs)
+                {
+                    if (lhs.roadIndex != rhs.roadIndex)
+                        return lhs.roadIndex > rhs.roadIndex;
+                    return lhs.pointIndex > rhs.pointIndex;
+                });
+            pointsToDelete.erase(
+                std::unique(
+                    pointsToDelete.begin(),
+                    pointsToDelete.end(),
+                    [](const PointRef& lhs, const PointRef& rhs)
+                    {
+                        return lhs.roadIndex == rhs.roadIndex && lhs.pointIndex == rhs.pointIndex;
+                    }),
+                pointsToDelete.end());
             bool removedAny = false;
             for (auto it = pointsToDelete.rbegin(); it != pointsToDelete.rend(); ++it)
             {
-                const int pointIndex = *it;
+                if (it->roadIndex < 0 || it->roadIndex >= static_cast<int>(m_network->roads.size()))
+                    continue;
+                Road& road = m_network->roads[it->roadIndex];
+                const int pointIndex = it->pointIndex;
                 if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
                     continue;
                 if (pointIndex == 0)
@@ -1341,6 +1672,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             if (removedAny)
                 m_statusMessage = pointsToDelete.size() > 1 ? "Points deleted" : "Point deleted";
             ClearPointSelection();
+            SanitizeSelection();
             m_activeGizmoAxis = GizmoAxis::None;
             m_hoverSnapIntersection = -1;
             m_pointDragStartPositions.clear();
@@ -1534,6 +1866,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
         if (!IsIntersectionVisible(isec))
             continue;
         const XMFLOAT4 col = (ii == m_activeIntersection)
+            || IsIntersectionSelected(ii)
             ? colorIntersectionSelected
             : colorIntersection;
         const float r = (std::max)(1.5f, isec.radius * 0.35f);
@@ -1565,9 +1898,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
             dd.AddLine(road.points.back().pos, m_cursorPos, colorCursor);
     }
 
-    if (m_mode == EditorMode::PointEdit &&
-        m_activeRoad >= 0 &&
-        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    if (m_mode == EditorMode::PointEdit)
     {
         XMFLOAT3 pivot;
         if (GetActiveGizmoPivot(pivot))
@@ -1642,7 +1973,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             ImVec2 sp;
             if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, sp))
                 continue;
-            bool isActive = (ri == m_activeRoad && IsPointSelected(pi));
+            bool isActive = IsPointSelected(ri, pi);
             ImU32 col = isActive ? colSelected : colPoint;
             float r   = isActive ? kRadius + 2.0f : kRadius;
             dl->AddCircleFilled(sp, r, col, 20);
@@ -1669,6 +2000,25 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         }
     }
 
+    if (m_marqueeSelecting)
+    {
+        const float minX = (std::min)(m_marqueeStart.x, m_marqueeEnd.x);
+        const float maxX = (std::max)(m_marqueeStart.x, m_marqueeEnd.x);
+        const float minY = (std::min)(m_marqueeStart.y, m_marqueeEnd.y);
+        const float maxY = (std::max)(m_marqueeStart.y, m_marqueeEnd.y);
+        dl->AddRect(
+            ImVec2(minX, minY),
+            ImVec2(maxX, maxY),
+            IM_COL32(255, 220, 80, 220),
+            0.0f,
+            0,
+            1.5f);
+        dl->AddRectFilled(
+            ImVec2(minX, minY),
+            ImVec2(maxX, maxY),
+            IM_COL32(255, 220, 80, 35));
+    }
+
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
     {
         const Intersection& isec = m_network->intersections[ii];
@@ -1677,7 +2027,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         ImVec2 sp;
         if (!WorldToScreen(isec.pos, viewProj, vpW, vpH, sp))
             continue;
-        const bool selected = (ii == m_activeIntersection);
+        const bool selected = (ii == m_activeIntersection) || IsIntersectionSelected(ii);
         const ImU32 col = selected ? colIsecSel : colIsec;
         dl->AddCircle(sp, 10.0f, col, 24, 2.0f);
         dl->AddLine(ImVec2(sp.x - 8.0f, sp.y), ImVec2(sp.x + 8.0f, sp.y), col, 2.0f);
@@ -1699,9 +2049,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         }
     }
 
-    if (m_mode == EditorMode::PointEdit &&
-        m_activeRoad >= 0 &&
-        m_activeRoad < static_cast<int>(m_network->roads.size()))
+    if (m_mode == EditorMode::PointEdit)
     {
         XMFLOAT3 p;
         if (GetActiveGizmoPivot(p))
@@ -1832,6 +2180,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         ImGui::TextDisabled("Camera navigation only");
         ImGui::TextDisabled("Click road: select road");
         ImGui::TextDisabled("Selected road points can be picked directly");
+        ImGui::TextDisabled("Drag empty area: marquee select points");
         ImGui::TextDisabled("Press W: show gizmo for selected point/intersection");
         break;
     case EditorMode::PolylineDraw:
@@ -1846,7 +2195,9 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     case EditorMode::PointEdit:
         ImGui::TextColored(ImVec4(1,0.8f,0.2f,1), "Edit Points");
         ImGui::TextDisabled("Click point: select");
-        ImGui::TextDisabled("Ctrl+Click: multi-select on active road");
+        ImGui::TextDisabled("Ctrl+Click: add/remove point");
+        ImGui::TextDisabled("Drag empty area: marquee select points");
+        ImGui::TextDisabled("Ctrl+Shift marquee: remove from selection");
         ImGui::TextDisabled("Drag center: pan in screen plane");
         ImGui::TextDisabled("Click X/Y/Z axis: move on that axis");
         ImGui::TextDisabled("Endpoint near intersection: snap/connect");
@@ -1872,13 +2223,15 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         m_snapToTerrain = snapToTerrain;
         if (m_snapToTerrain && m_terrain && m_terrain->IsReady())
         {
-            if (m_activeRoad >= 0 &&
-                !m_selectedPoints.empty() &&
-                m_activeRoad < static_cast<int>(m_network->roads.size()))
+            if (!m_selectedPoints.empty())
             {
-                Road& road = m_network->roads[m_activeRoad];
-                for (int pointIndex : m_selectedPoints)
+                for (const PointRef& pointRef : m_selectedPoints)
                 {
+                    if (pointRef.roadIndex < 0 ||
+                        pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                        continue;
+                    Road& road = m_network->roads[pointRef.roadIndex];
+                    const int pointIndex = pointRef.pointIndex;
                     if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
                         continue;
                     road.points[pointIndex].pos.y =
@@ -1887,12 +2240,14 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                 }
             }
 
-            if (m_activeIntersection >= 0 &&
-                m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+            for (int intersectionIndex : m_selectedIntersections)
             {
-                Intersection& isec = m_network->intersections[m_activeIntersection];
+                if (intersectionIndex < 0 ||
+                    intersectionIndex >= static_cast<int>(m_network->intersections.size()))
+                    continue;
+                Intersection& isec = m_network->intersections[intersectionIndex];
                 isec.pos.y = m_terrain->GetHeightAt(isec.pos.x, isec.pos.z);
-                SyncRoadConnectionsForIntersection(m_activeIntersection);
+                SyncRoadConnectionsForIntersection(intersectionIndex);
             }
         }
     }
@@ -1970,13 +2325,14 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                         continue;
 
                     const bool selected = (i == m_activeRoad);
-                    if (ImGui::Selectable(road.name.c_str(), selected))
-                    {
-                        m_activeRoad = i;
-                        m_activePoint = -1;
-                        m_activeIntersection = -1;
-                        m_activeGroup = gi;
-                    }
+            if (ImGui::Selectable(road.name.c_str(), selected))
+            {
+                m_activeRoad = i;
+                ClearPointSelection();
+                ClearIntersectionSelection();
+                m_activeIntersection = -1;
+                m_activeGroup = gi;
+            }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
                         if (ImGui::MenuItem("Delete Road"))
@@ -2009,13 +2365,13 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                         continue;
 
                     const bool selected = (i == m_activeIntersection);
-                    if (ImGui::Selectable(isec.name.c_str(), selected))
-                    {
-                        m_activeIntersection = i;
-                        m_activeRoad = -1;
-                        m_activePoint = -1;
-                        m_activeGroup = gi;
-                    }
+            if (ImGui::Selectable(isec.name.c_str(), selected))
+            {
+                SelectSingleIntersection(i);
+                m_activeRoad = -1;
+                ClearPointSelection();
+                m_activeGroup = gi;
+            }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
                         if (ImGui::MenuItem("Delete Intersection"))
@@ -2108,15 +2464,16 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     }
 
     // Selected point info
-    if (m_activeRoad  >= 0 &&
-        m_activePoint >= 0 &&
-        m_activeRoad  < static_cast<int>(m_network->roads.size()))
+    PointRef selectedPoint;
+    if (GetPrimarySelectedPoint(selectedPoint) &&
+        selectedPoint.roadIndex >= 0 &&
+        selectedPoint.roadIndex < static_cast<int>(m_network->roads.size()))
     {
-        Road& road = m_network->roads[m_activeRoad];
-        if (m_activePoint < static_cast<int>(road.points.size()))
+        Road& road = m_network->roads[selectedPoint.roadIndex];
+        if (selectedPoint.pointIndex < static_cast<int>(road.points.size()))
         {
-            RoadPoint& rp = road.points[m_activePoint];
-            ImGui::Text("Point %d", m_activePoint);
+            RoadPoint& rp = road.points[selectedPoint.pointIndex];
+            ImGui::Text("Point %d:%d", selectedPoint.roadIndex, selectedPoint.pointIndex);
             float pointPos[3] = { rp.pos.x, rp.pos.y, rp.pos.z };
             if (ImGui::InputFloat3("Pos", pointPos))
             {

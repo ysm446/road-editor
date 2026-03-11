@@ -15,6 +15,12 @@
 class PolylineEditor
 {
 public:
+    struct PointRef
+    {
+        int roadIndex = -1;
+        int pointIndex = -1;
+    };
+
     enum class GizmoAxis
     {
         None,
@@ -117,10 +123,16 @@ private:
     void SnapSelectedEndpointToIntersection(int intersectionIndex);
     void SyncRoadConnectionsForIntersection(int intersectionIndex);
     bool GetActiveGizmoPivot(DirectX::XMFLOAT3& outPivot) const;
-    bool IsPointSelected(int pointIndex) const;
+    bool IsPointSelected(int roadIndex, int pointIndex) const;
+    bool GetPrimarySelectedPoint(PointRef& outPoint) const;
+    bool IsIntersectionSelected(int intersectionIndex) const;
     void ClearPointSelection();
-    void SelectSinglePoint(int pointIndex);
-    void TogglePointSelection(int pointIndex);
+    void ClearIntersectionSelection();
+    void SelectSinglePoint(int roadIndex, int pointIndex);
+    void TogglePointSelection(int roadIndex, int pointIndex);
+    void SelectSingleIntersection(int intersectionIndex);
+    void ToggleIntersectionSelection(int intersectionIndex);
+    void ApplyMarqueeSelection(int vpW, int vpH, DirectX::XMMATRIX viewProj, bool addToSelection, bool removeFromSelection);
     GizmoAxis PickGizmoAxis(int vpW, int vpH,
                             DirectX::XMFLOAT2 px,
                             DirectX::XMMATRIX viewProj) const;
@@ -139,7 +151,8 @@ private:
         EditorMode  mode = EditorMode::Navigate;
         int activeRoad = -1;
         int activePoint = -1;
-        std::vector<int> selectedPoints;
+        std::vector<PointRef> selectedPoints;
+        std::vector<int> selectedIntersections;
         int activeGroup = -1;
         int activeIntersection = -1;
         int hoverSnapIntersection = -1;
@@ -157,7 +170,8 @@ private:
     // Index of road being drawn / edited
     int m_activeRoad  = -1;
     int m_activePoint = -1;   // selected point in PointEdit mode
-    std::vector<int> m_selectedPoints;
+    std::vector<PointRef> m_selectedPoints;
+    std::vector<int> m_selectedIntersections;
     int m_activeGroup = -1;
     int m_activeIntersection = -1;
     int m_hoverSnapIntersection = -1;
@@ -171,6 +185,12 @@ private:
     DirectX::XMFLOAT3 m_planeDragStartHit = { 0,0,0 };
     DirectX::XMFLOAT3 m_planeDragNormal   = { 0,0,1 };
     std::vector<DirectX::XMFLOAT3> m_pointDragStartPositions;
+    std::vector<DirectX::XMFLOAT3> m_intersectionDragStartPositions;
+    bool m_marqueeSelecting = false;
+    DirectX::XMFLOAT2 m_marqueeStart = { 0,0 };
+    DirectX::XMFLOAT2 m_marqueeEnd = { 0,0 };
+    bool m_marqueeAdditive = false;
+    bool m_marqueeSubtractive = false;
 
     // Cursor preview position (hover on terrain)
     bool              m_hasCursorPos = false;
