@@ -1302,6 +1302,12 @@ void PolylineEditor::Update(int vpW, int vpH,
                 ClearPointSelection();
                 ClearIntersectionSelection();
             }
+            if (m_mode == EditorMode::PointEdit &&
+                m_selectedPoints.empty() &&
+                m_selectedIntersections.empty())
+            {
+                m_mode = EditorMode::Navigate;
+            }
             m_marqueeSelecting = false;
         }
         return;

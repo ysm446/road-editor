@@ -1,0 +1,790 @@
+[
+    {
+        "id": "7ce33863",
+        "name": "",
+        "roadType": 0,
+        "laneWidth": 3.0,
+        "laneLeft": 1,
+        "laneRight": 1,
+        "defaultTargetSpeed": 30.0,
+        "defaultFriction": 0.15,
+        "active": 1,
+        "point": [
+            {
+                "pos": [
+                    1526.3109130859375,
+                    110.79796600341797,
+                    860.1455688476562
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1589.1129364847725,
+                    105.76761029380032,
+                    804.5025580425344
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1583.5267368497475,
+                    111.4753439999306,
+                    742.8761024048918
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1681.9642067672055,
+                    129.59530220602767,
+                    729.0678766473329
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1754.1241801094964,
+                    150.23147541033802,
+                    690.9497924854663
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1716.2860894928617,
+                    146.73364655714468,
+                    632.2793478374365
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1582.3454416059851,
+                    126.40242894352707,
+                    621.9784012713619
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1515.1180093317423,
+                    139.78862877146705,
+                    586.1253743642663
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1663.2730667501453,
+                    161.964125774404,
+                    517.124469533813
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1835.184225993472,
+                    179.6772776172666,
+                    503.1916127401937
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1666.3427810737203,
+                    185.47780521399568,
+                    411.0536337234771
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1703.7226339052736,
+                    214.48376011671564,
+                    293.4234697656001
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1645.9571533203125,
+                    229.2375946044922,
+                    195.64752197265625
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            }
+        ],
+        "verticalCurve": [
+            {
+                "u_coord": 0.09336614608764648,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.17969432166058547,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.27122634649276733,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.4105469584465027,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.49489179253578186,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.7270367741584778,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.814668595790863,
+                "vcl": 50.0,
+                "offset": 0.0
+            }
+        ],
+        "bankAngle": [
+            {
+                "u_coord": 0.13705947764854193,
+                "targetSpeed": 45.0,
+                "overrideBank": 0,
+                "bankAngle": 21.2
+            },
+            {
+                "u_coord": 0.7713129449324099,
+                "targetSpeed": 30.0,
+                "overrideBank": 0,
+                "bankAngle": 0.0
+            },
+            {
+                "u_coord": 0.28030312651908995,
+                "targetSpeed": 30.0,
+                "overrideBank": 0,
+                "bankAngle": -11.4
+            }
+        ],
+        "laneSections": [
+            {
+                "u_coord": 0.8127258369856409,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.16195591048718225,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.4866837326497388,
+                "useLaneLeft2": 1,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            }
+        ],
+        "laneSection": [
+            {
+                "u_coord": 0.7971582561292501,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.57,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.63,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.6030863544143685,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.27,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 2.81,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.09425975103247938,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.3402369805817159,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 4.45,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 4.0,
+                "useLaneRight2": 1,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.19764038842441867,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 1,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 1.58
+            },
+            {
+                "u_coord": 0.45436422914181146,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            }
+        ]
+    },
+    {
+        "id": "15a41a3f",
+        "name": "",
+        "roadType": 0,
+        "laneWidth": 3.0,
+        "laneLeft": 1,
+        "laneRight": 1,
+        "defaultTargetSpeed": 30.0,
+        "defaultFriction": 0.15,
+        "active": 1,
+        "point": [
+            {
+                "pos": [
+                    1526.3109130859375,
+                    110.79796600341797,
+                    860.1455688476562
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1382.3111572265625,
+                    98.9873046875,
+                    859.9923706054688
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1324.4766845703125,
+                    93.1884765625,
+                    886.3123779296875
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1242.444580078125,
+                    91.44287109375,
+                    919.739501953125
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1195.3624141537907,
+                    90.72134680312064,
+                    865.2850700373897
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1117.5745530402228,
+                    90.1015714400562,
+                    892.5783070760908
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1033.99755859375,
+                    90.34765625,
+                    851.3668823242188
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    996.8755186441549,
+                    89.41124094187637,
+                    778.6999575258906
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    909.43310546875,
+                    92.03125,
+                    786.5347290039062
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    836.2418823242188,
+                    92.43359375,
+                    770.4874877929688
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    777.676025390625,
+                    92.90673828125,
+                    771.3956298828125
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    722.564208984375,
+                    90.99307250976562,
+                    768.253662109375
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            }
+        ],
+        "verticalCurve": [
+            {
+                "u_coord": 0.17099498024668452,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.47916530557734255,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.759047367879803,
+                "vcl": 50.0,
+                "offset": 0.0
+            }
+        ],
+        "bankAngle": [
+            {
+                "u_coord": 0.6217410717550287,
+                "targetSpeed": 30.0,
+                "overrideBank": 0,
+                "bankAngle": 0.0
+            },
+            {
+                "u_coord": 0.8857111026839484,
+                "targetSpeed": 30.0,
+                "overrideBank": 0,
+                "bankAngle": 16.7
+            }
+        ],
+        "laneSection": [
+            {
+                "u_coord": 0.13773573305281667,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.24161508448447708,
+                "useLaneLeft2": 1,
+                "widthLaneLeft2": 3.8,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.8323349636564207,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 4.07,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.6989680194106436,
+                "useLaneLeft2": 1,
+                "widthLaneLeft2": 3.5,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.45,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 4.07,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.525843401768911,
+                "useLaneLeft2": 1,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            }
+        ]
+    },
+    {
+        "id": "dee8050c",
+        "name": "",
+        "roadType": 0,
+        "defaultTargetSpeed": 30.0,
+        "defaultFriction": 0.15,
+        "active": 1,
+        "point": [
+            {
+                "pos": [
+                    1526.3109130859375,
+                    110.79796600341797,
+                    860.1455688476562
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1497.8587646484375,
+                    102.4033203125,
+                    802.4130249023438
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1445.663818359375,
+                    101.34228515625,
+                    717.9769897460938
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1383.852294921875,
+                    102.669921875,
+                    637.5505981445312
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1328.9859619140625,
+                    114.615234375,
+                    582.7457885742188
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1243.1015625,
+                    108.23974609375,
+                    534.4547119140625
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1143.47998046875,
+                    116.54296875,
+                    507.8585205078125
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1056.946533203125,
+                    132.927734375,
+                    417.2265930175781
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    958.5975341796875,
+                    142.1044921875,
+                    382.2679138183594
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    880.33837890625,
+                    140.24728393554688,
+                    360.37060546875
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            }
+        ],
+        "verticalCurve": [
+            {
+                "u_coord": 0.566100537776947,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.7176321744918823,
+                "vcl": 50.0,
+                "offset": 0.0
+            },
+            {
+                "u_coord": 0.877531111240387,
+                "vcl": 50.0,
+                "offset": 0.0
+            }
+        ],
+        "bankAngle": [
+            {
+                "u_coord": 0.1794691120319554,
+                "targetSpeed": 30.0,
+                "overrideBank": 0,
+                "bankAngle": 0.0
+            }
+        ],
+        "laneSection": [
+            {
+                "u_coord": 0.744672650007815,
+                "useLaneLeft2": 1,
+                "widthLaneLeft2": 3.61,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 4.3,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.5803022758492158,
+                "useLaneLeft2": 1,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.8453214604636636,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            },
+            {
+                "u_coord": 0.4008126014323394,
+                "useLaneLeft2": 0,
+                "widthLaneLeft2": 3.0,
+                "useLaneLeft1": 1,
+                "widthLaneLeft1": 3.0,
+                "useLaneCenter": 1,
+                "widthLaneCenter": 0.0,
+                "useLaneRight1": 1,
+                "widthLaneRight1": 3.0,
+                "useLaneRight2": 0,
+                "widthLaneRight2": 3.0,
+                "offsetCenter": 0.0
+            }
+        ]
+    },
+    {
+        "id": "b5ff7153",
+        "name": "",
+        "roadType": 0,
+        "defaultTargetSpeed": 30.0,
+        "defaultFriction": 0.15,
+        "active": 1,
+        "point": [
+            {
+                "pos": [
+                    1502.4437255859375,
+                    111.72344970703125,
+                    1183.97607421875
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1489.4600830078125,
+                    102.287109375,
+                    1106.08154296875
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1548.7110595703125,
+                    97.04931640625,
+                    1031.37939453125
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1508.8189697265625,
+                    101.38623046875,
+                    956.007080078125
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            },
+            {
+                "pos": [
+                    1526.3109130859375,
+                    110.79796600341797,
+                    860.1455688476562
+                ],
+                "useCurvatureRadius": 0,
+                "curvatureRadius": 0.0
+            }
+        ],
+        "verticalCurve": [
+            {
+                "u_coord": 0.47228020429611206,
+                "vcl": 50.0,
+                "offset": 0.0
+            }
+        ],
+        "bankAngle": [],
+        "laneSection": []
+    }
+]
