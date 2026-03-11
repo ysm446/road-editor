@@ -44,6 +44,32 @@ float DistanceXZ(XMFLOAT3 a, XMFLOAT3 b)
     return sqrtf(dx * dx + dz * dz);
 }
 
+float Distance2D(XMFLOAT2 a, XMFLOAT2 b)
+{
+    const float dx = b.x - a.x;
+    const float dy = b.y - a.y;
+    return sqrtf(dx * dx + dy * dy);
+}
+
+bool WorldToScreenPoint(XMFLOAT3 world, XMMATRIX viewProj, int vpW, int vpH, XMFLOAT2& outScreen)
+{
+    const XMVECTOR clip = XMVector4Transform(XMVectorSet(world.x, world.y, world.z, 1.0f), viewProj);
+    const float w = XMVectorGetW(clip);
+    if (w <= 1e-5f)
+        return false;
+
+    const float invW = 1.0f / w;
+    const float ndcX = XMVectorGetX(clip) * invW;
+    const float ndcY = XMVectorGetY(clip) * invW;
+    const float ndcZ = XMVectorGetZ(clip) * invW;
+    if (ndcZ < 0.0f || ndcZ > 1.0f)
+        return false;
+
+    outScreen.x = (ndcX * 0.5f + 0.5f) * static_cast<float>(vpW);
+    outScreen.y = (-ndcY * 0.5f + 0.5f) * static_cast<float>(vpH);
+    return true;
+}
+
 float Distance3D(XMFLOAT3 a, XMFLOAT3 b)
 {
     const float dx = b.x - a.x;
@@ -501,10 +527,13 @@ bool App::SyncPathfindingEndpointsFromSelectedRoad()
     m_pathfinding.endPos = road.points.back().pos;
     m_pathfinding.hasStart = true;
     m_pathfinding.hasEnd = true;
-    m_pathfinding.pickingStart = false;
-    m_pathfinding.pickingEnd = false;
+    m_pathfinding.draggingStart = false;
+    m_pathfinding.draggingEnd = false;
     m_pathfinding.previewPath.clear();
-    SetStatusMessage("Pathfinding endpoints synced from selected road");
+    if (!ComputePathfindingPreview())
+        return false;
+
+    SetStatusMessage("Pathfinding preview synced from selected road");
     return true;
 }
 
@@ -1208,6 +1237,7 @@ void App::Render()
         GetClientRect(m_hwnd, &rc);
         int vpW = rc.right  - rc.left;
         int vpH = rc.bottom - rc.top;
+        DrawPathfindingOverlay(vp, vpW, vpH);
         m_editor.DrawOverlay(vp, vpW, vpH);
     }
 
@@ -1269,8 +1299,8 @@ void App::UpdatePathfindingInput(bool wantMouseByImGui)
 
     if (m_editor.GetMode() != EditorMode::Pathfinding)
     {
-        m_pathfinding.pickingStart = false;
-        m_pathfinding.pickingEnd = false;
+        m_pathfinding.draggingStart = false;
+        m_pathfinding.draggingEnd = false;
         return;
     }
 
@@ -1279,26 +1309,88 @@ void App::UpdatePathfindingInput(bool wantMouseByImGui)
 
     if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0)
     {
-        m_pathfinding.pickingStart = false;
-        m_pathfinding.pickingEnd = false;
+        m_pathfinding.draggingStart = false;
+        m_pathfinding.draggingEnd = false;
     }
 
-    if (!lClick || !m_cursorHitValid)
+    RECT rc = {};
+    GetClientRect(m_hwnd, &rc);
+    const int vpW = rc.right - rc.left;
+    const int vpH = rc.bottom - rc.top;
+
+    POINT cursor = {};
+    GetCursorPos(&cursor);
+    ScreenToClient(m_hwnd, &cursor);
+    const XMFLOAT2 mousePos =
+    {
+        static_cast<float>(cursor.x),
+        static_cast<float>(cursor.y)
+    };
+
+    const XMMATRIX viewProj = XMMatrixMultiply(
+        m_camera->GetViewMatrix(),
+        m_camera->GetProjMatrix(static_cast<float>(vpW) / static_cast<float>(vpH)));
+
+    auto updateDraggedHandle = [this]()
+    {
+        if (!m_cursorHitValid)
+            return false;
+
+        bool changed = false;
+        if (m_pathfinding.draggingStart)
+        {
+            m_pathfinding.startPos = m_cursorHitPos;
+            m_pathfinding.hasStart = true;
+            changed = true;
+        }
+        if (m_pathfinding.draggingEnd)
+        {
+            m_pathfinding.endPos = m_cursorHitPos;
+            m_pathfinding.hasEnd = true;
+            changed = true;
+        }
+        if (changed && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+            ComputePathfindingPreview();
+        return changed;
+    };
+
+    if ((m_pathfinding.draggingStart || m_pathfinding.draggingEnd) && lDown)
+    {
+        updateDraggedHandle();
+        return;
+    }
+
+    if ((m_pathfinding.draggingStart || m_pathfinding.draggingEnd) && !lDown)
+    {
+        m_pathfinding.draggingStart = false;
+        m_pathfinding.draggingEnd = false;
+        return;
+    }
+
+    if (!lClick)
         return;
 
-    if (m_pathfinding.pickingStart)
+    const float handlePickRadius = 12.0f;
+    XMFLOAT2 startScreen = {};
+    XMFLOAT2 endScreen = {};
+    const bool hasStartScreen =
+        m_pathfinding.hasStart && WorldToScreenPoint(m_pathfinding.startPos, viewProj, vpW, vpH, startScreen);
+    const bool hasEndScreen =
+        m_pathfinding.hasEnd && WorldToScreenPoint(m_pathfinding.endPos, viewProj, vpW, vpH, endScreen);
+
+    if (hasStartScreen && Distance2D(mousePos, startScreen) <= handlePickRadius)
     {
-        m_pathfinding.startPos = m_cursorHitPos;
-        m_pathfinding.hasStart = true;
-        m_pathfinding.pickingStart = false;
-        SetStatusMessage("Pathfinding start picked");
+        m_pathfinding.draggingStart = true;
+        m_pathfinding.draggingEnd = false;
+        updateDraggedHandle();
+        SetStatusMessage("Dragging pathfinding start");
     }
-    else if (m_pathfinding.pickingEnd)
+    else if (hasEndScreen && Distance2D(mousePos, endScreen) <= handlePickRadius)
     {
-        m_pathfinding.endPos = m_cursorHitPos;
-        m_pathfinding.hasEnd = true;
-        m_pathfinding.pickingEnd = false;
-        SetStatusMessage("Pathfinding end picked");
+        m_pathfinding.draggingStart = false;
+        m_pathfinding.draggingEnd = true;
+        updateDraggedHandle();
+        SetStatusMessage("Dragging pathfinding end");
     }
 }
 
@@ -1310,24 +1402,44 @@ void App::DrawPathfindingPreview()
         for (size_t i = 1; i < m_pathfinding.previewPath.size(); ++i)
             m_debugDraw.AddLine(m_pathfinding.previewPath[i - 1], m_pathfinding.previewPath[i], pathColor);
     }
+}
 
-    auto drawMarker = [this](XMFLOAT3 pos, XMFLOAT4 color)
+void App::DrawPathfindingOverlay(XMMATRIX viewProj, int vpW, int vpH)
+{
+    if (m_editor.GetMode() != EditorMode::Pathfinding)
+        return;
+
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    auto drawHandle = [&](XMFLOAT3 worldPos, ImU32 fillColor, bool active, const char* label)
     {
-        const float radius = 1.5f;
-        m_debugDraw.AddLine(
-            { pos.x - radius, pos.y, pos.z },
-            { pos.x + radius, pos.y, pos.z },
-            color);
-        m_debugDraw.AddLine(
-            { pos.x, pos.y, pos.z - radius },
-            { pos.x, pos.y, pos.z + radius },
-            color);
+        XMFLOAT2 screenPos = {};
+        if (!WorldToScreenPoint(worldPos, viewProj, vpW, vpH, screenPos))
+            return;
+
+        const float radius = active ? 9.0f : 7.0f;
+        const ImVec2 center(screenPos.x, screenPos.y);
+        dl->AddCircleFilled(center, radius, fillColor, 20);
+        dl->AddCircle(center, radius + 2.0f, IM_COL32(255, 255, 255, 220), 20, 2.0f);
+        dl->AddText(ImVec2(center.x + 12.0f, center.y - 9.0f), fillColor, label);
     };
 
     if (m_pathfinding.hasStart)
-        drawMarker(m_pathfinding.startPos, { 0.2f, 1.0f, 0.3f, 1.0f });
+    {
+        drawHandle(
+            m_pathfinding.startPos,
+            IM_COL32(60, 220, 90, 255),
+            m_pathfinding.draggingStart,
+            "Start");
+    }
+
     if (m_pathfinding.hasEnd)
-        drawMarker(m_pathfinding.endPos, { 1.0f, 0.3f, 0.3f, 1.0f });
+    {
+        drawHandle(
+            m_pathfinding.endPos,
+            IM_COL32(235, 90, 90, 255),
+            m_pathfinding.draggingEnd,
+            "End");
+    }
 }
 
 void App::DrawContourPreview()
@@ -1524,23 +1636,53 @@ bool App::ApplyPathfindingPreviewAsRoad()
         return false;
     }
 
-    m_editor.RecordUndoState();
-    const int roadIndex = m_roadNetwork.AddRoad("Path Road " + std::to_string(m_roadNetwork.roads.size()));
+    const int roadIndex = m_editor.GetActiveRoadIndex();
     if (roadIndex < 0 || roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
     {
-        SetStatusMessage("Failed to create road from preview");
+        SetStatusMessage("Select a road before applying pathfinding");
         return false;
     }
 
+    m_editor.RecordUndoState();
     Road& road = m_roadNetwork.roads[roadIndex];
+    const std::string preservedStartIntersectionId = road.startIntersectionId;
+    const std::string preservedEndIntersectionId = road.endIntersectionId;
     road.points.clear();
     road.points.reserve(controlPoints.size());
     for (const XMFLOAT3& pos : controlPoints)
         road.points.push_back({ pos, 3.0f });
+    road.startIntersectionId = preservedStartIntersectionId;
+    road.endIntersectionId = preservedEndIntersectionId;
+    if (!road.points.empty())
+    {
+        if (!road.startIntersectionId.empty())
+        {
+            for (const Intersection& intersection : m_roadNetwork.intersections)
+            {
+                if (intersection.id == road.startIntersectionId)
+                {
+                    road.points.front().pos = intersection.pos;
+                    break;
+                }
+            }
+        }
+        if (!road.endIntersectionId.empty())
+        {
+            for (const Intersection& intersection : m_roadNetwork.intersections)
+            {
+                if (intersection.id == road.endIntersectionId)
+                {
+                    road.points.back().pos = intersection.pos;
+                    break;
+                }
+            }
+        }
+    }
 
     m_editor.SetMode(EditorMode::Navigate);
+    ResetPathfindingState();
     SetStatusMessage(
-        "Path applied as smoothed control points (" + std::to_string(road.points.size()) + ")");
+        "Selected road updated from pathfinding (" + std::to_string(road.points.size()) + " points)");
     return true;
 }
 
@@ -1548,68 +1690,73 @@ void App::DrawPathfindingPanel()
 {
     ImGui::SetNextWindowPos(ImVec2(340, 30), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(320, 260), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin("Pathfinding"))
+    bool open = true;
+    if (!ImGui::Begin("Pathfinding", &open))
     {
         ImGui::End();
+        if (!open)
+        {
+            m_editor.SetMode(EditorMode::Navigate);
+            ResetPathfindingState();
+        }
         return;
     }
 
     ImGui::TextDisabled("Terrain/grid based A* route preview");
-    ImGui::TextDisabled("Uses the selected road's first and last point");
+    ImGui::TextDisabled("Drag the start/end handles in the viewport");
     ImGui::Separator();
 
     if (ImGui::Button("Use Selected Road", ImVec2(-1, 0)))
         SyncPathfindingEndpointsFromSelectedRoad();
 
-    if (ImGui::Button(m_pathfinding.pickingStart ? "Picking Start..." : "Pick Start", ImVec2(120, 0)))
-    {
-        m_pathfinding.pickingStart = true;
-        m_pathfinding.pickingEnd = false;
-    }
-    ImGui::SameLine();
     if (m_pathfinding.hasStart)
-        ImGui::Text("%.1f, %.1f, %.1f", m_pathfinding.startPos.x, m_pathfinding.startPos.y, m_pathfinding.startPos.z);
+        ImGui::Text("Start  %.1f, %.1f, %.1f", m_pathfinding.startPos.x, m_pathfinding.startPos.y, m_pathfinding.startPos.z);
     else
-        ImGui::TextDisabled("Not set");
+        ImGui::TextDisabled("Start  not set");
 
-    if (ImGui::Button(m_pathfinding.pickingEnd ? "Picking End..." : "Pick End", ImVec2(120, 0)))
-    {
-        m_pathfinding.pickingStart = false;
-        m_pathfinding.pickingEnd = true;
-    }
-    ImGui::SameLine();
     if (m_pathfinding.hasEnd)
-        ImGui::Text("%.1f, %.1f, %.1f", m_pathfinding.endPos.x, m_pathfinding.endPos.y, m_pathfinding.endPos.z);
+        ImGui::Text("End    %.1f, %.1f, %.1f", m_pathfinding.endPos.x, m_pathfinding.endPos.y, m_pathfinding.endPos.z);
     else
-        ImGui::TextDisabled("Not set");
+        ImGui::TextDisabled("End    not set");
 
     ImGui::Separator();
 
     ImGui::InputFloat("Max Grade (%)", &m_pathfinding.maxGradePercent, 0.5f, 5.0f, "%.1f");
-    m_pathfinding.maxGradePercent = std::clamp(m_pathfinding.maxGradePercent, 0.0f, 100.0f);
+    const float clampedMaxGrade = std::clamp(m_pathfinding.maxGradePercent, 0.0f, 100.0f);
+    if (fabsf(clampedMaxGrade - m_pathfinding.maxGradePercent) > 1e-4f)
+        m_pathfinding.maxGradePercent = clampedMaxGrade;
+    if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+        ComputePathfindingPreview();
 
     ImGui::InputFloat("Grid Step (m)", &m_pathfinding.gridStep, 0.5f, 5.0f, "%.1f");
-    m_pathfinding.gridStep = std::clamp(m_pathfinding.gridStep, 1.0f, 100.0f);
+    const float clampedGridStep = std::clamp(m_pathfinding.gridStep, 1.0f, 100.0f);
+    if (fabsf(clampedGridStep - m_pathfinding.gridStep) > 1e-4f)
+        m_pathfinding.gridStep = clampedGridStep;
+    if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+        ComputePathfindingPreview();
 
     ImGui::Checkbox("Strict Max Grade", &m_pathfinding.strictMaxGrade);
+    if (ImGui::IsItemEdited() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+        ComputePathfindingPreview();
     if (!m_pathfinding.strictMaxGrade)
     {
         ImGui::InputFloat("Slope Penalty", &m_pathfinding.slopePenalty, 5.0f, 20.0f, "%.1f");
-        m_pathfinding.slopePenalty = std::clamp(m_pathfinding.slopePenalty, 0.0f, 1000.0f);
+        const float clampedPenalty = std::clamp(m_pathfinding.slopePenalty, 0.0f, 1000.0f);
+        if (fabsf(clampedPenalty - m_pathfinding.slopePenalty) > 1e-4f)
+            m_pathfinding.slopePenalty = clampedPenalty;
+        if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+            ComputePathfindingPreview();
     }
 
     ImGui::Separator();
-
-    if (ImGui::Button("Compute", ImVec2(-1, 0)))
-        ComputePathfindingPreview();
 
     if (ImGui::Button("Apply as Road", ImVec2(-1, 0)))
         ApplyPathfindingPreviewAsRoad();
 
     if (ImGui::Button("Clear", ImVec2(-1, 0)))
     {
-        m_pathfinding.pickingStart = false;
-        m_pathfinding.pickingEnd = false;
+        m_pathfinding.draggingStart = false;
+        m_pathfinding.draggingEnd = false;
         m_pathfinding.hasStart = false;
         m_pathfinding.hasEnd = false;
         m_pathfinding.previewPath.clear();
@@ -1617,10 +1764,17 @@ void App::DrawPathfindingPanel()
     }
 
     ImGui::Separator();
-    ImGui::TextDisabled("Esc: cancel picking");
-    ImGui::TextDisabled("Pick start/end, then compute");
+    ImGui::TextDisabled("Click a handle to drag it on terrain");
+    ImGui::TextDisabled("Preview recomputes while dragging");
 
     ImGui::End();
+
+    if (!open)
+    {
+        m_editor.SetMode(EditorMode::Navigate);
+        ResetPathfindingState();
+        SetStatusMessage("Pathfinding closed");
+    }
 }
 
 LRESULT App::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

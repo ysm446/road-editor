@@ -2312,7 +2312,13 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         ImGui::SameLine();
 
         if (pathActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button("Pathfinding")) SetMode(EditorMode::Pathfinding);
+        if (ImGui::Button("Pathfinding"))
+        {
+            if (pathActive)
+                SetMode(EditorMode::Navigate);
+            else
+                SetMode(EditorMode::Pathfinding);
+        }
         if (pathActive) ImGui::PopStyleColor();
     }
 

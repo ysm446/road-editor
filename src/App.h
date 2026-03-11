@@ -49,6 +49,7 @@ private:
     void    RebuildContourCache();
     void    UpdatePathfindingInput(bool wantMouseByImGui);
     void    DrawPathfindingPreview();
+    void    DrawPathfindingOverlay(DirectX::XMMATRIX viewProj, int vpW, int vpH);
     void    DrawContourPreview();
     void    DrawPathfindingPanel();
     bool    ComputePathfindingPreview();
@@ -58,14 +59,14 @@ private:
     struct PathfindingState
     {
         bool enabled = false;
-        bool pickingStart = false;
-        bool pickingEnd = false;
         bool hasStart = false;
         bool hasEnd = false;
         bool strictMaxGrade = true;
         float maxGradePercent = 10.0f;
         float gridStep = 5.0f;
         float slopePenalty = 40.0f;
+        bool draggingStart = false;
+        bool draggingEnd = false;
         DirectX::XMFLOAT3 startPos = { 0.0f, 0.0f, 0.0f };
         DirectX::XMFLOAT3 endPos = { 0.0f, 0.0f, 0.0f };
         std::vector<DirectX::XMFLOAT3> previewPath;
