@@ -201,6 +201,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.mode = m_mode;
     snapshot.activeRoad = m_activeRoad;
     snapshot.activePoint = m_activePoint;
+    snapshot.selectedRoads = m_selectedRoads;
     snapshot.selectedPoints = m_selectedPoints;
     snapshot.selectedIntersections = m_selectedIntersections;
     snapshot.activeGroup = m_activeGroup;
@@ -217,6 +218,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_mode = snapshot.mode;
     m_activeRoad = snapshot.activeRoad;
     m_activePoint = snapshot.activePoint;
+    m_selectedRoads = snapshot.selectedRoads;
     m_selectedPoints = snapshot.selectedPoints;
     m_selectedIntersections = snapshot.selectedIntersections;
     m_activeGroup = snapshot.activeGroup;
@@ -278,6 +280,7 @@ void PolylineEditor::ResetState()
     m_mode = EditorMode::Navigate;
     m_activeRoad = -1;
     m_activePoint = -1;
+    m_selectedRoads.clear();
     m_selectedPoints.clear();
     m_selectedIntersections.clear();
     m_activeGroup = -1;
@@ -314,39 +317,46 @@ void PolylineEditor::SanitizeSelection()
     if (m_activeGroup < 0 || m_activeGroup >= static_cast<int>(m_network->groups.size()))
         m_activeGroup = m_network->groups.empty() ? -1 : 0;
 
-    if (m_activeRoad < 0 || m_activeRoad >= static_cast<int>(m_network->roads.size()))
+    m_selectedRoads.erase(
+        std::remove_if(
+            m_selectedRoads.begin(),
+            m_selectedRoads.end(),
+            [this](int roadIndex)
+            {
+                return roadIndex < 0 ||
+                    roadIndex >= static_cast<int>(m_network->roads.size());
+            }),
+        m_selectedRoads.end());
+
+    m_selectedPoints.erase(
+        std::remove_if(
+            m_selectedPoints.begin(),
+            m_selectedPoints.end(),
+            [this](const PointRef& pointRef)
+            {
+                if (pointRef.roadIndex < 0 ||
+                    pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                    return true;
+
+                const int pointCount = static_cast<int>(
+                    m_network->roads[pointRef.roadIndex].points.size());
+                return pointRef.pointIndex < 0 || pointRef.pointIndex >= pointCount;
+            }),
+        m_selectedPoints.end());
+
+    PointRef primaryPoint;
+    if (GetPrimarySelectedPoint(primaryPoint))
     {
-        m_activeRoad = -1;
-        m_activePoint = -1;
-        m_selectedPoints.clear();
+        m_activeRoad = primaryPoint.roadIndex;
+        m_activePoint = primaryPoint.pointIndex;
     }
     else
     {
-        m_selectedPoints.erase(
-            std::remove_if(
-                m_selectedPoints.begin(),
-                m_selectedPoints.end(),
-                [this](const PointRef& pointRef)
-                {
-                    if (pointRef.roadIndex < 0 ||
-                        pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
-                        return true;
-
-                    const int pointCount = static_cast<int>(
-                        m_network->roads[pointRef.roadIndex].points.size());
-                    return pointRef.pointIndex < 0 || pointRef.pointIndex >= pointCount;
-                }),
-            m_selectedPoints.end());
-
-        PointRef primaryPoint;
-        if (!GetPrimarySelectedPoint(primaryPoint))
+        m_activePoint = -1;
+        if (m_activeRoad < 0 || m_activeRoad >= static_cast<int>(m_network->roads.size()) ||
+            !IsRoadSelected(m_activeRoad))
         {
-            m_activePoint = -1;
-        }
-        else
-        {
-            m_activeRoad = primaryPoint.roadIndex;
-            m_activePoint = primaryPoint.pointIndex;
+            m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
         }
     }
 
@@ -796,6 +806,128 @@ bool PolylineEditor::SplitSelectedRoadAtPoint()
     return true;
 }
 
+bool PolylineEditor::MergeSelectedRoads()
+{
+    constexpr float kMergeEndpointDistance = 5.0f;
+
+    if (!m_network || m_selectedRoads.size() != 2)
+        return false;
+
+    const int roadAIndex = m_selectedRoads[0];
+    const int roadBIndex = m_selectedRoads[1];
+    if (roadAIndex < 0 || roadAIndex >= static_cast<int>(m_network->roads.size()) ||
+        roadBIndex < 0 || roadBIndex >= static_cast<int>(m_network->roads.size()) ||
+        roadAIndex == roadBIndex)
+        return false;
+
+    const Road& roadA = m_network->roads[roadAIndex];
+    const Road& roadB = m_network->roads[roadBIndex];
+    if (roadA.points.size() < 2 || roadB.points.size() < 2)
+    {
+        m_statusMessage = "Both roads need at least two points";
+        return false;
+    }
+
+    auto endpointsMatch = [kMergeEndpointDistance](const std::string& lhsId,
+                                                   const std::string& rhsId,
+                                                   XMFLOAT3 lhsPos,
+                                                   XMFLOAT3 rhsPos)
+    {
+        if (!lhsId.empty() && !rhsId.empty() && lhsId == rhsId)
+            return true;
+        return Distance3(lhsPos, rhsPos) <= kMergeEndpointDistance;
+    };
+
+    bool reverseA = false;
+    bool reverseB = false;
+    bool foundConnection = false;
+    XMFLOAT3 mergePoint = {};
+    if (endpointsMatch(roadA.endIntersectionId, roadB.startIntersectionId, roadA.points.back().pos, roadB.points.front().pos))
+    {
+        reverseA = false;
+        reverseB = false;
+        foundConnection = true;
+        mergePoint =
+        {
+            0.5f * (roadA.points.back().pos.x + roadB.points.front().pos.x),
+            0.5f * (roadA.points.back().pos.y + roadB.points.front().pos.y),
+            0.5f * (roadA.points.back().pos.z + roadB.points.front().pos.z)
+        };
+    }
+    else if (endpointsMatch(roadA.endIntersectionId, roadB.endIntersectionId, roadA.points.back().pos, roadB.points.back().pos))
+    {
+        reverseA = false;
+        reverseB = true;
+        foundConnection = true;
+        mergePoint =
+        {
+            0.5f * (roadA.points.back().pos.x + roadB.points.back().pos.x),
+            0.5f * (roadA.points.back().pos.y + roadB.points.back().pos.y),
+            0.5f * (roadA.points.back().pos.z + roadB.points.back().pos.z)
+        };
+    }
+    else if (endpointsMatch(roadA.startIntersectionId, roadB.startIntersectionId, roadA.points.front().pos, roadB.points.front().pos))
+    {
+        reverseA = true;
+        reverseB = false;
+        foundConnection = true;
+        mergePoint =
+        {
+            0.5f * (roadA.points.front().pos.x + roadB.points.front().pos.x),
+            0.5f * (roadA.points.front().pos.y + roadB.points.front().pos.y),
+            0.5f * (roadA.points.front().pos.z + roadB.points.front().pos.z)
+        };
+    }
+    else if (endpointsMatch(roadA.startIntersectionId, roadB.endIntersectionId, roadA.points.front().pos, roadB.points.back().pos))
+    {
+        reverseA = true;
+        reverseB = true;
+        foundConnection = true;
+        mergePoint =
+        {
+            0.5f * (roadA.points.front().pos.x + roadB.points.back().pos.x),
+            0.5f * (roadA.points.front().pos.y + roadB.points.back().pos.y),
+            0.5f * (roadA.points.front().pos.z + roadB.points.back().pos.z)
+        };
+    }
+
+    if (!foundConnection)
+    {
+        m_statusMessage = "Selected roads need endpoints within 5m to merge";
+        return false;
+    }
+
+    PushUndoState();
+
+    std::vector<RoadPoint> pointsA = roadA.points;
+    std::vector<RoadPoint> pointsB = roadB.points;
+    if (reverseA)
+        std::reverse(pointsA.begin(), pointsA.end());
+    if (reverseB)
+        std::reverse(pointsB.begin(), pointsB.end());
+    pointsA.back().pos = mergePoint;
+    pointsB.front().pos = mergePoint;
+
+    Road mergedRoad = roadA;
+    mergedRoad.points = pointsA;
+    mergedRoad.points.insert(mergedRoad.points.end(), pointsB.begin() + 1, pointsB.end());
+    mergedRoad.startIntersectionId = reverseA ? roadA.endIntersectionId : roadA.startIntersectionId;
+    mergedRoad.endIntersectionId = reverseB ? roadB.startIntersectionId : roadB.endIntersectionId;
+    mergedRoad.closed = false;
+
+    const int keepIndex = (std::min)(roadAIndex, roadBIndex);
+    const int removeIndex = (std::max)(roadAIndex, roadBIndex);
+    m_network->roads[keepIndex] = mergedRoad;
+    m_network->RemoveRoad(removeIndex);
+
+    SelectSingleRoad(keepIndex);
+    ClearPointSelection();
+    ClearIntersectionSelection();
+    m_activeIntersection = -1;
+    m_statusMessage = "Roads merged";
+    return true;
+}
+
 int PolylineEditor::FindSnapIntersectionForSelectedEndpoint(
     int vpW, int vpH, XMMATRIX viewProj) const
 {
@@ -927,6 +1059,14 @@ bool PolylineEditor::GetActiveGizmoPivot(XMFLOAT3& outPivot) const
     return false;
 }
 
+bool PolylineEditor::IsRoadSelected(int roadIndex) const
+{
+    return std::find(
+        m_selectedRoads.begin(),
+        m_selectedRoads.end(),
+        roadIndex) != m_selectedRoads.end();
+}
+
 bool PolylineEditor::IsPointSelected(int roadIndex, int pointIndex) const
 {
     return std::find_if(
@@ -953,6 +1093,42 @@ bool PolylineEditor::IsIntersectionSelected(int intersectionIndex) const
         m_selectedIntersections.begin(),
         m_selectedIntersections.end(),
         intersectionIndex) != m_selectedIntersections.end();
+}
+
+void PolylineEditor::ClearRoadSelection()
+{
+    m_selectedRoads.clear();
+    m_activeRoad = -1;
+}
+
+void PolylineEditor::SelectSingleRoad(int roadIndex)
+{
+    m_selectedRoads.clear();
+    if (roadIndex >= 0)
+        m_selectedRoads.push_back(roadIndex);
+    m_activeRoad = roadIndex;
+    m_activePoint = -1;
+}
+
+void PolylineEditor::ToggleRoadSelection(int roadIndex)
+{
+    if (roadIndex < 0)
+        return;
+
+    std::vector<int>::iterator it = std::find(
+        m_selectedRoads.begin(),
+        m_selectedRoads.end(),
+        roadIndex);
+    if (it != m_selectedRoads.end())
+    {
+        m_selectedRoads.erase(it);
+        m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
+        return;
+    }
+
+    m_selectedRoads.push_back(roadIndex);
+    m_activeRoad = roadIndex;
+    m_activePoint = -1;
 }
 
 void PolylineEditor::ClearPointSelection()
@@ -1235,6 +1411,7 @@ void PolylineEditor::StartNewRoad()
         m_network->roads[m_activeRoad].groupId = m_network->groups[m_activeGroup].id;
     }
     m_activePoint = -1;
+    SelectSingleRoad(m_activeRoad);
     m_selectedPoints.clear();
     m_mode        = EditorMode::PolylineDraw;
 }
@@ -1254,6 +1431,7 @@ void PolylineEditor::ConfirmRoad()
             }
         }
         m_activeRoad  = -1;
+        ClearRoadSelection();
         ClearPointSelection();
         m_mode        = EditorMode::Navigate;
     }
@@ -1270,6 +1448,7 @@ void PolylineEditor::CancelRoad()
             m_network->RemoveRoad(m_activeRoad);
         }
         m_activeRoad  = -1;
+        ClearRoadSelection();
         ClearPointSelection();
         m_mode        = EditorMode::Navigate;
     }
@@ -1390,6 +1569,8 @@ void PolylineEditor::Update(int vpW, int vpH,
             if (width >= 4.0f || height >= 4.0f)
             {
                 ApplyMarqueeSelection(vpW, vpH, viewProj, m_marqueeAdditive, m_marqueeSubtractive);
+                if (m_mode == EditorMode::Navigate && !m_selectedPoints.empty())
+                    SetMode(EditorMode::PointEdit);
             }
             else if (!m_marqueeAdditive && !m_marqueeSubtractive)
             {
@@ -1432,16 +1613,23 @@ void PolylineEditor::Update(int vpW, int vpH,
         }
 
         if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
-            m_activeRoad >= 0 &&
+            !m_selectedRoads.empty() &&
             m_activePoint < 0 &&
-            m_activeRoad < static_cast<int>(m_network->roads.size()))
+            m_selectedPoints.empty())
         {
             PushUndoState();
-            m_network->RemoveRoad(m_activeRoad);
-            m_activeRoad = -1;
+            std::vector<int> roadsToDelete = m_selectedRoads;
+            std::sort(roadsToDelete.begin(), roadsToDelete.end(), std::greater<int>());
+            roadsToDelete.erase(std::unique(roadsToDelete.begin(), roadsToDelete.end()), roadsToDelete.end());
+            for (int roadIndex : roadsToDelete)
+            {
+                if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
+                    m_network->RemoveRoad(roadIndex);
+            }
+            ClearRoadSelection();
             ClearPointSelection();
             m_hoverSnapIntersection = -1;
-            m_statusMessage = "Road deleted";
+            m_statusMessage = roadsToDelete.size() > 1 ? "Roads deleted" : "Road deleted";
             return;
         }
 
@@ -1460,6 +1648,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                         SelectSinglePoint(m_activeRoad, selPoint);
                         ClearIntersectionSelection();
                     }
+                    SetMode(EditorMode::PointEdit);
                     return;
                 }
             }
@@ -1475,21 +1664,24 @@ void PolylineEditor::Update(int vpW, int vpH,
                     ClearPointSelection();
                 }
                 SetActiveGroupById(m_network->intersections[selIntersection].groupId);
-                m_activeRoad = -1;
+                ClearRoadSelection();
                 return;
             }
 
             const int selRoad = FindNearestRoad(vpW, vpH, mousePos, viewProj);
             if (selRoad >= 0)
             {
-                m_activeRoad = selRoad;
+                if (ctrlDown)
+                    ToggleRoadSelection(selRoad);
+                else
+                    SelectSingleRoad(selRoad);
                 SetActiveGroupById(m_network->roads[selRoad].groupId);
                 ClearPointSelection();
                 ClearIntersectionSelection();
                 return;
             }
 
-            m_activeRoad = -1;
+            ClearRoadSelection();
             m_dragging = false;
             m_activeGizmoAxis = GizmoAxis::None;
             m_hoverSnapIntersection = -1;
@@ -2070,17 +2262,20 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
         const Road& road = m_network->roads[ri];
         if (!IsRoadVisible(road))
             continue;
-        XMFLOAT4 col = (ri == m_activeRoad) ? colorSelected : colorRoad;
-
-        for (int pi = 0; pi + 1 < static_cast<int>(road.points.size()); ++pi)
-            dd.AddLine(road.points[pi].pos, road.points[pi + 1].pos, col);
-
-        if (road.closed && road.points.size() >= 2)
-            dd.AddLine(road.points.back().pos, road.points.front().pos, col);
 
         const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
         for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
             dd.AddLine(previewCurve[sampleIndex], previewCurve[sampleIndex + 1], colorPreview);
+    }
+
+    auto drawRoadLines = [&](int roadIndex, XMFLOAT4 color)
+    {
+        const Road& road = m_network->roads[roadIndex];
+        for (int pi = 0; pi + 1 < static_cast<int>(road.points.size()); ++pi)
+            dd.AddLine(road.points[pi].pos, road.points[pi + 1].pos, color);
+
+        if (road.closed && road.points.size() >= 2)
+            dd.AddLine(road.points.back().pos, road.points.front().pos, color);
 
         const int startIsec = FindIntersectionIndexById(road.startIntersectionId);
         const int endIsec   = FindIntersectionIndexById(road.endIntersectionId);
@@ -2090,6 +2285,22 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
         if (endIsec >= 0 && !road.points.empty() &&
             IsIntersectionVisible(m_network->intersections[endIsec]))
             dd.AddLine(road.points.back().pos, m_network->intersections[endIsec].pos, colorConnection);
+    };
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road) || IsRoadSelected(ri) || ri == m_activeRoad)
+            continue;
+        drawRoadLines(ri, colorRoad);
+    }
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
+            continue;
+        drawRoadLines(ri, colorSelected);
     }
 
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
@@ -2424,6 +2635,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     case EditorMode::Navigate:
         ImGui::TextDisabled("Object selection mode");
         ImGui::TextDisabled("Click road: select road");
+        ImGui::TextDisabled("Ctrl+Click road: multi-select roads");
         ImGui::TextDisabled("Selected road points can be picked directly");
         ImGui::TextDisabled("Drag empty area: marquee select points");
         ImGui::TextDisabled("Press W: show gizmo for selected point/intersection");
@@ -2575,23 +2787,25 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                     if (road.groupId != group.id)
                         continue;
 
-                    const bool selected = (i == m_activeRoad);
-            if (ImGui::Selectable(road.name.c_str(), selected))
-            {
-                m_activeRoad = i;
-                ClearPointSelection();
-                ClearIntersectionSelection();
-                m_activeIntersection = -1;
-                m_activeGroup = gi;
-            }
+                    const bool selected = IsRoadSelected(i);
+                    if (ImGui::Selectable(road.name.c_str(), selected))
+                    {
+                        if (ImGui::GetIO().KeyCtrl)
+                            ToggleRoadSelection(i);
+                        else
+                            SelectSingleRoad(i);
+                        ClearPointSelection();
+                        ClearIntersectionSelection();
+                        m_activeIntersection = -1;
+                        m_activeGroup = gi;
+                    }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
                         if (ImGui::MenuItem("Delete Road"))
                         {
                             PushUndoState();
                             m_network->RemoveRoad(i);
-                            if (m_activeRoad >= static_cast<int>(m_network->roads.size()))
-                                m_activeRoad = -1;
+                            SanitizeSelection();
                         }
                         ImGui::EndPopup();
                     }
@@ -2619,7 +2833,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             if (ImGui::Selectable(isec.name.c_str(), selected))
             {
                 SelectSingleIntersection(i);
-                m_activeRoad = -1;
+                ClearRoadSelection();
                 ClearPointSelection();
                 m_activeGroup = gi;
             }
@@ -2684,6 +2898,14 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         Road& road = m_network->roads[m_activeRoad];
         ImGui::Separator();
         ImGui::Text("Road");
+        if (m_selectedRoads.size() > 1)
+            ImGui::TextDisabled("Selected Roads: %d", static_cast<int>(m_selectedRoads.size()));
+
+        if (m_selectedRoads.size() == 2)
+        {
+            if (ImGui::Button("Merge Selected Roads"))
+                MergeSelectedRoads();
+        }
 
         char roadNameBuf[128] = {};
         strncpy_s(roadNameBuf, sizeof(roadNameBuf), road.name.c_str(), _TRUNCATE);

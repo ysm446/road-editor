@@ -120,14 +120,19 @@ private:
     void SetSelectedRoadConnectionId(const std::string& intersectionId);
     void ClearSelectedRoadConnection();
     bool SplitSelectedRoadAtPoint();
+    bool MergeSelectedRoads();
     int FindSnapIntersectionForSelectedEndpoint(int vpW, int vpH,
                                                 DirectX::XMMATRIX viewProj) const;
     void SnapSelectedEndpointToIntersection(int intersectionIndex);
     void SyncRoadConnectionsForIntersection(int intersectionIndex);
     bool GetActiveGizmoPivot(DirectX::XMFLOAT3& outPivot) const;
+    bool IsRoadSelected(int roadIndex) const;
     bool IsPointSelected(int roadIndex, int pointIndex) const;
     bool GetPrimarySelectedPoint(PointRef& outPoint) const;
     bool IsIntersectionSelected(int intersectionIndex) const;
+    void ClearRoadSelection();
+    void SelectSingleRoad(int roadIndex);
+    void ToggleRoadSelection(int roadIndex);
     void ClearPointSelection();
     void ClearIntersectionSelection();
     void SelectSinglePoint(int roadIndex, int pointIndex);
@@ -153,6 +158,7 @@ private:
         EditorMode  mode = EditorMode::Navigate;
         int activeRoad = -1;
         int activePoint = -1;
+        std::vector<int> selectedRoads;
         std::vector<PointRef> selectedPoints;
         std::vector<int> selectedIntersections;
         int activeGroup = -1;
@@ -172,6 +178,7 @@ private:
     // Index of road being drawn / edited
     int m_activeRoad  = -1;
     int m_activePoint = -1;   // selected point in PointEdit mode
+    std::vector<int> m_selectedRoads;
     std::vector<PointRef> m_selectedPoints;
     std::vector<int> m_selectedIntersections;
     int m_activeGroup = -1;
