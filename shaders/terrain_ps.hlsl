@@ -26,6 +26,7 @@ float4 main(PSInput input) : SV_TARGET
 {
     float3 n = normalize(input.normal);
     float3 albedo;
+    bool applyDesaturation = false;
     if (colorMode == 0)
     {
         albedo = float3(0.62, 0.62, 0.64);
@@ -36,6 +37,7 @@ float4 main(PSInput input) : SV_TARGET
     }
     else if (colorMode == 2)
     {
+        applyDesaturation = true;
         float slope = saturate(1.0 - abs(n.y));
         float3 colLow  = float3(0.30, 0.70, 0.32);
         float3 colMid  = float3(0.98, 0.91, 0.24);
@@ -51,6 +53,7 @@ float4 main(PSInput input) : SV_TARGET
     }
     else
     {
+        applyDesaturation = true;
         // Altitude [0, 1] relative to the terrain's maximum height
         float t = saturate(input.worldPos.y / max(maxHeight, 0.001));
 
@@ -63,6 +66,12 @@ float4 main(PSInput input) : SV_TARGET
             albedo = lerp(colGrass, colRock,  saturate(t * 2.0));
         else
             albedo = lerp(colRock,  colSnow,  saturate((t - 0.5) * 2.0));
+    }
+
+    if (applyDesaturation)
+    {
+        const float luminance = dot(albedo, float3(0.299, 0.587, 0.114));
+        albedo = lerp(float3(luminance, luminance, luminance), albedo, 0.82);
     }
 
     // Lambert

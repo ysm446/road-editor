@@ -459,6 +459,8 @@ void App::LoadViewSettings()
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
     m_showContours = false;
+    m_contourColor = { 0.18f, 0.18f, 0.18f };
+    m_backgroundColor = { 0.12f, 0.12f, 0.14f };
 
     try
     {
@@ -471,6 +473,18 @@ void App::LoadViewSettings()
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showContours = root.value("showContours", false);
+            if (root.contains("contourColor") && root["contourColor"].is_array() && root["contourColor"].size() == 3)
+            {
+                m_contourColor.x = root["contourColor"][0].get<float>();
+                m_contourColor.y = root["contourColor"][1].get<float>();
+                m_contourColor.z = root["contourColor"][2].get<float>();
+            }
+            if (root.contains("backgroundColor") && root["backgroundColor"].is_array() && root["backgroundColor"].size() == 3)
+            {
+                m_backgroundColor.x = root["backgroundColor"][0].get<float>();
+                m_backgroundColor.y = root["backgroundColor"][1].get<float>();
+                m_backgroundColor.z = root["backgroundColor"][2].get<float>();
+            }
         }
     }
     catch (...)
@@ -492,7 +506,9 @@ void App::SaveViewSettings() const
             { "showRoadNames", m_showRoadNames },
             { "showIntersectionNames", m_showIntersectionNames },
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
-            { "showContours", m_showContours }
+            { "showContours", m_showContours },
+            { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
+            { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } }
         };
 
         std::ofstream ofs(kViewSettingsPath);
@@ -998,7 +1014,7 @@ int App::Run()
 
 void App::Render()
 {
-    m_d3d->BeginFrame();
+    m_d3d->BeginFrame(m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z);
 
     // Build per-frame constant buffer
     float    aspect = static_cast<float>(m_d3d->GetWidth())
@@ -1296,6 +1312,30 @@ void App::Render()
             SaveViewSettings();
         }
 
+        ImGui::TextUnformatted(u8"\u7B49\u9AD8\u7DDA\u306E\u8272");
+        ImGui::SameLine();
+        float contourColor[3] = { m_contourColor.x, m_contourColor.y, m_contourColor.z };
+        if (ImGui::ColorEdit3(
+                "##contourColor",
+                contourColor,
+                ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
+        {
+            m_contourColor = { contourColor[0], contourColor[1], contourColor[2] };
+            SaveViewSettings();
+        }
+
+        ImGui::TextUnformatted(u8"\u80CC\u666F\u8272");
+        ImGui::SameLine();
+        float backgroundColor[3] = { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z };
+        if (ImGui::ColorEdit3(
+                "##backgroundColor",
+                backgroundColor,
+                ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
+        {
+            m_backgroundColor = { backgroundColor[0], backgroundColor[1], backgroundColor[2] };
+            SaveViewSettings();
+        }
+
     }
     ImGui::End();
 
@@ -1518,7 +1558,7 @@ void App::DrawContourPreview()
     if (!m_showContours || m_contourSegments.empty())
         return;
 
-    const XMFLOAT4 contourColor = { 0.18f, 0.18f, 0.18f, 0.85f };
+    const XMFLOAT4 contourColor = { m_contourColor.x, m_contourColor.y, m_contourColor.z, 0.85f };
     for (const ContourSegment& segment : m_contourSegments)
         m_debugDraw.AddLine(segment.a, segment.b, contourColor);
 }
