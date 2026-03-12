@@ -470,6 +470,7 @@ void App::LoadViewSettings()
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
     m_showRoadGradeGradient = false;
+    m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
     m_contourColor = { 0.18f, 0.18f, 0.18f };
@@ -486,6 +487,7 @@ void App::LoadViewSettings()
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
+            m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
             if (root.contains("contourColor") && root["contourColor"].is_array() && root["contourColor"].size() == 3)
@@ -524,6 +526,7 @@ void App::SaveViewSettings() const
             { "showIntersectionNames", m_showIntersectionNames },
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
             { "showRoadGradeGradient", m_showRoadGradeGradient },
+            { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
             { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
@@ -1289,6 +1292,11 @@ void App::Render()
                 m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
                 SaveViewSettings();
             }
+            if (ImGui::MenuItem("FPS", nullptr, m_showFps))
+            {
+                m_showFps = !m_showFps;
+                SaveViewSettings();
+            }
             if (m_showRoadGradeGradient)
             {
                 float threshold = m_roadGradeRedThresholdPercent;
@@ -1305,9 +1313,10 @@ void App::Render()
         ImGui::EndMainMenuBar();
     }
 
+    if (m_showFps)
     {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
-        const ImVec2 pos(viewport->WorkPos.x + viewport->WorkSize.x - 90.0f, viewport->WorkPos.y + 28.0f);
+        const ImVec2 pos(viewport->WorkPos.x + 10.0f, viewport->WorkPos.y + 10.0f);
         ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(0.0f);
         ImGuiWindowFlags flags =

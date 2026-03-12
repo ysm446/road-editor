@@ -10,7 +10,8 @@
     0.23552125692367554
   ],
   "roadGradeRedThresholdPercent": 15.0,
-  "showContours": true,
+  "showContours": false,
+  "showFps": false,
   "showIntersectionNames": true,
   "showRoadGradeGradient": true,
   "showRoadNames": true,
