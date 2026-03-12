@@ -3057,6 +3057,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 
     ImDrawList* dl = ImGui::GetBackgroundDrawList();
     const float kRadius    = 3.0f;
+    const float kSelectedRoadThickness = 2.0f;
     const ImU32 colPoint    = IM_COL32(160, 160, 160, 220);
     const ImU32 colRoadSel  = IM_COL32(255, 255, 255, 255);
     const ImU32 colPointSel = IM_COL32(255, 140,  60, 255);
@@ -3068,6 +3069,38 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const ImU32 colIsec     = IM_COL32( 80, 240, 255, 255);
     const ImU32 colIsecSel  = IM_COL32(255, 120, 80, 255);
     const ImU32 colSnap     = IM_COL32(255, 240, 80, 255);
+
+    auto drawSelectedRoadOverlay = [&](const Road& road)
+    {
+        for (int pi = 0; pi + 1 < static_cast<int>(road.points.size()); ++pi)
+        {
+            ImVec2 a;
+            ImVec2 b;
+            if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, a) ||
+                !WorldToScreen(road.points[pi + 1].pos, viewProj, vpW, vpH, b))
+                continue;
+            dl->AddLine(a, b, colRoadSel, kSelectedRoadThickness);
+        }
+
+        if (road.closed && road.points.size() >= 2)
+        {
+            ImVec2 a;
+            ImVec2 b;
+            if (WorldToScreen(road.points.back().pos, viewProj, vpW, vpH, a) &&
+                WorldToScreen(road.points.front().pos, viewProj, vpW, vpH, b))
+            {
+                dl->AddLine(a, b, colRoadSel, kSelectedRoadThickness);
+            }
+        }
+    };
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
+            continue;
+        drawSelectedRoadOverlay(road);
+    }
 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
