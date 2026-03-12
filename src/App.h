@@ -65,6 +65,7 @@ private:
         float maxGradePercent = 10.0f;
         float gridStep = 5.0f;
         float slopePenalty = 40.0f;
+        float turnPenalty = 8.0f;
         bool draggingStart = false;
         bool draggingEnd = false;
         DirectX::XMFLOAT3 startPos = { 0.0f, 0.0f, 0.0f };
@@ -111,6 +112,8 @@ private:
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
     bool              m_showRoadPreviewMetrics = false;
+    bool              m_showRoadGradeGradient = false;
+    float             m_roadGradeRedThresholdPercent = 12.0f;
     bool              m_prevPathPickLButton = false;
     bool              m_showContours = false;
     float             m_contourInterval = 5.0f;

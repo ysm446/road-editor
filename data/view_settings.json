@@ -1,0 +1,18 @@
+{
+  "backgroundColor": [
+    0.3137255012989044,
+    0.3137255012989044,
+    0.3137255012989044
+  ],
+  "contourColor": [
+    0.23552125692367554,
+    0.23552125692367554,
+    0.23552125692367554
+  ],
+  "roadGradeRedThresholdPercent": 15.0,
+  "showContours": true,
+  "showIntersectionNames": true,
+  "showRoadGradeGradient": true,
+  "showRoadNames": true,
+  "showRoadPreviewMetrics": true
+}

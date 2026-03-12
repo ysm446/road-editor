@@ -33,8 +33,13 @@ _deps/
 *.cso
 *.fxo
 
-# User data (heightmaps, road files)
-/data/
+# User data
+data/*
+!data/heightmap.png
+!data/project.json
+!data/texture.png
+!data/view_settings.json
+!data/roads.json
 imgui.ini
 
 # OS

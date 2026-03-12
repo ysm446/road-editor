@@ -458,6 +458,8 @@ void App::LoadViewSettings()
     m_showRoadNames = false;
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
+    m_showRoadGradeGradient = false;
+    m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
     m_contourColor = { 0.18f, 0.18f, 0.18f };
     m_backgroundColor = { 0.12f, 0.12f, 0.14f };
@@ -472,6 +474,8 @@ void App::LoadViewSettings()
             m_showRoadNames = root.value("showRoadNames", false);
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
+            m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
+            m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
             if (root.contains("contourColor") && root["contourColor"].is_array() && root["contourColor"].size() == 3)
             {
@@ -494,6 +498,8 @@ void App::LoadViewSettings()
     m_editor.SetShowRoadNames(m_showRoadNames);
     m_editor.SetShowIntersectionNames(m_showIntersectionNames);
     m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
+    m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
+    m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
     RebuildContourCache();
 }
 
@@ -506,6 +512,8 @@ void App::SaveViewSettings() const
             { "showRoadNames", m_showRoadNames },
             { "showIntersectionNames", m_showIntersectionNames },
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
+            { "showRoadGradeGradient", m_showRoadGradeGradient },
+            { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
             { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
             { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } }
@@ -1104,11 +1112,44 @@ void App::Render()
                 m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
                 SaveViewSettings();
             }
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u52FE\u914D\u30B0\u30E9\u30C7\u30FC\u30B7\u30E7\u30F3", nullptr, m_showRoadGradeGradient))
+            {
+                m_showRoadGradeGradient = !m_showRoadGradeGradient;
+                m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
+                SaveViewSettings();
+            }
+            if (m_showRoadGradeGradient)
+            {
+                float threshold = m_roadGradeRedThresholdPercent;
+                if (ImGui::InputFloat(u8"\u8D64\u95BE\u5024 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
+                {
+                    m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
+                    m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
+                    SaveViewSettings();
+                }
+            }
             ImGui::MenuItem("ImGui Demo", nullptr, false, false);
             ImGui::EndMenu();
         }
-        ImGui::Text("  FPS: %.0f", ImGui::GetIO().Framerate);
         ImGui::EndMainMenuBar();
+    }
+
+    {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        const ImVec2 pos(viewport->WorkPos.x + viewport->WorkSize.x - 90.0f, viewport->WorkPos.y + 28.0f);
+        ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGuiWindowFlags flags =
+            ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_NoDocking |
+            ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav |
+            ImGuiWindowFlags_NoMove;
+        if (ImGui::Begin("##fps_overlay", nullptr, flags))
+            ImGui::Text("FPS: %.0f", ImGui::GetIO().Framerate);
+        ImGui::End();
     }
 
     if (ImGui::BeginPopup("ProjectSaveError"))
@@ -1618,7 +1659,8 @@ bool App::ComputePathfindingPreview()
     struct OpenNode
     {
         float score = 0.0f;
-        int index = -1;
+        int cellIndex = -1;
+        int dirIndex = -1;
 
         bool operator<(const OpenNode& other) const
         {
@@ -1630,43 +1672,102 @@ bool App::ComputePathfindingPreview()
     const int endIndex = toIndex(endCol, endRow);
     const float maxGrade = (std::max)(0.0f, m_pathfinding.maxGradePercent) * 0.01f;
     const float slopePenalty = (std::max)(0.0f, m_pathfinding.slopePenalty);
-
-    std::vector<float> bestCost(cellCount, (std::numeric_limits<float>::max)());
-    std::vector<int> parent(cellCount, -1);
-    std::vector<unsigned char> closed(cellCount, 0);
-    std::priority_queue<OpenNode> openSet;
-
-    bestCost[startIndex] = 0.0f;
-    openSet.push({ heuristic(startCol, startRow, endCol, endRow), startIndex });
+    const float turnPenalty = (std::max)(0.0f, m_pathfinding.turnPenalty);
 
     constexpr std::array<int, 8> kNeighborDx = { -1, 0, 1, -1, 1, -1, 0, 1 };
     constexpr std::array<int, 8> kNeighborDz = { -1, -1, -1, 0, 0, 1, 1, 1 };
+    constexpr int kDirectionCount = 8;
+
+    auto toStateIndex = [cellCount](int cellIndex, int dirIndex)
+    {
+        return dirIndex * cellCount + cellIndex;
+    };
+
+    auto turnStepCount = [](int fromDir, int toDir)
+    {
+        const int diff = abs(fromDir - toDir);
+        return (std::min)(diff, 8 - diff);
+    };
+
+    if (startIndex == endIndex)
+    {
+        m_pathfinding.previewPath = { m_pathfinding.startPos, m_pathfinding.endPos };
+        SetStatusMessage("Path preview computed (2 points)");
+        return true;
+    }
+
+    const int stateCount = cellCount * kDirectionCount;
+    std::vector<float> bestCost(stateCount, (std::numeric_limits<float>::max)());
+    std::vector<int> parentState(stateCount, -1);
+    std::vector<unsigned char> closed(stateCount, 0);
+    std::priority_queue<OpenNode> openSet;
+
+    const XMFLOAT3 startPosWorld = GridToWorld(grid, startCol, startRow, m_terrain.get());
+    for (int dirIndex = 0; dirIndex < kDirectionCount; ++dirIndex)
+    {
+        const int nextCol = startCol + kNeighborDx[dirIndex];
+        const int nextRow = startRow + kNeighborDz[dirIndex];
+        if (nextCol < 0 || nextCol >= grid.cols || nextRow < 0 || nextRow >= grid.rows)
+            continue;
+
+        const int nextCellIndex = toIndex(nextCol, nextRow);
+        const XMFLOAT3 nextPos = GridToWorld(grid, nextCol, nextRow, m_terrain.get());
+        const float horizontalDistance = DistanceXZ(startPosWorld, nextPos);
+        if (horizontalDistance <= 1e-4f)
+            continue;
+
+        const float dy = nextPos.y - startPosWorld.y;
+        const float grade = fabsf(dy) / horizontalDistance;
+        if (m_pathfinding.strictMaxGrade && grade > maxGrade)
+            continue;
+
+        float moveCost = horizontalDistance + fabsf(dy);
+        if (!m_pathfinding.strictMaxGrade && grade > maxGrade)
+            moveCost += (grade - maxGrade) * slopePenalty * horizontalDistance;
+        else
+            moveCost += grade * 0.1f * horizontalDistance;
+
+        const int stateIndex = toStateIndex(nextCellIndex, dirIndex);
+        bestCost[stateIndex] = moveCost;
+        openSet.push({ moveCost + heuristic(nextCol, nextRow, endCol, endRow), nextCellIndex, dirIndex });
+    }
+
+    int bestEndState = -1;
 
     while (!openSet.empty())
     {
         const OpenNode current = openSet.top();
         openSet.pop();
 
-        if (current.index < 0 || current.index >= cellCount || closed[current.index] != 0)
+        if (current.cellIndex < 0 || current.cellIndex >= cellCount ||
+            current.dirIndex < 0 || current.dirIndex >= kDirectionCount)
             continue;
 
-        closed[current.index] = 1;
-        if (current.index == endIndex)
-            break;
+        const int currentStateIndex = toStateIndex(current.cellIndex, current.dirIndex);
+        if (closed[currentStateIndex] != 0)
+            continue;
 
-        const int row = current.index / grid.cols;
-        const int col = current.index % grid.cols;
+        closed[currentStateIndex] = 1;
+        if (current.cellIndex == endIndex)
+        {
+            bestEndState = currentStateIndex;
+            break;
+        }
+
+        const int row = current.cellIndex / grid.cols;
+        const int col = current.cellIndex % grid.cols;
         const XMFLOAT3 currentPos = GridToWorld(grid, col, row, m_terrain.get());
 
-        for (size_t i = 0; i < kNeighborDx.size(); ++i)
+        for (int nextDirIndex = 0; nextDirIndex < kDirectionCount; ++nextDirIndex)
         {
-            const int nextCol = col + kNeighborDx[i];
-            const int nextRow = row + kNeighborDz[i];
+            const int nextCol = col + kNeighborDx[nextDirIndex];
+            const int nextRow = row + kNeighborDz[nextDirIndex];
             if (nextCol < 0 || nextCol >= grid.cols || nextRow < 0 || nextRow >= grid.rows)
                 continue;
 
-            const int nextIndex = toIndex(nextCol, nextRow);
-            if (closed[nextIndex] != 0)
+            const int nextCellIndex = toIndex(nextCol, nextRow);
+            const int nextStateIndex = toStateIndex(nextCellIndex, nextDirIndex);
+            if (closed[nextStateIndex] != 0)
                 continue;
 
             const XMFLOAT3 nextPos = GridToWorld(grid, nextCol, nextRow, m_terrain.get());
@@ -1685,33 +1786,38 @@ bool App::ComputePathfindingPreview()
             else
                 moveCost += grade * 0.1f * horizontalDistance;
 
-            const float tentativeCost = bestCost[current.index] + moveCost;
-            if (tentativeCost >= bestCost[nextIndex])
+            const int turnSteps = turnStepCount(current.dirIndex, nextDirIndex);
+            moveCost += turnPenalty * (static_cast<float>(turnSteps) * 0.5f);
+
+            const float tentativeCost = bestCost[currentStateIndex] + moveCost;
+            if (tentativeCost >= bestCost[nextStateIndex])
                 continue;
 
-            bestCost[nextIndex] = tentativeCost;
-            parent[nextIndex] = current.index;
+            bestCost[nextStateIndex] = tentativeCost;
+            parentState[nextStateIndex] = currentStateIndex;
             openSet.push(
                 {
                     tentativeCost + heuristic(nextCol, nextRow, endCol, endRow),
-                    nextIndex
+                    nextCellIndex,
+                    nextDirIndex
                 });
         }
     }
 
-    if (parent[endIndex] < 0 && endIndex != startIndex)
+    if (bestEndState < 0)
     {
         SetStatusMessage("No route found for the current grade settings");
         return false;
     }
 
     std::vector<XMFLOAT3> reversedPath;
-    for (int index = endIndex; index >= 0; index = parent[index])
+    for (int stateIndex = bestEndState; stateIndex >= 0; stateIndex = parentState[stateIndex])
     {
+        const int index = stateIndex % cellCount;
         const int row = index / grid.cols;
         const int col = index % grid.cols;
         reversedPath.push_back(GridToWorld(grid, col, row, m_terrain.get()));
-        if (index == startIndex)
+        if (parentState[stateIndex] < 0)
             break;
     }
 
@@ -1722,7 +1828,7 @@ bool App::ComputePathfindingPreview()
     }
 
     m_pathfinding.previewPath.assign(reversedPath.rbegin(), reversedPath.rend());
-    m_pathfinding.previewPath.front() = m_pathfinding.startPos;
+    m_pathfinding.previewPath.insert(m_pathfinding.previewPath.begin(), m_pathfinding.startPos);
     m_pathfinding.previewPath.back() = m_pathfinding.endPos;
     SetStatusMessage(
         "Path preview computed (" + std::to_string(m_pathfinding.previewPath.size()) + " points)");
@@ -1858,6 +1964,13 @@ void App::DrawPathfindingPanel()
         if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
             ComputePathfindingPreview();
     }
+
+    ImGui::InputFloat("Turn Penalty", &m_pathfinding.turnPenalty, 1.0f, 5.0f, "%.1f");
+    const float clampedTurnPenalty = std::clamp(m_pathfinding.turnPenalty, 0.0f, 1000.0f);
+    if (fabsf(clampedTurnPenalty - m_pathfinding.turnPenalty) > 1e-4f)
+        m_pathfinding.turnPenalty = clampedTurnPenalty;
+    if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+        ComputePathfindingPreview();
 
     ImGui::Separator();
 

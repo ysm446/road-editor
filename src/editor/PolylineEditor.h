@@ -82,6 +82,8 @@ public:
     void SetShowRoadNames(bool show) { m_showRoadNames = show; }
     void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
     void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }
+    void SetShowRoadGradeGradient(bool show) { m_showRoadGradeGradient = show; }
+    void SetRoadGradeRedThresholdPercent(float value) { m_roadGradeRedThresholdPercent = value; }
     void RecordUndoState() { PushUndoState(); }
 
 private:
@@ -222,6 +224,8 @@ private:
     bool m_showRoadNames = false;
     bool m_showIntersectionNames = true;
     bool m_showRoadPreviewMetrics = false;
+    bool m_showRoadGradeGradient = false;
+    float m_roadGradeRedThresholdPercent = 12.0f;
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
     bool m_prevUndoShortcut = false;

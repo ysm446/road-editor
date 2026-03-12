@@ -1,0 +1,28 @@
+{
+  "camera": {
+    "azimuth": -0.1950092613697052,
+    "distance": 1362.943603515625,
+    "elevation": 0.6650014519691467,
+    "targetX": -209.7537078857422,
+    "targetY": -117.77007293701172,
+    "targetZ": 102.97618865966797
+  },
+  "roads": {
+    "path": "data/roads.json"
+  },
+  "terrain": {
+    "colorMode": 1,
+    "depthM": 2047.0,
+    "divisionsX": 127,
+    "divisionsY": 127,
+    "heightM": 100.0,
+    "offsetX": 0.0,
+    "offsetZ": 0.0,
+    "path": "data/heightmap.png",
+    "texturePath": "D:\\GitHub\\directx-viewer\\data\\texture.png",
+    "visible": true,
+    "widthM": 2047.0,
+    "wireframe": false
+  },
+  "version": 1
+}

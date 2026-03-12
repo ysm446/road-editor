@@ -30,6 +30,36 @@ XMFLOAT3 Lerp3(XMFLOAT3 a, XMFLOAT3 b, float t)
     };
 }
 
+XMFLOAT4 Lerp4(XMFLOAT4 a, XMFLOAT4 b, float t)
+{
+    return
+    {
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t,
+        a.w + (b.w - a.w) * t
+    };
+}
+
+float DistanceXZ3(XMFLOAT3 a, XMFLOAT3 b)
+{
+    const float dx = a.x - b.x;
+    const float dz = a.z - b.z;
+    return sqrtf(dx * dx + dz * dz);
+}
+
+XMFLOAT4 PreviewGradeColor(float gradePercent, float redThresholdPercent)
+{
+    const XMFLOAT4 colorLow = { 0.45f, 0.95f, 0.95f, 0.9f };
+    const XMFLOAT4 colorMid = { 1.0f, 0.88f, 0.20f, 0.95f };
+    const XMFLOAT4 colorHigh = { 1.0f, 0.24f, 0.18f, 1.0f };
+    const float safeThreshold = (std::max)(0.1f, redThresholdPercent);
+    const float t = std::clamp(gradePercent / safeThreshold, 0.0f, 1.0f);
+    if (t < 0.5f)
+        return Lerp4(colorLow, colorMid, t * 2.0f);
+    return Lerp4(colorMid, colorHigh, (t - 0.5f) * 2.0f);
+}
+
 XMFLOAT3 QuadraticBezier(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, float t)
 {
     const float u = 1.0f - t;
@@ -2328,7 +2358,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
 {
     const_cast<PolylineEditor*>(this)->SanitizeSelection();
 
-    static const XMFLOAT4 colorRoad     = { 1.0f, 0.8f, 0.1f, 1.0f };
+    static const XMFLOAT4 colorRoad     = { 0.72f, 0.72f, 0.75f, 1.0f };
     static const XMFLOAT4 colorSelected = { 1.0f, 0.3f, 0.3f, 1.0f };
     static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.4f };
     static const XMFLOAT4 colorAxisX    = { 1.0f, 0.2f, 0.2f, 1.0f };
@@ -2340,17 +2370,6 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     static const XMFLOAT4 colorConnection = { 0.9f, 0.9f, 0.3f, 0.9f };
     static const XMFLOAT4 colorSnapCandidate = { 1.0f, 1.0f, 0.2f, 1.0f };
     static const XMFLOAT4 colorPreview = { 0.45f, 0.95f, 0.95f, 0.9f };
-
-    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
-    {
-        const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road))
-            continue;
-
-        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
-        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
-            dd.AddLine(previewCurve[sampleIndex], previewCurve[sampleIndex + 1], colorPreview);
-    }
 
     auto drawRoadLines = [&](int roadIndex, XMFLOAT4 color)
     {
@@ -2385,6 +2404,30 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
         if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
             continue;
         drawRoadLines(ri, colorSelected);
+    }
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road))
+            continue;
+
+        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
+        {
+            XMFLOAT4 segmentColor = colorPreview;
+            if (m_showRoadGradeGradient)
+            {
+                const float horizontalDistance = DistanceXZ3(previewCurve[sampleIndex], previewCurve[sampleIndex + 1]);
+                if (horizontalDistance > 1e-4f)
+                {
+                    const float dy = previewCurve[sampleIndex + 1].y - previewCurve[sampleIndex].y;
+                    const float gradePercent = fabsf(dy) / horizontalDistance * 100.0f;
+                    segmentColor = PreviewGradeColor(gradePercent, m_roadGradeRedThresholdPercent);
+                }
+            }
+            dd.AddLine(previewCurve[sampleIndex], previewCurve[sampleIndex + 1], segmentColor);
+        }
     }
 
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
