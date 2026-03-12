@@ -385,6 +385,17 @@ void DrawViewAxisGizmo(XMMATRIX view)
         dl->AddText(ImVec2(end.x + 8.0f, end.y - 8.0f), axis.color, axis.label);
     }
 }
+
+XMFLOAT3 DirectionFromAzimuthElevation(float azimuth, float elevation)
+{
+    const float cosElevation = cosf(elevation);
+    return
+    {
+        cosElevation * sinf(azimuth),
+        sinf(elevation),
+        cosElevation * cosf(azimuth)
+    };
+}
 }
 
 // ---------------------------------------------------------------------------
@@ -679,6 +690,10 @@ void App::NewProject()
     m_editor.SetFilePath("data/roads.json");
     m_editor.ResetState();
     m_camera->SetOrbitState({ 0.0f, 0.0f, 0.0f }, 20.0f, 0.785f, 0.4f);
+    m_sunAzimuth = 0.98f;
+    m_sunElevation = 0.78f;
+    m_terrain->sunDirection = ComputeSunDirection();
+    m_terrain->lightingMode = Terrain::LightingModeBasic;
     SetStatusMessage("New project");
 }
 
@@ -706,6 +721,11 @@ bool App::SaveProject(const char* path)
             { "offsetX",     m_loadOffsetX            },
             { "offsetZ",     m_loadOffsetZ            },
             { "colorMode",   m_terrain->colorMode     },
+            { "lightingMode", m_terrain->lightingMode },
+            { "sunAzimuth",  m_sunAzimuth             },
+            { "sunElevation", m_sunElevation          },
+            { "shadowStrength", m_terrain->shadowStrength },
+            { "shadowBias",  m_terrain->shadowBias    },
             { "visible",     m_terrain->visible       },
             { "wireframe",   m_terrain->wireframe     }
         };
@@ -765,6 +785,12 @@ bool App::LoadProject(const char* path)
             m_loadOffsetX = t.value("offsetX", 0.0f);
             m_loadOffsetZ = t.value("offsetZ", 0.0f);
             m_terrain->colorMode = t.value("colorMode", 1);
+            m_terrain->lightingMode = t.value("lightingMode", Terrain::LightingModeBasic);
+            m_sunAzimuth = t.value("sunAzimuth", 0.98f);
+            m_sunElevation = t.value("sunElevation", 0.78f);
+            m_terrain->shadowStrength = t.value("shadowStrength", 0.72f);
+            m_terrain->shadowBias = t.value("shadowBias", 0.0015f);
+            m_terrain->sunDirection = ComputeSunDirection();
             m_terrain->visible   = t.value("visible", true);
             m_terrain->wireframe = t.value("wireframe", false);
             if (m_terrainTexturePath[0] != '\0')
@@ -825,6 +851,145 @@ bool App::LoadProject(const char* path)
         SetStatusMessage(std::string("Project load failed: ") + path);
         return false;
     }
+}
+
+void App::UpdateSunInput(bool wantMouse)
+{
+    const bool lightHotkeyDown = (GetAsyncKeyState('L') & 0x8000) != 0;
+    const bool lmbDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    const bool altDown = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+    const bool sunDragRequested =
+        lightHotkeyDown &&
+        lmbDown &&
+        !altDown &&
+        !wantMouse &&
+        m_terrain &&
+        m_terrain->lightingMode == Terrain::LightingModeSunShadowed;
+
+    if (!sunDragRequested)
+    {
+        m_sunDragActive = false;
+        return;
+    }
+
+    POINT cursor = {};
+    GetCursorPos(&cursor);
+    if (!m_sunDragActive)
+    {
+        m_sunDragActive = true;
+        m_lastSunMouse = cursor;
+        SetStatusMessage("Sun direction editing");
+        return;
+    }
+
+    const float dx = static_cast<float>(cursor.x - m_lastSunMouse.x);
+    const float dy = static_cast<float>(cursor.y - m_lastSunMouse.y);
+    m_lastSunMouse = cursor;
+
+    const float sensitivity = 0.008f;
+    m_sunAzimuth -= dx * sensitivity;
+    m_sunElevation = std::clamp(m_sunElevation + dy * sensitivity, 0.05f, 1.52f);
+    m_terrain->sunDirection = ComputeSunDirection();
+}
+
+XMFLOAT3 App::ComputeSunDirection() const
+{
+    const XMFLOAT3 dir = DirectionFromAzimuthElevation(m_sunAzimuth, m_sunElevation);
+    XMVECTOR sun = XMVector3Normalize(XMLoadFloat3(&dir));
+    XMFLOAT3 normalized = {};
+    XMStoreFloat3(&normalized, sun);
+    return normalized;
+}
+
+XMFLOAT4X4 App::ComputeLightViewProjMatrix() const
+{
+    XMFLOAT4X4 result = {};
+    XMStoreFloat4x4(&result, XMMatrixIdentity());
+
+    if (!m_terrain || !m_terrain->IsReady())
+        return result;
+
+    const XMFLOAT3 sunDir = ComputeSunDirection();
+    const float halfWidth =
+        static_cast<float>(m_terrain->GetMeshW() - 1) * m_terrain->horizontalScaleX * 0.5f;
+    const float halfDepth =
+        static_cast<float>(m_terrain->GetMeshH() - 1) * m_terrain->horizontalScaleZ * 0.5f;
+    const XMFLOAT3 boundsMin =
+    {
+        m_terrain->offsetX - halfWidth,
+        0.0f,
+        m_terrain->offsetZ - halfDepth
+    };
+    const XMFLOAT3 boundsMax =
+    {
+        m_terrain->offsetX + halfWidth,
+        m_terrain->heightScale,
+        m_terrain->offsetZ + halfDepth
+    };
+    const XMFLOAT3 center =
+    {
+        0.5f * (boundsMin.x + boundsMax.x),
+        0.5f * (boundsMin.y + boundsMax.y),
+        0.5f * (boundsMin.z + boundsMax.z)
+    };
+
+    const float radius = 0.5f * sqrtf(
+        (boundsMax.x - boundsMin.x) * (boundsMax.x - boundsMin.x) +
+        (boundsMax.y - boundsMin.y) * (boundsMax.y - boundsMin.y) +
+        (boundsMax.z - boundsMin.z) * (boundsMax.z - boundsMin.z));
+    const XMFLOAT3 lightPos =
+    {
+        center.x + sunDir.x * (radius + 200.0f),
+        center.y + sunDir.y * (radius + 200.0f),
+        center.z + sunDir.z * (radius + 200.0f)
+    };
+
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    if (fabsf(sunDir.y) > 0.97f)
+        up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+
+    const XMMATRIX lightView = XMMatrixLookAtLH(
+        XMLoadFloat3(&lightPos),
+        XMLoadFloat3(&center),
+        up);
+
+    std::array<XMFLOAT3, 8> corners =
+    {{
+        { boundsMin.x, boundsMin.y, boundsMin.z },
+        { boundsMin.x, boundsMin.y, boundsMax.z },
+        { boundsMin.x, boundsMax.y, boundsMin.z },
+        { boundsMin.x, boundsMax.y, boundsMax.z },
+        { boundsMax.x, boundsMin.y, boundsMin.z },
+        { boundsMax.x, boundsMin.y, boundsMax.z },
+        { boundsMax.x, boundsMax.y, boundsMin.z },
+        { boundsMax.x, boundsMax.y, boundsMax.z }
+    }};
+
+    const float kFloatMax = (std::numeric_limits<float>::max)();
+    XMFLOAT3 lightMin = { kFloatMax, kFloatMax, kFloatMax };
+    XMFLOAT3 lightMax = { -kFloatMax, -kFloatMax, -kFloatMax };
+    for (const XMFLOAT3& corner : corners)
+    {
+        XMFLOAT3 ls = {};
+        XMStoreFloat3(&ls, XMVector3TransformCoord(XMLoadFloat3(&corner), lightView));
+        lightMin.x = (std::min)(lightMin.x, ls.x);
+        lightMin.y = (std::min)(lightMin.y, ls.y);
+        lightMin.z = (std::min)(lightMin.z, ls.z);
+        lightMax.x = (std::max)(lightMax.x, ls.x);
+        lightMax.y = (std::max)(lightMax.y, ls.y);
+        lightMax.z = (std::max)(lightMax.z, ls.z);
+    }
+
+    const float padding = 20.0f;
+    const XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(
+        lightMin.x - padding,
+        lightMax.x + padding,
+        lightMin.y - padding,
+        lightMax.y + padding,
+        (std::max)(0.1f, lightMin.z - padding),
+        lightMax.z + padding);
+    XMStoreFloat4x4(&result, XMMatrixMultiply(lightView, lightProj));
+    return result;
 }
 
 // --- Window ------------------------------------------------------------------
@@ -930,6 +1095,7 @@ int App::Run()
 
         bool wantMouse = ImGui::GetIO().WantCaptureMouse;
         m_camera->HandleInput(wantMouse);
+        UpdateSunInput(wantMouse);
 
         const bool focusKeyDown = (GetAsyncKeyState('F') & 0x8000) != 0;
         const bool focusPressed = focusKeyDown && !m_prevFocusKey;
@@ -951,10 +1117,11 @@ int App::Run()
                                                 static_cast<float>(vpW) /
                                                 static_cast<float>(vpH)));
             XMMATRIX invVP = XMMatrixInverse(nullptr, vp);
+            const bool blockSceneMouse = wantMouse || m_sunDragActive;
             m_editor.Update(vpW, vpH,
                             { static_cast<float>(cursor.x),
                               static_cast<float>(cursor.y) },
-                            invVP, wantMouse);
+                            invVP, blockSceneMouse);
 
             if (focusPressed && !ImGui::GetIO().WantTextInput)
             {
@@ -1003,7 +1170,7 @@ int App::Run()
                 m_prevEditorMode = currentMode;
             }
 
-            UpdatePathfindingInput(wantMouse);
+            UpdatePathfindingInput(blockSceneMouse);
         }
 
         Render();
@@ -1022,6 +1189,10 @@ int App::Run()
 
 void App::Render()
 {
+    const XMFLOAT4X4 lightViewProj = ComputeLightViewProjMatrix();
+    if (m_terrain->lightingMode == Terrain::LightingModeSunShadowed)
+        m_terrain->RenderShadowMap(m_d3d->GetContext(), lightViewProj);
+
     m_d3d->BeginFrame(m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z);
 
     // Build per-frame constant buffer
@@ -1039,7 +1210,7 @@ void App::Render()
     m_perFrameCB.Update(m_d3d->GetContext(), pfd);
 
     // 3D scene  (order: terrain -> grid -> debug lines)
-    m_terrain->Render(m_d3d->GetContext(), m_perFrameCB.Get());
+    m_terrain->Render(m_d3d->GetContext(), m_perFrameCB.Get(), lightViewProj);
     m_grid->Render(m_d3d->GetContext(), m_perFrameCB.Get());
 
     m_editor.DrawNetwork(m_debugDraw, vp, m_d3d->GetWidth(), m_d3d->GetHeight());
@@ -1182,6 +1353,7 @@ void App::Render()
         ImGui::TextDisabled(u8"Alt + \u5DE6\u30C9\u30E9\u30C3\u30B0 : \u56DE\u8EE2");
         ImGui::TextDisabled(u8"Alt + \u4E2D\u30C9\u30E9\u30C3\u30B0 : \u30D1\u30F3");
         ImGui::TextDisabled(u8"\u30DE\u30A6\u30B9\u30DB\u30A4\u30FC\u30EB   : \u30BA\u30FC\u30E0");
+        ImGui::TextDisabled(u8"L + \u5DE6\u30C9\u30E9\u30C3\u30B0   : \u592A\u967D\u65B9\u5411");
     }
     ImGui::End();
 
@@ -1199,9 +1371,27 @@ void App::Render()
             u8"\u52FE\u914D",
             u8"\u30C6\u30AF\u30B9\u30C1\u30E3"
         };
+        static const char* kLightingModes[] =
+        {
+            u8"\u6A19\u6E96",
+            u8"\u592A\u967D\u5149 + \u5F71"
+        };
         int terrainColorMode = std::clamp(m_terrain->colorMode, 0, 3);
         if (ImGui::Combo(u8"\u8868\u793A\u30E2\u30FC\u30C9", &terrainColorMode, kTerrainColorModes, IM_ARRAYSIZE(kTerrainColorModes)))
             m_terrain->colorMode = terrainColorMode;
+        int terrainLightingMode = std::clamp(m_terrain->lightingMode, 0, 1);
+        if (ImGui::Combo(u8"\u30E9\u30A4\u30C6\u30A3\u30F3\u30B0", &terrainLightingMode, kLightingModes, IM_ARRAYSIZE(kLightingModes)))
+            m_terrain->lightingMode = terrainLightingMode;
+
+        if (m_terrain->lightingMode == Terrain::LightingModeSunShadowed)
+        {
+            ImGui::SliderAngle(u8"\u592A\u967D\u65B9\u4F4D", &m_sunAzimuth, -180.0f, 180.0f);
+            ImGui::SliderAngle(u8"\u592A\u967D\u9AD8\u5EA6", &m_sunElevation, 3.0f, 87.0f);
+            ImGui::SliderFloat(u8"\u5F71\u306E\u6FC3\u3055", &m_terrain->shadowStrength, 0.0f, 1.0f);
+            ImGui::SliderFloat(u8"\u5F71\u30D0\u30A4\u30A2\u30B9", &m_terrain->shadowBias, 0.0001f, 0.01f, "%.4f", ImGuiSliderFlags_Logarithmic);
+            m_terrain->sunDirection = ComputeSunDirection();
+            ImGui::TextDisabled(u8"L + \u5DE6\u30C9\u30E9\u30C3\u30B0\u3067\u592A\u967D\u65B9\u5411\u3092\u56DE\u8EE2");
+        }
 
         if (m_terrain->colorMode == 3)
         {

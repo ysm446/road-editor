@@ -54,6 +54,9 @@ private:
     void    DrawPathfindingPanel();
     bool    ComputePathfindingPreview();
     bool    ApplyPathfindingPreviewAsRoad();
+    void    UpdateSunInput(bool wantMouse);
+    DirectX::XMFLOAT3 ComputeSunDirection() const;
+    DirectX::XMFLOAT4X4 ComputeLightViewProjMatrix() const;
     void    Render();
 
     struct PathfindingState
@@ -115,6 +118,10 @@ private:
     bool              m_showRoadGradeGradient = false;
     float             m_roadGradeRedThresholdPercent = 12.0f;
     bool              m_prevPathPickLButton = false;
+    bool              m_sunDragActive = false;
+    POINT             m_lastSunMouse = { 0, 0 };
+    float             m_sunAzimuth = 0.98f;
+    float             m_sunElevation = 0.78f;
     bool              m_showContours = false;
     float             m_contourInterval = 5.0f;
     DirectX::XMFLOAT3 m_contourColor = { 0.18f, 0.18f, 0.18f };

@@ -15,12 +15,27 @@ struct TerrainCB
     DirectX::XMFLOAT3 sunDir;    // 12 bytes  (normalized, pointing toward light)
     float             maxHeight; //  4 bytes
     int               colorMode; //  4 bytes
-    DirectX::XMFLOAT3 padding;   // 12 bytes
-};                               // = 32 bytes
+    int               lightingMode; // 4 bytes
+    DirectX::XMFLOAT2 shadowMapTexelSize; // 8 bytes
+    float             shadowStrength; // 4 bytes
+    float             shadowBias; // 4 bytes
+    DirectX::XMFLOAT2 padding; // 8 bytes
+};                               // = 48 bytes
+
+struct TerrainShadowCB
+{
+    DirectX::XMFLOAT4X4 lightViewProj;
+};
 
 class Terrain
 {
 public:
+    enum LightingMode
+    {
+        LightingModeBasic = 0,
+        LightingModeSunShadowed = 1
+    };
+
     bool Initialize(ID3D11Device* device);
 
     // Generate a procedural sinusoidal heightmap.
@@ -35,7 +50,10 @@ public:
     // Rebuild vertex/index buffers using current heightScale / horizontalScale.
     void Rebuild(ID3D11Device* device);
 
-    void Render(ID3D11DeviceContext* ctx, ID3D11Buffer* perFrameCB);
+    void RenderShadowMap(ID3D11DeviceContext* ctx, const DirectX::XMFLOAT4X4& lightViewProj);
+    void Render(ID3D11DeviceContext* ctx,
+                ID3D11Buffer* perFrameCB,
+                const DirectX::XMFLOAT4X4& lightViewProj);
     void Shutdown();
     void Reset();
 
@@ -66,8 +84,12 @@ public:
     int   meshSubdivW      =   0;
     int   meshSubdivH      =   0;
     int   colorMode        =   1;
+    int   lightingMode     =   LightingModeBasic;
     bool  wireframe        = false;
     bool  visible          = true;
+    DirectX::XMFLOAT3 sunDirection = { 0.6f, 1.0f, 0.4f };
+    float shadowStrength   = 0.72f;
+    float shadowBias       = 0.0015f;
     std::string colorTexturePath;
 
 private:
@@ -81,14 +103,21 @@ private:
     void BuildMesh(ID3D11Device* device);
 
     Shader m_shader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader>    m_shadowVS;
     Microsoft::WRL::ComPtr<ID3D11Buffer>          m_vb;
     Microsoft::WRL::ComPtr<ID3D11Buffer>          m_ib;
     Microsoft::WRL::ComPtr<ID3D11InputLayout>     m_inputLayout;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsSolid;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsWireframe;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsShadow;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_colorTextureSRV;
     Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_colorTextureSampler;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_shadowMap;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   m_shadowDSV;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_shadowSRV;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_shadowSampler;
     ConstantBuffer<TerrainCB>                     m_terrainCB;
+    ConstantBuffer<TerrainShadowCB>               m_shadowCB;
 
     std::vector<float> m_rawHeights; // normalised heights [0, 1] at native resolution
     int      m_rawW       = 0;  // native image width

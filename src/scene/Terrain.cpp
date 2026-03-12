@@ -2,12 +2,47 @@
 
 #include <algorithm>
 #include <cmath>
+#include <d3dcompiler.h>
 
 // stb_image - single-header image loader (included once here)
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#pragma comment(lib, "d3dcompiler.lib")
+
 using namespace DirectX;
+
+namespace
+{
+bool CompileVertexShaderFromFile(const std::wstring& path,
+                                 const std::string& entry,
+                                 ID3DBlob** outBlob)
+{
+    UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#ifdef _DEBUG
+    flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+    Microsoft::WRL::ComPtr<ID3DBlob> errors;
+    const HRESULT hr = D3DCompileFromFile(
+        path.c_str(),
+        nullptr,
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        entry.c_str(),
+        "vs_5_0",
+        flags,
+        0,
+        outBlob,
+        &errors);
+    if (FAILED(hr))
+    {
+        if (errors)
+            OutputDebugStringA(static_cast<const char*>(errors->GetBufferPointer()));
+        return false;
+    }
+    return true;
+}
+}
 
 // ---------------------------------------------------------------------------
 // Initialize shaders and pipeline states
@@ -17,6 +52,16 @@ bool Terrain::Initialize(ID3D11Device* device)
     if (!m_shader.LoadVertex(device, L"shaders/terrain_vs.hlsl"))
         return false;
     if (!m_shader.LoadPixel(device, L"shaders/terrain_ps.hlsl"))
+        return false;
+
+    Microsoft::WRL::ComPtr<ID3DBlob> shadowVsBlob;
+    if (!CompileVertexShaderFromFile(L"shaders/terrain_shadow_vs.hlsl", "main", &shadowVsBlob))
+        return false;
+    if (FAILED(device->CreateVertexShader(
+            shadowVsBlob->GetBufferPointer(),
+            shadowVsBlob->GetBufferSize(),
+            nullptr,
+            &m_shadowVS)))
         return false;
 
     // Rasterizer: solid, back-face cull
@@ -32,6 +77,16 @@ bool Terrain::Initialize(ID3D11Device* device)
     rd.CullMode = D3D11_CULL_NONE;
     device->CreateRasterizerState(&rd, &m_rsWireframe);
 
+    D3D11_RASTERIZER_DESC shadowRd = {};
+    shadowRd.FillMode = D3D11_FILL_SOLID;
+    shadowRd.CullMode = D3D11_CULL_BACK;
+    shadowRd.FrontCounterClockwise = TRUE;
+    shadowRd.DepthClipEnable = TRUE;
+    shadowRd.DepthBias = 1000;
+    shadowRd.SlopeScaledDepthBias = 2.0f;
+    shadowRd.DepthBiasClamp = 0.0f;
+    device->CreateRasterizerState(&shadowRd, &m_rsShadow);
+
     D3D11_SAMPLER_DESC sd = {};
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -40,7 +95,48 @@ bool Terrain::Initialize(ID3D11Device* device)
     sd.MaxLOD = D3D11_FLOAT32_MAX;
     device->CreateSamplerState(&sd, &m_colorTextureSampler);
 
+    D3D11_SAMPLER_DESC shadowSd = {};
+    shadowSd.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+    shadowSd.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    shadowSd.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    shadowSd.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+    shadowSd.BorderColor[0] = 1.0f;
+    shadowSd.BorderColor[1] = 1.0f;
+    shadowSd.BorderColor[2] = 1.0f;
+    shadowSd.BorderColor[3] = 1.0f;
+    shadowSd.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+    shadowSd.MaxLOD = D3D11_FLOAT32_MAX;
+    if (FAILED(device->CreateSamplerState(&shadowSd, &m_shadowSampler)))
+        return false;
+
+    D3D11_TEXTURE2D_DESC shadowTd = {};
+    shadowTd.Width = 2048;
+    shadowTd.Height = 2048;
+    shadowTd.MipLevels = 1;
+    shadowTd.ArraySize = 1;
+    shadowTd.Format = DXGI_FORMAT_R24G8_TYPELESS;
+    shadowTd.SampleDesc.Count = 1;
+    shadowTd.Usage = D3D11_USAGE_DEFAULT;
+    shadowTd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    if (FAILED(device->CreateTexture2D(&shadowTd, nullptr, &m_shadowMap)))
+        return false;
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC shadowDsvDesc = {};
+    shadowDsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    shadowDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    if (FAILED(device->CreateDepthStencilView(m_shadowMap.Get(), &shadowDsvDesc, &m_shadowDSV)))
+        return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC shadowSrvDesc = {};
+    shadowSrvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    shadowSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    shadowSrvDesc.Texture2D.MipLevels = 1;
+    if (FAILED(device->CreateShaderResourceView(m_shadowMap.Get(), &shadowSrvDesc, &m_shadowSRV)))
+        return false;
+
     if (!m_terrainCB.Initialize(device))
+        return false;
+    if (!m_shadowCB.Initialize(device))
         return false;
 
     return true;
@@ -402,28 +498,79 @@ bool Terrain::Raycast(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
 // ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
-void Terrain::Render(ID3D11DeviceContext* ctx, ID3D11Buffer* perFrameCB)
+void Terrain::RenderShadowMap(ID3D11DeviceContext* ctx, const XMFLOAT4X4& lightViewProj)
+{
+    if (!m_ready || !visible || lightingMode != LightingModeSunShadowed)
+        return;
+
+    TerrainShadowCB shadowCb = {};
+    shadowCb.lightViewProj = lightViewProj;
+    m_shadowCB.Update(ctx, shadowCb);
+
+    D3D11_VIEWPORT vp = {};
+    vp.Width = 2048.0f;
+    vp.Height = 2048.0f;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    ID3D11ShaderResourceView* nullSrv = nullptr;
+    ctx->PSSetShaderResources(1, 1, &nullSrv);
+    ctx->RSSetViewports(1, &vp);
+    ctx->OMSetRenderTargets(0, nullptr, m_shadowDSV.Get());
+    ctx->ClearDepthStencilView(m_shadowDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+    ctx->VSSetShader(m_shadowVS.Get(), nullptr, 0);
+    ctx->VSSetConstantBuffers(0, 1, m_shadowCB.GetAddressOf());
+    ctx->PSSetShader(nullptr, nullptr, 0);
+    ctx->RSSetState(m_rsShadow.Get());
+    ctx->IASetInputLayout(m_inputLayout.Get());
+    ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    UINT stride = sizeof(Vertex), offset = 0;
+    ctx->IASetVertexBuffers(0, 1, m_vb.GetAddressOf(), &stride, &offset);
+    ctx->IASetIndexBuffer(m_ib.Get(), DXGI_FORMAT_R32_UINT, 0);
+    ctx->DrawIndexed(m_indexCount, 0, 0);
+
+    ctx->RSSetState(nullptr);
+}
+
+void Terrain::Render(ID3D11DeviceContext* ctx,
+                     ID3D11Buffer* perFrameCB,
+                     const XMFLOAT4X4& lightViewProj)
 {
     if (!m_ready || !visible)
         return;
 
     // Update terrain constant buffer
     TerrainCB tcb;
-    XMVECTOR  sun = XMVector3Normalize(XMVectorSet(0.6f, 1.0f, 0.4f, 0.0f));
+    XMVECTOR  sun = XMVector3Normalize(XMLoadFloat3(&sunDirection));
     XMStoreFloat3(&tcb.sunDir, sun);
     tcb.maxHeight = heightScale;
     tcb.colorMode = (colorMode == 3 && m_colorTextureSRV) ? 3 : colorMode;
-    tcb.padding = { 0.0f, 0.0f, 0.0f };
+    tcb.lightingMode = lightingMode;
+    tcb.shadowMapTexelSize = { 1.0f / 2048.0f, 1.0f / 2048.0f };
+    tcb.shadowStrength = shadowStrength;
+    tcb.shadowBias = shadowBias;
+    tcb.padding = { 0.0f, 0.0f };
     m_terrainCB.Update(ctx, tcb);
+
+    TerrainShadowCB shadowCb = {};
+    shadowCb.lightViewProj = lightViewProj;
+    m_shadowCB.Update(ctx, shadowCb);
 
     m_shader.Bind(ctx);
     ctx->VSSetConstantBuffers(0, 1, &perFrameCB);
     ctx->PSSetConstantBuffers(0, 1, &perFrameCB);
     ctx->PSSetConstantBuffers(1, 1, m_terrainCB.GetAddressOf());
+    ctx->VSSetConstantBuffers(2, 1, m_shadowCB.GetAddressOf());
+    ctx->PSSetConstantBuffers(2, 1, m_shadowCB.GetAddressOf());
     ID3D11ShaderResourceView* terrainSrv = m_colorTextureSRV.Get();
     ctx->PSSetShaderResources(0, 1, &terrainSrv);
+    ID3D11ShaderResourceView* shadowSrv = m_shadowSRV.Get();
+    ctx->PSSetShaderResources(1, 1, &shadowSrv);
     ID3D11SamplerState* terrainSampler = m_colorTextureSampler.Get();
     ctx->PSSetSamplers(0, 1, &terrainSampler);
+    ID3D11SamplerState* shadowSampler = m_shadowSampler.Get();
+    ctx->PSSetSamplers(1, 1, &shadowSampler);
 
     ctx->RSSetState(wireframe ? m_rsWireframe.Get() : m_rsSolid.Get());
     ctx->IASetInputLayout(m_inputLayout.Get());
@@ -437,6 +584,7 @@ void Terrain::Render(ID3D11DeviceContext* ctx, ID3D11Buffer* perFrameCB)
 
     ID3D11ShaderResourceView* nullSrv = nullptr;
     ctx->PSSetShaderResources(0, 1, &nullSrv);
+    ctx->PSSetShaderResources(1, 1, &nullSrv);
     ctx->RSSetState(nullptr);
 }
 
@@ -450,8 +598,14 @@ void Terrain::Shutdown()
     m_inputLayout.Reset();
     m_rsSolid.Reset();
     m_rsWireframe.Reset();
+    m_rsShadow.Reset();
+    m_shadowVS.Reset();
     m_colorTextureSRV.Reset();
     m_colorTextureSampler.Reset();
+    m_shadowMap.Reset();
+    m_shadowDSV.Reset();
+    m_shadowSRV.Reset();
+    m_shadowSampler.Reset();
 }
 
 void Terrain::Reset()
@@ -476,7 +630,11 @@ void Terrain::Reset()
     meshSubdivW = 0;
     meshSubdivH = 0;
     colorMode = 1;
+    lightingMode = LightingModeBasic;
     wireframe = false;
     visible = true;
+    sunDirection = { 0.6f, 1.0f, 0.4f };
+    shadowStrength = 0.72f;
+    shadowBias = 0.0015f;
     colorTexturePath.clear();
 }

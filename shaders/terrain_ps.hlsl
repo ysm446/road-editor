@@ -8,11 +8,22 @@ cbuffer TerrainParams : register(b1)
     float3 sunDir;    // normalised, pointing toward light source
     float  maxHeight;
     int    colorMode;
-    float3 _padding;
+    int    lightingMode;
+    float2 shadowMapTexelSize;
+    float  shadowStrength;
+    float  shadowBias;
+    float2 _padding;
 };
 
 Texture2D terrainTexture : register(t0);
 SamplerState terrainSampler : register(s0);
+Texture2D shadowMap : register(t1);
+SamplerComparisonState shadowSampler : register(s1);
+
+cbuffer ShadowParams : register(b2)
+{
+    row_major float4x4 lightViewProj;
+}
 
 struct PSInput
 {
@@ -74,11 +85,43 @@ float4 main(PSInput input) : SV_TARGET
         albedo = lerp(float3(luminance, luminance, luminance), albedo, 0.82);
     }
 
+    float shadow = 1.0;
+    if (lightingMode == 1)
+    {
+        const float4 lightClip = mul(float4(input.worldPos, 1.0), lightViewProj);
+        const float invW = rcp(max(lightClip.w, 1e-5));
+        const float3 shadowCoord = lightClip.xyz * invW;
+        const float2 shadowUv = float2(shadowCoord.x * 0.5 + 0.5, shadowCoord.y * -0.5 + 0.5);
+        const bool inShadowBounds =
+            shadowCoord.z >= 0.0 && shadowCoord.z <= 1.0 &&
+            shadowUv.x >= 0.0 && shadowUv.x <= 1.0 &&
+            shadowUv.y >= 0.0 && shadowUv.y <= 1.0;
+        if (inShadowBounds)
+        {
+            float visibility = 0.0;
+            [unroll]
+            for (int y = -1; y <= 1; ++y)
+            {
+                [unroll]
+                for (int x = -1; x <= 1; ++x)
+                {
+                    const float2 offset = float2(x, y) * shadowMapTexelSize;
+                    visibility += shadowMap.SampleCmpLevelZero(
+                        shadowSampler,
+                        shadowUv + offset,
+                        shadowCoord.z - shadowBias);
+                }
+            }
+            visibility /= 9.0;
+            shadow = lerp(1.0 - shadowStrength, 1.0, visibility);
+        }
+    }
+
     // Lambert
     float3 sun    = normalize(sunDir);
     float  NdotL  = saturate(dot(n, sun));
-    float3 ambient = albedo * 0.25;
-    float3 diffuse = albedo * NdotL;
+    float3 ambient = albedo * ((lightingMode == 1) ? 0.32 : 0.25);
+    float3 diffuse = albedo * NdotL * shadow;
 
     return float4(ambient + diffuse, 1.0);
 }
