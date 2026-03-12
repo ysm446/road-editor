@@ -28,7 +28,8 @@ public:
         X,
         Y,
         Z,
-        RotateY
+        RotateY,
+        ScaleXZ
     };
 
     // Setup
@@ -160,6 +161,9 @@ private:
     float ComputeRotationGizmoRadius(DirectX::XMFLOAT3 pivot,
                                      DirectX::XMMATRIX viewProj,
                                      int vpW, int vpH) const;
+    float ComputeScaleGizmoRadius(DirectX::XMFLOAT3 pivot,
+                                  DirectX::XMMATRIX viewProj,
+                                  int vpW, int vpH) const;
     void PushUndoState();
     void Undo();
     void Redo();
@@ -180,6 +184,7 @@ private:
         float defaultWidth = 3.0f;
         bool snapToTerrain = true;
         bool rotateYMode = false;
+        bool scaleXZMode = false;
     };
     struct RoadClipboard
     {
@@ -213,6 +218,7 @@ private:
     DirectX::XMFLOAT3 m_planeDragStartHit = { 0,0,0 };
     DirectX::XMFLOAT3 m_planeDragNormal   = { 0,0,1 };
     float m_rotateDragStartAngle = 0.0f;
+    float m_scaleDragStartDistance = 1.0f;
     std::vector<DirectX::XMFLOAT3> m_pointDragStartPositions;
     std::vector<DirectX::XMFLOAT3> m_intersectionDragStartPositions;
     bool m_marqueeSelecting = false;
@@ -229,6 +235,7 @@ private:
     bool m_prevLButton = false;
     bool m_prevWKey    = false;
     bool m_prevEKey    = false;
+    bool m_prevRKey    = false;
     bool m_prevVKey    = false;
 
     // Default width for new points
@@ -243,6 +250,7 @@ private:
     bool m_showRoadPreviewMetrics = false;
     bool m_showRoadGradeGradient = false;
     bool m_rotateYMode = false;
+    bool m_scaleXZMode = false;
     float m_roadGradeRedThresholdPercent = 12.0f;
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
