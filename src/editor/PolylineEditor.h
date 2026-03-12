@@ -134,6 +134,11 @@ private:
     bool IsPointSelected(int roadIndex, int pointIndex) const;
     bool GetPrimarySelectedPoint(PointRef& outPoint) const;
     bool IsIntersectionSelected(int intersectionIndex) const;
+    void CollectSelectedRoadIndices(std::vector<int>& outRoadIndices) const;
+    bool SelectAllPointsOnSelectedRoads();
+    bool DisconnectSelectedRoadEndpoints();
+    bool CopySelectedRoads();
+    bool PasteCopiedRoadsAtCursor();
     void ClearRoadSelection();
     void SelectSingleRoad(int roadIndex);
     void ToggleRoadSelection(int roadIndex);
@@ -170,6 +175,11 @@ private:
         int hoverSnapIntersection = -1;
         float defaultWidth = 3.0f;
         bool snapToTerrain = true;
+    };
+    struct RoadClipboard
+    {
+        std::vector<Road> roads;
+        DirectX::XMFLOAT3 anchor = { 0.0f, 0.0f, 0.0f };
     };
     EditorSnapshot CaptureSnapshot() const;
     void RestoreSnapshot(const EditorSnapshot& snapshot);
@@ -230,4 +240,7 @@ private:
     std::vector<EditorSnapshot> m_redoStack;
     bool m_prevUndoShortcut = false;
     bool m_prevRedoShortcut = false;
+    bool m_prevCopyShortcut = false;
+    bool m_prevPasteShortcut = false;
+    RoadClipboard m_roadClipboard;
 };
