@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 using namespace DirectX;
 
@@ -337,6 +338,26 @@ void PolylineEditor::CollectSelectedRoadIndices(std::vector<int>& outRoadIndices
         outRoadIndices.end());
 }
 
+void PolylineEditor::CollectSelectedIntersectionIndices(std::vector<int>& outIntersectionIndices) const
+{
+    outIntersectionIndices.clear();
+    if (!m_network)
+        return;
+
+    outIntersectionIndices = m_selectedIntersections;
+    if (outIntersectionIndices.empty() &&
+        m_activeIntersection >= 0 &&
+        m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+    {
+        outIntersectionIndices.push_back(m_activeIntersection);
+    }
+
+    std::sort(outIntersectionIndices.begin(), outIntersectionIndices.end());
+    outIntersectionIndices.erase(
+        std::unique(outIntersectionIndices.begin(), outIntersectionIndices.end()),
+        outIntersectionIndices.end());
+}
+
 bool PolylineEditor::SelectAllPointsOnSelectedRoads()
 {
     if (!m_network)
@@ -416,16 +437,18 @@ bool PolylineEditor::CopySelectedRoads()
         return false;
 
     std::vector<int> roadIndices;
+    std::vector<int> intersectionIndices;
     CollectSelectedRoadIndices(roadIndices);
-    if (roadIndices.empty())
+    CollectSelectedIntersectionIndices(intersectionIndices);
+    if (roadIndices.empty() && intersectionIndices.empty())
     {
-        m_statusMessage = "Select a road before copying";
+        m_statusMessage = "Select a road or intersection before copying";
         return false;
     }
 
     RoadClipboard clipboard;
     XMFLOAT3 anchor = { 0.0f, 0.0f, 0.0f };
-    int pointCount = 0;
+    int anchorCount = 0;
     for (int roadIndex : roadIndices)
     {
         if (roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
@@ -438,17 +461,36 @@ bool PolylineEditor::CopySelectedRoads()
             anchor.x += point.pos.x;
             anchor.y += point.pos.y;
             anchor.z += point.pos.z;
-            ++pointCount;
+            ++anchorCount;
         }
     }
 
-    if (clipboard.roads.empty() || pointCount == 0)
+    for (int intersectionIndex : intersectionIndices)
     {
-        m_statusMessage = "Selected road has no points to copy";
+        if (intersectionIndex < 0 ||
+            intersectionIndex >= static_cast<int>(m_network->intersections.size()))
+            continue;
+
+        const Intersection& intersection = m_network->intersections[intersectionIndex];
+        clipboard.intersections.push_back(intersection);
+        anchor.x += intersection.pos.x;
+        anchor.y += intersection.pos.y;
+        anchor.z += intersection.pos.z;
+        ++anchorCount;
+    }
+
+    if (clipboard.roads.empty() && clipboard.intersections.empty())
+    {
+        m_statusMessage = "Nothing selected to copy";
+        return false;
+    }
+    if (anchorCount == 0)
+    {
+        m_statusMessage = "Selected item has no position to copy";
         return false;
     }
 
-    const float invPointCount = 1.0f / static_cast<float>(pointCount);
+    const float invPointCount = 1.0f / static_cast<float>(anchorCount);
     clipboard.anchor =
     {
         anchor.x * invPointCount,
@@ -456,8 +498,8 @@ bool PolylineEditor::CopySelectedRoads()
         anchor.z * invPointCount
     };
     m_roadClipboard = std::move(clipboard);
-    m_statusMessage =
-        m_roadClipboard.roads.size() > 1 ? "Roads copied" : "Road copied";
+    const int copiedCount = static_cast<int>(m_roadClipboard.roads.size() + m_roadClipboard.intersections.size());
+    m_statusMessage = copiedCount > 1 ? "Selection copied" : "Item copied";
     return true;
 }
 
@@ -465,9 +507,9 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
 {
     if (!m_network)
         return false;
-    if (m_roadClipboard.roads.empty())
+    if (m_roadClipboard.roads.empty() && m_roadClipboard.intersections.empty())
     {
-        m_statusMessage = "Copy a road before pasting";
+        m_statusMessage = "Copy a road or intersection before pasting";
         return false;
     }
     if (!m_hasCursorPos)
@@ -488,7 +530,39 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
     };
 
     std::vector<int> pastedRoads;
+    std::vector<int> pastedIntersections;
     pastedRoads.reserve(m_roadClipboard.roads.size());
+    pastedIntersections.reserve(m_roadClipboard.intersections.size());
+    std::unordered_map<std::string, std::string> intersectionIdMap;
+
+    for (const Intersection& copiedIntersection : m_roadClipboard.intersections)
+    {
+        const std::string pastedName = copiedIntersection.name.empty()
+            ? std::string("Intersection Copy")
+            : copiedIntersection.name + " Copy";
+        const int newIntersectionIndex = m_network->AddIntersection(copiedIntersection.pos, pastedName);
+        if (newIntersectionIndex < 0 ||
+            newIntersectionIndex >= static_cast<int>(m_network->intersections.size()))
+            continue;
+
+        Intersection& newIntersection = m_network->intersections[newIntersectionIndex];
+        newIntersection.name = pastedName;
+        newIntersection.groupId =
+            FindGroupIndexById(copiedIntersection.groupId) >= 0
+            ? copiedIntersection.groupId
+            : m_network->intersections[newIntersectionIndex].groupId;
+        newIntersection.type = copiedIntersection.type;
+        newIntersection.radius = copiedIntersection.radius;
+        newIntersection.pos.x += delta.x;
+        newIntersection.pos.z += delta.z;
+        if (m_terrain && m_terrain->IsReady())
+            newIntersection.pos.y = m_terrain->GetHeightAt(newIntersection.pos.x, newIntersection.pos.z);
+        else
+            newIntersection.pos.y += delta.y;
+
+        intersectionIdMap[copiedIntersection.id] = newIntersection.id;
+        pastedIntersections.push_back(newIntersectionIndex);
+    }
 
     for (const Road& copiedRoad : m_roadClipboard.roads)
     {
@@ -509,8 +583,12 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
         newRoad.laneWidth = copiedRoad.laneWidth;
         newRoad.laneLeft = copiedRoad.laneLeft;
         newRoad.laneRight = copiedRoad.laneRight;
-        newRoad.startIntersectionId.clear();
-        newRoad.endIntersectionId.clear();
+        const auto startIt = intersectionIdMap.find(copiedRoad.startIntersectionId);
+        const auto endIt = intersectionIdMap.find(copiedRoad.endIntersectionId);
+        newRoad.startIntersectionId =
+            startIt != intersectionIdMap.end() ? startIt->second : std::string();
+        newRoad.endIntersectionId =
+            endIt != intersectionIdMap.end() ? endIt->second : std::string();
         newRoad.points.clear();
         newRoad.points.reserve(copiedRoad.points.size());
 
@@ -529,23 +607,28 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
         pastedRoads.push_back(newRoadIndex);
     }
 
-    if (pastedRoads.empty())
+    if (pastedRoads.empty() && pastedIntersections.empty())
     {
         m_statusMessage = "Paste failed";
         return false;
     }
 
     m_selectedRoads = pastedRoads;
-    m_activeRoad = pastedRoads.front();
+    m_activeRoad = pastedRoads.empty() ? -1 : pastedRoads.front();
     m_activePoint = -1;
     m_selectedPoints.clear();
-    m_selectedIntersections.clear();
-    m_activeIntersection = -1;
+    m_selectedIntersections = pastedIntersections;
+    m_activeIntersection = pastedIntersections.empty() ? -1 : pastedIntersections.front();
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
     m_hoverSnapIntersection = -1;
-    SetActiveGroupById(m_network->roads[m_activeRoad].groupId);
-    m_statusMessage = pastedRoads.size() > 1 ? "Roads pasted" : "Road pasted";
+    if (!pastedRoads.empty())
+        SetActiveGroupById(m_network->roads[m_activeRoad].groupId);
+    else if (!pastedIntersections.empty())
+        SetActiveGroupById(m_network->intersections[m_activeIntersection].groupId);
+
+    const int pastedCount = static_cast<int>(pastedRoads.size() + pastedIntersections.size());
+    m_statusMessage = pastedCount > 1 ? "Selection pasted" : "Item pasted";
     return true;
 }
 

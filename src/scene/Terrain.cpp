@@ -452,10 +452,28 @@ bool Terrain::Raycast(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
     XMVECTOR orig = XMLoadFloat3(&rayOrigin);
     XMVECTOR dir  = XMVector3Normalize(XMLoadFloat3(&rayDir));
 
-    // March along the ray with a coarse step, then refine
-    const float maxDist  = 2000.0f;
-    const float coarse   = (horizontalScaleX < horizontalScaleZ
-                            ? horizontalScaleX : horizontalScaleZ) * 0.5f;
+    // March along the ray with a coarse step, then refine.
+    // The search distance must scale with terrain size and camera distance,
+    // otherwise zoomed-out views can miss the ground entirely.
+    const float terrainHalfWidth = static_cast<float>(m_meshW - 1) * fabsf(horizontalScaleX) * 0.5f;
+    const float terrainHalfDepth = static_cast<float>(m_meshH - 1) * fabsf(horizontalScaleZ) * 0.5f;
+    const float terrainRadius =
+        sqrtf(terrainHalfWidth * terrainHalfWidth +
+              terrainHalfDepth * terrainHalfDepth +
+              heightScale * heightScale);
+    const XMFLOAT3 terrainCenter =
+    {
+        offsetX,
+        heightScale * 0.5f,
+        offsetZ
+    };
+    const float originToTerrainCenter = XMVectorGetX(
+        XMVector3Length(
+            XMVectorSubtract(
+                XMLoadFloat3(&rayOrigin),
+                XMLoadFloat3(&terrainCenter))));
+    const float maxDist = (std::max)(2000.0f, originToTerrainCenter + terrainRadius + 1000.0f);
+    const float coarse   = (std::max)(0.25f, (std::min)(fabsf(horizontalScaleX), fabsf(horizontalScaleZ)) * 0.5f);
 
     float t = 0.0f;
     float prevDiff = 0.0f;

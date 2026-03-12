@@ -137,6 +137,7 @@ private:
     bool GetPrimarySelectedPoint(PointRef& outPoint) const;
     bool IsIntersectionSelected(int intersectionIndex) const;
     void CollectSelectedRoadIndices(std::vector<int>& outRoadIndices) const;
+    void CollectSelectedIntersectionIndices(std::vector<int>& outIntersectionIndices) const;
     bool SelectAllPointsOnSelectedRoads();
     bool DisconnectSelectedRoadEndpoints();
     bool CopySelectedRoads();
@@ -189,6 +190,7 @@ private:
     struct RoadClipboard
     {
         std::vector<Road> roads;
+        std::vector<Intersection> intersections;
         DirectX::XMFLOAT3 anchor = { 0.0f, 0.0f, 0.0f };
     };
     EditorSnapshot CaptureSnapshot() const;
