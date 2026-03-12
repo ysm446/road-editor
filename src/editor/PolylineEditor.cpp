@@ -564,6 +564,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.hoverSnapIntersection = m_hoverSnapIntersection;
     snapshot.defaultWidth = m_defaultWidth;
     snapshot.snapToTerrain = m_snapToTerrain;
+    snapshot.rotateYMode = m_rotateYMode;
     return snapshot;
 }
 
@@ -581,6 +582,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_hoverSnapIntersection = snapshot.hoverSnapIntersection;
     m_defaultWidth = snapshot.defaultWidth;
     m_snapToTerrain = snapshot.snapToTerrain;
+    m_rotateYMode = snapshot.rotateYMode;
 
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
@@ -659,11 +661,13 @@ void PolylineEditor::ResetState()
     m_cursorPos = { 0, 0, 0 };
     m_prevLButton = false;
     m_prevWKey = false;
+    m_prevEKey = false;
     m_prevVKey = false;
     m_prevUndoShortcut = false;
     m_prevRedoShortcut = false;
     m_prevCopyShortcut = false;
     m_prevPasteShortcut = false;
+    m_rotateYMode = false;
     m_defaultWidth = 3.0f;
     m_snapToTerrain = true;
     m_statusMessage.clear();
@@ -779,6 +783,29 @@ static XMFLOAT3 AxisDirection(PolylineEditor::GizmoAxis axis)
     case PolylineEditor::GizmoAxis::Z: return { 0.0f, 0.0f, 1.0f };
     default:                           return { 0.0f, 0.0f, 0.0f };
     }
+}
+
+static float NormalizeAngleDelta(float angle)
+{
+    while (angle > XM_PI)
+        angle -= XM_2PI;
+    while (angle < -XM_PI)
+        angle += XM_2PI;
+    return angle;
+}
+
+static XMFLOAT3 RotateAroundY(XMFLOAT3 point, XMFLOAT3 pivot, float radians)
+{
+    const float dx = point.x - pivot.x;
+    const float dz = point.z - pivot.z;
+    const float c = cosf(radians);
+    const float s = sinf(radians);
+    return
+    {
+        pivot.x + dx * c - dz * s,
+        point.y,
+        pivot.z + dx * s + dz * c
+    };
 }
 
 static bool IntersectRayPlane(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
@@ -1665,11 +1692,44 @@ PolylineEditor::GizmoAxis PolylineEditor::PickGizmoAxis(
     XMFLOAT3 pivotPos;
     if (!GetActiveGizmoPivot(pivotPos))
         return GizmoAxis::None;
-    const float threshold = 10.0f;
 
     XMFLOAT2 pivotScreen = WorldToScreen(pivotPos, viewProj, vpW, vpH);
     if (pivotScreen.x < 0.0f)
         return GizmoAxis::None;
+
+    if (m_rotateYMode)
+    {
+        const float worldRadius = ComputeRotationGizmoRadius(pivotPos, viewProj, vpW, vpH);
+        constexpr int kSegments = 48;
+        constexpr float kThreshold = 10.0f;
+        float bestDist = kThreshold;
+        for (int segmentIndex = 0; segmentIndex < kSegments; ++segmentIndex)
+        {
+            const float t0 = XM_2PI * static_cast<float>(segmentIndex) / static_cast<float>(kSegments);
+            const float t1 = XM_2PI * static_cast<float>(segmentIndex + 1) / static_cast<float>(kSegments);
+            const XMFLOAT3 p0 =
+            {
+                pivotPos.x + cosf(t0) * worldRadius,
+                pivotPos.y,
+                pivotPos.z + sinf(t0) * worldRadius
+            };
+            const XMFLOAT3 p1 =
+            {
+                pivotPos.x + cosf(t1) * worldRadius,
+                pivotPos.y,
+                pivotPos.z + sinf(t1) * worldRadius
+            };
+            const XMFLOAT2 s0 = WorldToScreen(p0, viewProj, vpW, vpH);
+            const XMFLOAT2 s1 = WorldToScreen(p1, viewProj, vpW, vpH);
+            if (s0.x < 0.0f || s1.x < 0.0f)
+                continue;
+
+            bestDist = (std::min)(bestDist, DistPointToSegment2D(px, s0, s1));
+        }
+        return bestDist < kThreshold ? GizmoAxis::RotateY : GizmoAxis::None;
+    }
+
+    const float threshold = 10.0f;
 
     if (Dist2D(px, pivotScreen) <= threshold)
         return GizmoAxis::Center;
@@ -1733,6 +1793,14 @@ float PolylineEditor::ComputeGizmoAxisLength(
     return std::clamp(targetPixels / pixelsPerUnit, 0.5f, 1000.0f);
 }
 
+float PolylineEditor::ComputeRotationGizmoRadius(
+    XMFLOAT3 pivot, XMMATRIX viewProj, int vpW, int vpH) const
+{
+    const float radiusX = ComputeGizmoAxisLength(pivot, GizmoAxis::X, viewProj, vpW, vpH);
+    const float radiusZ = ComputeGizmoAxisLength(pivot, GizmoAxis::Z, viewProj, vpW, vpH);
+    return (std::max)(0.5f, 0.8f * (radiusX + radiusZ) * 0.5f);
+}
+
 // ---------------------------------------------------------------------------
 // SetMode
 // ---------------------------------------------------------------------------
@@ -1750,6 +1818,7 @@ void PolylineEditor::SetMode(EditorMode mode)
     }
     else
     {
+        m_rotateYMode = false;
         ClearPointSelection();
         m_dragging    = false;
         m_activeGizmoAxis = GizmoAxis::None;
@@ -1832,6 +1901,8 @@ void PolylineEditor::Update(int vpW, int vpH,
     bool lClick = lDown && !m_prevLButton;  // rising edge
     bool wDown = (GetAsyncKeyState('W') & 0x8000) != 0;
     bool wPress = wDown && !m_prevWKey;
+    bool eDown = (GetAsyncKeyState('E') & 0x8000) != 0;
+    bool ePress = eDown && !m_prevEKey;
     bool vDown = (GetAsyncKeyState('V') & 0x8000) != 0;
     bool vPress = vDown && !m_prevVKey;
 
@@ -1841,11 +1912,13 @@ void PolylineEditor::Update(int vpW, int vpH,
         m_hoverSnapIntersection = -1;
         m_prevLButton  = lDown;
         m_prevWKey     = wDown;
+        m_prevEKey     = eDown;
         m_prevVKey     = vDown;
         return;
     }
     m_prevLButton = lDown;
     m_prevWKey = wDown;
+    m_prevEKey = eDown;
     m_prevVKey = vDown;
 
     // Compute ray
@@ -1917,22 +1990,29 @@ void PolylineEditor::Update(int vpW, int vpH,
 
     if (wPress && m_mode != EditorMode::Pathfinding)
     {
-        if (m_mode == EditorMode::PointEdit || m_mode == EditorMode::IntersectionEdit)
-        {
-            m_mode = EditorMode::Navigate;
-            m_dragging = false;
-            m_activeGizmoAxis = GizmoAxis::None;
-            m_hoverSnapIntersection = -1;
-        }
-        else if (!m_selectedRoads.empty() ||
-                 !m_selectedPoints.empty() ||
-                 !m_selectedIntersections.empty())
+        m_rotateYMode = false;
+        if (!m_selectedRoads.empty() ||
+            !m_selectedPoints.empty() ||
+            !m_selectedIntersections.empty() ||
+            m_mode == EditorMode::PointEdit)
         {
             SetMode(EditorMode::PointEdit);
         }
         else if (m_activeIntersection >= 0)
         {
             SetMode(EditorMode::IntersectionEdit);
+        }
+    }
+
+    if (ePress && m_mode != EditorMode::Pathfinding)
+    {
+        m_rotateYMode = true;
+        if (!m_selectedRoads.empty() ||
+            !m_selectedPoints.empty() ||
+            !m_selectedIntersections.empty() ||
+            m_mode == EditorMode::PointEdit)
+        {
+            SetMode(EditorMode::PointEdit);
         }
     }
 
@@ -2149,9 +2229,21 @@ void PolylineEditor::Update(int vpW, int vpH,
                 {
                     XMFLOAT3 pivotStart = m_axisDragStartPos;
                     XMFLOAT3 delta = { 0.0f, 0.0f, 0.0f };
-                    if (m_snapToTerrain &&
-                        hasHit &&
-                        m_activeGizmoAxis == GizmoAxis::Center)
+                    float rotationDelta = 0.0f;
+                    if (m_activeGizmoAxis == GizmoAxis::RotateY)
+                    {
+                        const XMFLOAT2 pivotScreen =
+                            WorldToScreen(m_axisDragStartPos, viewProj, vpW, vpH);
+                        if (pivotScreen.x >= 0.0f)
+                        {
+                            const float currentAngle =
+                                atan2f(mousePos.y - pivotScreen.y, mousePos.x - pivotScreen.x);
+                            rotationDelta = NormalizeAngleDelta(currentAngle - m_rotateDragStartAngle);
+                        }
+                    }
+                    else if (m_snapToTerrain &&
+                             hasHit &&
+                             m_activeGizmoAxis == GizmoAxis::Center)
                     {
                         delta =
                         {
@@ -2221,18 +2313,31 @@ void PolylineEditor::Update(int vpW, int vpH,
                         if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
                             continue;
 
-                        XMFLOAT3 newPos =
+                        XMFLOAT3 newPos = m_pointDragStartPositions[selectionIndex];
+                        if (m_activeGizmoAxis == GizmoAxis::RotateY)
                         {
-                            m_pointDragStartPositions[selectionIndex].x + delta.x,
-                            m_pointDragStartPositions[selectionIndex].y + delta.y,
-                            m_pointDragStartPositions[selectionIndex].z + delta.z
-                        };
+                            newPos = RotateAroundY(newPos, pivotStart, rotationDelta);
+                            if (m_snapToTerrain &&
+                                m_terrain && m_terrain->IsReady())
+                            {
+                                newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                            }
+                        }
+                        else
+                        {
+                            newPos =
+                            {
+                                m_pointDragStartPositions[selectionIndex].x + delta.x,
+                                m_pointDragStartPositions[selectionIndex].y + delta.y,
+                                m_pointDragStartPositions[selectionIndex].z + delta.z
+                            };
 
-                        if (m_snapToTerrain &&
-                            m_terrain && m_terrain->IsReady() &&
-                            m_activeGizmoAxis != GizmoAxis::Y)
-                        {
-                            newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                            if (m_snapToTerrain &&
+                                m_terrain && m_terrain->IsReady() &&
+                                m_activeGizmoAxis != GizmoAxis::Y)
+                            {
+                                newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                            }
                         }
 
                         road.points[pointIndex].pos = newPos;
@@ -2246,18 +2351,31 @@ void PolylineEditor::Update(int vpW, int vpH,
                             selectionIndex >= m_intersectionDragStartPositions.size())
                             continue;
 
-                        XMFLOAT3 newPos =
+                        XMFLOAT3 newPos = m_intersectionDragStartPositions[selectionIndex];
+                        if (m_activeGizmoAxis == GizmoAxis::RotateY)
                         {
-                            m_intersectionDragStartPositions[selectionIndex].x + delta.x,
-                            m_intersectionDragStartPositions[selectionIndex].y + delta.y,
-                            m_intersectionDragStartPositions[selectionIndex].z + delta.z
-                        };
+                            newPos = RotateAroundY(newPos, pivotStart, rotationDelta);
+                            if (m_snapToTerrain &&
+                                m_terrain && m_terrain->IsReady())
+                            {
+                                newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                            }
+                        }
+                        else
+                        {
+                            newPos =
+                            {
+                                m_intersectionDragStartPositions[selectionIndex].x + delta.x,
+                                m_intersectionDragStartPositions[selectionIndex].y + delta.y,
+                                m_intersectionDragStartPositions[selectionIndex].z + delta.z
+                            };
 
-                        if (m_snapToTerrain &&
-                            m_terrain && m_terrain->IsReady() &&
-                            m_activeGizmoAxis != GizmoAxis::Y)
-                        {
-                            newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                            if (m_snapToTerrain &&
+                                m_terrain && m_terrain->IsReady() &&
+                                m_activeGizmoAxis != GizmoAxis::Y)
+                            {
+                                newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+                            }
                         }
 
                         m_network->intersections[intersectionIndex].pos = newPos;
@@ -2304,6 +2422,10 @@ void PolylineEditor::Update(int vpW, int vpH,
                     if (!GetActiveGizmoPivot(m_axisDragStartPos))
                         return;
                     m_axisDragStartMouse = mousePos;
+                    const XMFLOAT2 pivotScreen =
+                        WorldToScreen(m_axisDragStartPos, viewProj, vpW, vpH);
+                    m_rotateDragStartAngle =
+                        atan2f(mousePos.y - pivotScreen.y, mousePos.x - pivotScreen.x);
                     m_planeDragNormal = rayDir;
                     if (!IntersectRayPlane(rayOrig, rayDir, m_axisDragStartPos,
                                            m_planeDragNormal, m_planeDragStartHit))
@@ -2636,6 +2758,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     static const XMFLOAT4 colorAxisX    = { 1.0f, 0.2f, 0.2f, 1.0f };
     static const XMFLOAT4 colorAxisY    = { 0.2f, 1.0f, 0.2f, 1.0f };
     static const XMFLOAT4 colorAxisZ    = { 0.2f, 0.6f, 1.0f, 1.0f };
+    static const XMFLOAT4 colorRotateY  = { 1.0f, 0.85f, 0.2f, 1.0f };
     static const XMFLOAT4 colorPivot    = { 1.0f, 1.0f, 1.0f, 0.9f };
     static const XMFLOAT4 colorIntersection = { 0.3f, 0.95f, 1.0f, 1.0f };
     static const XMFLOAT4 colorIntersectionSelected = { 1.0f, 0.4f, 0.2f, 1.0f };
@@ -2745,16 +2868,42 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
         XMFLOAT3 pivot;
         if (GetActiveGizmoPivot(pivot))
         {
-            const float axisLenX = ComputeGizmoAxisLength(pivot, GizmoAxis::X, viewProj, vpW, vpH);
-            const float axisLenY = ComputeGizmoAxisLength(pivot, GizmoAxis::Y, viewProj, vpW, vpH);
-            const float axisLenZ = ComputeGizmoAxisLength(pivot, GizmoAxis::Z, viewProj, vpW, vpH);
             const XMFLOAT3 p = pivot;
             dd.AddLine({ p.x - 0.15f, p.y, p.z }, { p.x + 0.15f, p.y, p.z }, colorPivot);
             dd.AddLine({ p.x, p.y - 0.15f, p.z }, { p.x, p.y + 0.15f, p.z }, colorPivot);
             dd.AddLine({ p.x, p.y, p.z - 0.15f }, { p.x, p.y, p.z + 0.15f }, colorPivot);
-            dd.AddLine(p, { p.x + axisLenX, p.y, p.z }, colorAxisX);
-            dd.AddLine(p, { p.x, p.y + axisLenY, p.z }, colorAxisY);
-            dd.AddLine(p, { p.x, p.y, p.z + axisLenZ }, colorAxisZ);
+            if (m_rotateYMode)
+            {
+                constexpr int kSegments = 48;
+                const float radius = ComputeRotationGizmoRadius(pivot, viewProj, vpW, vpH);
+                XMFLOAT3 prev =
+                {
+                    p.x + radius,
+                    p.y,
+                    p.z
+                };
+                for (int segmentIndex = 1; segmentIndex <= kSegments; ++segmentIndex)
+                {
+                    const float t = XM_2PI * static_cast<float>(segmentIndex) / static_cast<float>(kSegments);
+                    const XMFLOAT3 next =
+                    {
+                        p.x + cosf(t) * radius,
+                        p.y,
+                        p.z + sinf(t) * radius
+                    };
+                    dd.AddLine(prev, next, colorRotateY);
+                    prev = next;
+                }
+            }
+            else
+            {
+                const float axisLenX = ComputeGizmoAxisLength(pivot, GizmoAxis::X, viewProj, vpW, vpH);
+                const float axisLenY = ComputeGizmoAxisLength(pivot, GizmoAxis::Y, viewProj, vpW, vpH);
+                const float axisLenZ = ComputeGizmoAxisLength(pivot, GizmoAxis::Z, viewProj, vpW, vpH);
+                dd.AddLine(p, { p.x + axisLenX, p.y, p.z }, colorAxisX);
+                dd.AddLine(p, { p.x, p.y + axisLenY, p.z }, colorAxisY);
+                dd.AddLine(p, { p.x, p.y, p.z + axisLenZ }, colorAxisZ);
+            }
         }
     }
 
@@ -2927,27 +3076,52 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             {
                 dl->AddCircle(pivot, 8.0f, IM_COL32(255,255,255,220), 24, 2.0f);
                 dl->AddCircleFilled(pivot, 3.0f, IM_COL32(255,255,255,220), 16);
+                if (m_rotateYMode)
+                {
+                    constexpr int kSegments = 64;
+                    std::vector<ImVec2> ringPoints;
+                    ringPoints.reserve(kSegments + 1);
+                    const float radius = ComputeRotationGizmoRadius(p, viewProj, vpW, vpH);
+                    for (int segmentIndex = 0; segmentIndex <= kSegments; ++segmentIndex)
+                    {
+                        const float t = XM_2PI * static_cast<float>(segmentIndex) / static_cast<float>(kSegments);
+                        ImVec2 ringPoint;
+                        if (!WorldToScreen(
+                                { p.x + cosf(t) * radius, p.y, p.z + sinf(t) * radius },
+                                viewProj,
+                                vpW,
+                                vpH,
+                                ringPoint))
+                            continue;
+                        ringPoints.push_back(ringPoint);
+                    }
+                    if (ringPoints.size() >= 2)
+                        dl->AddPolyline(ringPoints.data(), static_cast<int>(ringPoints.size()), IM_COL32(255, 215, 60, 240), ImDrawFlags_None, 2.0f);
+                    dl->AddText(ImVec2(pivot.x + 10.0f, pivot.y - 22.0f), IM_COL32(255, 215, 60, 240), "RY");
+                }
+                else
+                {
+                    struct AxisOverlay
+                    {
+                        XMFLOAT3 end;
+                        ImU32 color;
+                        const char* label;
+                    };
+                    AxisOverlay axes[] =
+                    {
+                        { { p.x + ComputeGizmoAxisLength(p, GizmoAxis::X, viewProj, vpW, vpH), p.y, p.z }, colAxisX, "X" },
+                        { { p.x, p.y + ComputeGizmoAxisLength(p, GizmoAxis::Y, viewProj, vpW, vpH), p.z }, colAxisY, "Y" },
+                        { { p.x, p.y, p.z + ComputeGizmoAxisLength(p, GizmoAxis::Z, viewProj, vpW, vpH) }, colAxisZ, "Z" },
+                    };
 
-                struct AxisOverlay
-                {
-                    XMFLOAT3 end;
-                    ImU32 color;
-                    const char* label;
-                };
-                AxisOverlay axes[] =
-                {
-                    { { p.x + ComputeGizmoAxisLength(p, GizmoAxis::X, viewProj, vpW, vpH), p.y, p.z }, colAxisX, "X" },
-                    { { p.x, p.y + ComputeGizmoAxisLength(p, GizmoAxis::Y, viewProj, vpW, vpH), p.z }, colAxisY, "Y" },
-                    { { p.x, p.y, p.z + ComputeGizmoAxisLength(p, GizmoAxis::Z, viewProj, vpW, vpH) }, colAxisZ, "Z" },
-                };
-
-                for (const AxisOverlay& axis : axes)
-                {
-                    ImVec2 end;
-                    if (!WorldToScreen(axis.end, viewProj, vpW, vpH, end))
-                        continue;
-                    dl->AddLine(pivot, end, axis.color, 2.0f);
-                    dl->AddText(ImVec2(end.x + 4.0f, end.y - 8.0f), axis.color, axis.label);
+                    for (const AxisOverlay& axis : axes)
+                    {
+                        ImVec2 end;
+                        if (!WorldToScreen(axis.end, viewProj, vpW, vpH, end))
+                            continue;
+                        dl->AddLine(pivot, end, axis.color, 2.0f);
+                        dl->AddText(ImVec2(end.x + 4.0f, end.y - 8.0f), axis.color, axis.label);
+                    }
                 }
             }
         }
@@ -3063,7 +3237,8 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         ImGui::TextDisabled(u8"Ctrl+\u30AF\u30EA\u30C3\u30AF: \u9053\u8DEF\u3092\u8907\u6570\u9078\u629E");
         ImGui::TextDisabled(u8"\u9078\u629E\u4E2D\u9053\u8DEF\u306E\u30DD\u30A4\u30F3\u30C8\u306F\u76F4\u63A5\u9078\u629E\u53EF\u80FD");
         ImGui::TextDisabled(u8"\u7A7A\u304D\u9818\u57DF\u3092\u30C9\u30E9\u30C3\u30B0: \u77E9\u5F62\u9078\u629E");
-        ImGui::TextDisabled(u8"W \u30AD\u30FC: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8/\u4EA4\u5DEE\u70B9\u306B\u30AE\u30BA\u30E2\u8868\u793A");
+        ImGui::TextDisabled(u8"W \u30AD\u30FC: \u79FB\u52D5\u30AE\u30BA\u30E2");
+        ImGui::TextDisabled(u8"E \u30AD\u30FC: Y\u56DE\u8EE2\u30AE\u30BA\u30E2");
         break;
     case EditorMode::PolylineDraw:
         ImGui::TextColored(ImVec4(0.2f,1,0.4f,1), u8"\u4F5C\u6210\u4E2D: %s",
@@ -3082,6 +3257,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
         ImGui::TextDisabled(u8"Ctrl+Shift \u77E9\u5F62: \u9078\u629E\u89E3\u9664");
         ImGui::TextDisabled(u8"\u4E2D\u592E\u30C9\u30E9\u30C3\u30B0: \u30B9\u30AF\u30EA\u30FC\u30F3\u5E73\u9762\u3067\u79FB\u52D5");
         ImGui::TextDisabled(u8"X/Y/Z \u8EF8\u30AF\u30EA\u30C3\u30AF: \u8EF8\u65B9\u5411\u306B\u79FB\u52D5");
+        ImGui::TextDisabled(u8"E: Y\u56DE\u8EE2\u30EA\u30F3\u30B0");
         ImGui::TextDisabled(u8"\u7AEF\u70B9\u304C\u4EA4\u5DEE\u70B9\u4ED8\u8FD1: \u30B9\u30CA\u30C3\u30D7/\u63A5\u7D9A");
         ImGui::TextDisabled(u8"Delete: \u30DD\u30A4\u30F3\u30C8\u524A\u9664");
         break;

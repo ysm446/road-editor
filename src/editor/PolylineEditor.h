@@ -27,7 +27,8 @@ public:
         Center,
         X,
         Y,
-        Z
+        Z,
+        RotateY
     };
 
     // Setup
@@ -156,6 +157,9 @@ private:
                                  GizmoAxis axis,
                                  DirectX::XMMATRIX viewProj,
                                  int vpW, int vpH) const;
+    float ComputeRotationGizmoRadius(DirectX::XMFLOAT3 pivot,
+                                     DirectX::XMMATRIX viewProj,
+                                     int vpW, int vpH) const;
     void PushUndoState();
     void Undo();
     void Redo();
@@ -175,6 +179,7 @@ private:
         int hoverSnapIntersection = -1;
         float defaultWidth = 3.0f;
         bool snapToTerrain = true;
+        bool rotateYMode = false;
     };
     struct RoadClipboard
     {
@@ -207,6 +212,7 @@ private:
     DirectX::XMFLOAT2 m_axisDragStartMouse = { 0,0 };
     DirectX::XMFLOAT3 m_planeDragStartHit = { 0,0,0 };
     DirectX::XMFLOAT3 m_planeDragNormal   = { 0,0,1 };
+    float m_rotateDragStartAngle = 0.0f;
     std::vector<DirectX::XMFLOAT3> m_pointDragStartPositions;
     std::vector<DirectX::XMFLOAT3> m_intersectionDragStartPositions;
     bool m_marqueeSelecting = false;
@@ -222,6 +228,7 @@ private:
     // Track left-button state for click detection
     bool m_prevLButton = false;
     bool m_prevWKey    = false;
+    bool m_prevEKey    = false;
     bool m_prevVKey    = false;
 
     // Default width for new points
@@ -235,6 +242,7 @@ private:
     bool m_showIntersectionNames = true;
     bool m_showRoadPreviewMetrics = false;
     bool m_showRoadGradeGradient = false;
+    bool m_rotateYMode = false;
     float m_roadGradeRedThresholdPercent = 12.0f;
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
