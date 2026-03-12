@@ -2851,7 +2851,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     const_cast<PolylineEditor*>(this)->SanitizeSelection();
 
     static const XMFLOAT4 colorRoad     = { 0.72f, 0.72f, 0.75f, 1.0f };
-    static const XMFLOAT4 colorSelected = { 1.0f, 0.3f, 0.3f, 1.0f };
+    static const XMFLOAT4 colorSelected = { 1.0f, 1.0f, 1.0f, 1.0f };
     static const XMFLOAT4 colorCursor   = { 0.2f, 1.0f, 0.4f, 0.4f };
     static const XMFLOAT4 colorAxisX    = { 1.0f, 0.2f, 0.2f, 1.0f };
     static const XMFLOAT4 colorAxisY    = { 0.2f, 1.0f, 0.2f, 1.0f };
@@ -3058,7 +3058,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     ImDrawList* dl = ImGui::GetBackgroundDrawList();
     const float kRadius    = 3.0f;
     const ImU32 colPoint    = IM_COL32(160, 160, 160, 220);
-    const ImU32 colSelected = IM_COL32(255,  80,  80, 255);
+    const ImU32 colRoadSel  = IM_COL32(255, 255, 255, 255);
+    const ImU32 colPointSel = IM_COL32(255, 140,  60, 255);
     const ImU32 colCursor   = IM_COL32( 60, 255, 110, 220);
     const ImU32 colAxisX    = IM_COL32(255,  80,  80, 255);
     const ImU32 colAxisY    = IM_COL32( 80, 255, 120, 255);
@@ -3080,7 +3081,11 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
                 continue;
             const bool pointSelected = IsPointSelected(ri, pi);
             const bool roadSelected = IsRoadSelected(ri) || ri == m_activeRoad;
-            ImU32 col = (pointSelected || roadSelected) ? colSelected : colPoint;
+            ImU32 col = colPoint;
+            if (roadSelected)
+                col = colRoadSel;
+            if (pointSelected)
+                col = colPointSel;
             const float radius = pointSelected ? (kRadius + 2.0f) : kRadius;
             dl->AddCircleFilled(sp, radius, col, 20);
         }
