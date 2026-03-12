@@ -2137,18 +2137,12 @@ void App::DrawPathfindingPanel()
 
     ImGui::Separator();
 
-    ImGui::InputFloat(u8"\u6700\u5927\u52FE\u914D (%)", &m_pathfinding.maxGradePercent, 0.5f, 5.0f, "%.1f");
-    const float clampedMaxGrade = std::clamp(m_pathfinding.maxGradePercent, 0.0f, 100.0f);
-    if (fabsf(clampedMaxGrade - m_pathfinding.maxGradePercent) > 1e-4f)
-        m_pathfinding.maxGradePercent = clampedMaxGrade;
-    if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+    if (ImGui::SliderFloat(u8"\u6700\u5927\u52FE\u914D (%)", &m_pathfinding.maxGradePercent, 0.0f, 100.0f, "%.1f") &&
+        m_pathfinding.hasStart && m_pathfinding.hasEnd)
         ComputePathfindingPreview();
 
-    ImGui::InputFloat(u8"\u30B0\u30EA\u30C3\u30C9\u9593\u9694 (m)", &m_pathfinding.gridStep, 0.5f, 5.0f, "%.1f");
-    const float clampedGridStep = std::clamp(m_pathfinding.gridStep, 1.0f, 100.0f);
-    if (fabsf(clampedGridStep - m_pathfinding.gridStep) > 1e-4f)
-        m_pathfinding.gridStep = clampedGridStep;
-    if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+    if (ImGui::SliderFloat(u8"\u30B0\u30EA\u30C3\u30C9\u9593\u9694 (m)", &m_pathfinding.gridStep, 1.0f, 100.0f, "%.1f") &&
+        m_pathfinding.hasStart && m_pathfinding.hasEnd)
         ComputePathfindingPreview();
 
     ImGui::Checkbox(u8"\u6700\u5927\u52FE\u914D\u3092\u53B3\u5B88", &m_pathfinding.strictMaxGrade);
@@ -2164,11 +2158,8 @@ void App::DrawPathfindingPanel()
             ComputePathfindingPreview();
     }
 
-    ImGui::InputFloat("Turn Penalty", &m_pathfinding.turnPenalty, 1.0f, 5.0f, "%.1f");
-    const float clampedTurnPenalty = std::clamp(m_pathfinding.turnPenalty, 0.0f, 1000.0f);
-    if (fabsf(clampedTurnPenalty - m_pathfinding.turnPenalty) > 1e-4f)
-        m_pathfinding.turnPenalty = clampedTurnPenalty;
-    if (ImGui::IsItemDeactivatedAfterEdit() && m_pathfinding.hasStart && m_pathfinding.hasEnd)
+    if (ImGui::SliderFloat("Turn Penalty", &m_pathfinding.turnPenalty, 0.0f, 1000.0f, "%.1f") &&
+        m_pathfinding.hasStart && m_pathfinding.hasEnd)
         ComputePathfindingPreview();
 
     ImGui::Separator();
