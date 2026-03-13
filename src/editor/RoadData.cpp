@@ -286,9 +286,7 @@ static nlohmann::json IntersectionToJson(const Intersection& i)
         { "name",   i.name   },
         { "groupId", i.groupId },
         { "type",   i.type   },
-        { "x",      i.pos.x  },
-        { "y",      i.pos.y  },
-        { "z",      i.pos.z  },
+        { "pos",    { i.pos.x, i.pos.y, i.pos.z } },
         { "radius", i.radius }
     };
 }
@@ -300,7 +298,19 @@ static Intersection IntersectionFromJson(const nlohmann::json& j)
     i.name   = j.value("name", std::string("Intersection"));
     i.groupId = j.value("groupId", std::string());
     i.type   = j.value("type", std::string("intersection"));
-    i.pos    = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
+    if (j.contains("pos") && j["pos"].is_array() && j["pos"].size() >= 3)
+    {
+        i.pos =
+        {
+            j["pos"][0].get<float>(),
+            j["pos"][1].get<float>(),
+            j["pos"][2].get<float>()
+        };
+    }
+    else
+    {
+        i.pos = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
+    }
     i.radius = j.value("radius", 4.0f);
     EnsureIntersectionId(i);
     return i;

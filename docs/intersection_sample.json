@@ -1,0 +1,351 @@
+[
+    {
+        "id": "f2acf7f2",
+        "name": "",
+        "type": 0,
+        "entryDist": 3.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "9fbcdf42"
+            },
+            {
+                "prim_id": "d2697c5d"
+            },
+            {
+                "prim_id": "5ec6d618"
+            }
+        ]
+    },
+    {
+        "id": "ee66e1ae",
+        "name": "",
+        "type": 0,
+        "entryDist": 8.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "ff6bfdf2"
+            },
+            {
+                "prim_id": "e0ca1aed"
+            },
+            {
+                "prim_id": "7b74db5d"
+            }
+        ]
+    },
+    {
+        "id": "f256151e",
+        "name": "",
+        "type": 1,
+        "entryDist": 12.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "9277cf66"
+            },
+            {
+                "prim_id": "b72ec752"
+            },
+            {
+                "prim_id": "b8aedeb9"
+            },
+            {
+                "prim_id": "b260fce1"
+            }
+        ]
+    },
+    {
+        "id": "9d1b771a",
+        "name": "",
+        "type": 0,
+        "entryDist": 10.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "95e1f915"
+            },
+            {
+                "prim_id": "d76fd484"
+            },
+            {
+                "prim_id": "ff6bfdf2"
+            }
+        ]
+    },
+    {
+        "id": "1ba44a43",
+        "name": "",
+        "type": 0,
+        "entryDist": 8.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "a867b016"
+            },
+            {
+                "prim_id": "83e60861"
+            },
+            {
+                "prim_id": "390e685d"
+            }
+        ]
+    },
+    {
+        "id": "6da52d8b",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "a867b016"
+            },
+            {
+                "prim_id": "40cbad32"
+            },
+            {
+                "prim_id": "3a888d43"
+            }
+        ]
+    },
+    {
+        "id": "92fa58ba",
+        "name": "",
+        "type": 0,
+        "entryDist": 8.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "4c7424be"
+            },
+            {
+                "prim_id": "ddecbc57"
+            },
+            {
+                "prim_id": "ae9de891"
+            },
+            {
+                "prim_id": "390e685d"
+            }
+        ]
+    },
+    {
+        "id": "01826b61",
+        "name": "",
+        "type": 0,
+        "entryDist": 4.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "9f64fdd2"
+            },
+            {
+                "prim_id": "1142dfaf"
+            },
+            {
+                "prim_id": "5ec6d618"
+            },
+            {
+                "prim_id": "5c7bb965"
+            }
+        ]
+    },
+    {
+        "id": "b04cc411",
+        "name": "",
+        "type": 0,
+        "entryDist": 8.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "eaa4bbfa"
+            },
+            {
+                "prim_id": "c1af64bc"
+            },
+            {
+                "prim_id": "1264c501"
+            }
+        ]
+    },
+    {
+        "id": "678e80c3",
+        "name": "",
+        "type": 0,
+        "entryDist": 8.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "29d0b547"
+            },
+            {
+                "prim_id": "03c0233c"
+            },
+            {
+                "prim_id": "704b9d5d"
+            }
+        ]
+    },
+    {
+        "id": "86e264a2",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "61af7f50"
+            },
+            {
+                "prim_id": "5b850812"
+            },
+            {
+                "prim_id": "9e717756"
+            }
+        ]
+    },
+    {
+        "id": "1d256087",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "a17b3957"
+            },
+            {
+                "prim_id": "bfa57558"
+            },
+            {
+                "prim_id": "5b850812"
+            }
+        ]
+    },
+    {
+        "id": "9169e76c",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "a0844a56"
+            },
+            {
+                "prim_id": "649e1ec0"
+            },
+            {
+                "prim_id": "f7bee4a3"
+            }
+        ]
+    },
+    {
+        "id": "a9cd8a24",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "f7bee4a3"
+            },
+            {
+                "prim_id": "a17b3957"
+            },
+            {
+                "prim_id": "3e85df74"
+            }
+        ]
+    },
+    {
+        "id": "f6b6ac46",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "ec4cb836"
+            },
+            {
+                "prim_id": "10ac4165"
+            },
+            {
+                "prim_id": "1f3503b8"
+            }
+        ]
+    },
+    {
+        "id": "aa43c707",
+        "name": "",
+        "type": 0,
+        "entryDist": 6.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "4bcaab02"
+            },
+            {
+                "prim_id": "10ac4165"
+            },
+            {
+                "prim_id": "9c930cd1"
+            }
+        ]
+    },
+    {
+        "id": "663d1c86",
+        "name": "",
+        "type": 0,
+        "entryDist": 8.0,
+        "outerRadius": 20.0,
+        "islandRadius": 10.0,
+        "roadCount": 1,
+        "connectedIds": [
+            {
+                "prim_id": "4bcaab02"
+            },
+            {
+                "prim_id": "8a7cb859"
+            },
+            {
+                "prim_id": "5e3fe3d5"
+            }
+        ]
+    }
+]
