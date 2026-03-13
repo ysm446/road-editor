@@ -1389,6 +1389,13 @@ int App::Run()
             int vpW = rc.right  - rc.left;
             int vpH = rc.bottom - rc.top;
 
+            if (IsIconic(m_hwnd) || vpW <= 0 || vpH <= 0)
+            {
+                m_cursorHitValid = false;
+                Render();
+                continue;
+            }
+
             POINT cursor = {};
             GetCursorPos(&cursor);
             ScreenToClient(m_hwnd, &cursor);
@@ -2200,6 +2207,9 @@ void App::UpdatePathfindingInput(bool wantMouseByImGui)
     GetClientRect(m_hwnd, &rc);
     const int vpW = rc.right - rc.left;
     const int vpH = rc.bottom - rc.top;
+
+    if (IsIconic(m_hwnd) || vpW <= 0 || vpH <= 0)
+        return;
 
     POINT cursor = {};
     GetCursorPos(&cursor);

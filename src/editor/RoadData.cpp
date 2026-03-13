@@ -211,17 +211,22 @@ void RoadNetwork::EnsureDefaultGroup()
 // JSON helpers
 // ---------------------------------------------------------------------------
 
-static nlohmann::json PointToJson(const RoadPoint& p)
-{
-    return {
-        { "x", p.pos.x }, { "y", p.pos.y }, { "z", p.pos.z }
-    };
-}
-
 static RoadPoint PointFromJson(const nlohmann::json& j)
 {
     RoadPoint p;
-    p.pos   = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
+    if (j.contains("pos") && j["pos"].is_array() && j["pos"].size() >= 3)
+    {
+        p.pos =
+        {
+            JsonToFloat(j["pos"][0], 0.0f),
+            JsonToFloat(j["pos"][1], 0.0f),
+            JsonToFloat(j["pos"][2], 0.0f)
+        };
+    }
+    else
+    {
+        p.pos = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
+    }
     p.width = j.value("width", 3.0f);
     return p;
 }
@@ -264,19 +269,15 @@ static nlohmann::json RoadToJson(const Road& r)
 {
     nlohmann::json roadJson =
         (r.legacyData.is_object() ? r.legacyData : nlohmann::json::object());
-    nlohmann::json legacyPoints = nlohmann::json::array();
     nlohmann::json pts = nlohmann::json::array();
     for (const auto& p : r.points)
-    {
-        legacyPoints.push_back(PointToJson(p));
         pts.push_back(CurvePointToJson(p));
-    }
 
     roadJson["id"] = r.id;
     roadJson["name"] = r.name;
     roadJson["groupId"] = r.groupId;
     roadJson["closed"] = r.closed;
-    roadJson["points"] = legacyPoints;
+    roadJson.erase("points");
     roadJson["startIntersectionId"] = r.startIntersectionId;
     roadJson["endIntersectionId"] = r.endIntersectionId;
     roadJson["laneWidth"] = r.laneWidth;

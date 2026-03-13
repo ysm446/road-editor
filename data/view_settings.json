@@ -28,7 +28,7 @@
     0.6274510025978088,
     0.6274510025978088
   ],
-  "roadVertexScreenRadius": 3.0,
+  "roadVertexScreenRadius": 4.0,
   "selectedRoadColor": [
     1.0,
     1.0,
@@ -39,11 +39,11 @@
   "showContours": true,
   "showFps": true,
   "showGrid": true,
-  "showIntersectionNames": false,
+  "showIntersectionNames": true,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
   "showRoadGradeGradient": true,
-  "showRoadNames": false,
+  "showRoadNames": true,
   "showRoadPreviewMetrics": false,
   "showTerrainWindow": false
 }
