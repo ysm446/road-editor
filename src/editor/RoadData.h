@@ -10,6 +10,7 @@ struct RoadPoint
 {
     DirectX::XMFLOAT3 pos;  // World-space position (y = terrain height)
     float             width; // Road half-width at this point
+    nlohmann::json    curveData = nlohmann::json::object();
 };
 
 // A single polyline road
@@ -25,6 +26,7 @@ struct Road
     float                  laneWidth = 3.0f;
     int                    laneLeft = 1;
     int                    laneRight = 1;
+    nlohmann::json         legacyData = nlohmann::json::object();
 
     // Convenience
     bool IsValid() const { return points.size() >= 2; }
@@ -38,6 +40,7 @@ struct Intersection
     std::string         type = "intersection";
     DirectX::XMFLOAT3   pos = { 0.0f, 0.0f, 0.0f };
     float               radius = 4.0f;
+    nlohmann::json      legacyData = nlohmann::json::object();
 };
 
 struct RoadGroup

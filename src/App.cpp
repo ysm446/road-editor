@@ -9,6 +9,7 @@
 #include <commdlg.h>
 #include <DirectXMath.h>
 #include <fstream>
+#include <filesystem>
 #include <limits>
 #include <queue>
 
@@ -23,6 +24,7 @@ using namespace DirectX;
 namespace
 {
 constexpr const char* kViewSettingsPath = "data/view_settings.json";
+namespace fs = std::filesystem;
 
 struct PathGridConfig
 {
@@ -396,6 +398,47 @@ XMFLOAT3 DirectionFromAzimuthElevation(float azimuth, float elevation)
         cosElevation * cosf(azimuth)
     };
 }
+
+fs::path GetProjectDirectory(const char* projectPath)
+{
+    if (projectPath == nullptr || projectPath[0] == '\0')
+        return fs::current_path();
+
+    fs::path path(projectPath);
+    if (path.has_parent_path())
+        return path.parent_path();
+    return fs::current_path();
+}
+
+std::string MakePathRelativeToProject(const char* projectPath, const char* targetPath)
+{
+    if (targetPath == nullptr || targetPath[0] == '\0')
+        return std::string();
+
+    const fs::path target(targetPath);
+    if (!target.is_absolute())
+        return target.generic_string();
+
+    const fs::path projectDir = GetProjectDirectory(projectPath);
+    std::error_code ec;
+    const fs::path relative = fs::relative(target, projectDir, ec);
+    return ec ? target.generic_string() : relative.generic_string();
+}
+
+std::string ResolvePathFromProject(const char* projectPath, const std::string& storedPath)
+{
+    if (storedPath.empty())
+        return std::string();
+
+    fs::path path(storedPath);
+    if (path.is_absolute())
+        return path.string();
+
+    const fs::path projectDir = GetProjectDirectory(projectPath);
+    std::error_code ec;
+    const fs::path resolved = fs::weakly_canonical(projectDir / path, ec);
+    return ec ? (projectDir / path).string() : resolved.string();
+}
 }
 
 // ---------------------------------------------------------------------------
@@ -671,13 +714,13 @@ void App::RebuildContourCache()
 void App::NewProject()
 {
     strncpy_s(m_terrainPath, sizeof(m_terrainPath), "data/heightmap.png", _TRUNCATE);
-    strncpy_s(m_projectPath, sizeof(m_projectPath), "data/project.json", _TRUNCATE);
+    m_projectPath[0] = '\0';
 
-    m_loadResW = 0;
-    m_loadResH = 0;
-    m_loadWidthM = 255.0f;
-    m_loadDepthM = 255.0f;
-    m_loadHeightM = 100.0f;
+    m_loadResW = 1024;
+    m_loadResH = 1024;
+    m_loadWidthM = 1024.0f;
+    m_loadDepthM = 1024.0f;
+    m_loadHeightM = 1024.0f;
     m_loadOffsetX = 0.0f;
     m_loadOffsetZ = 0.0f;
 
@@ -697,25 +740,111 @@ void App::NewProject()
     m_sunElevation = 0.78f;
     m_terrain->sunDirection = ComputeSunDirection();
     m_terrain->lightingMode = Terrain::LightingModeBasic;
+    UpdateWindowTitle();
     SetStatusMessage("New project");
+}
+
+bool App::SaveProjectAs()
+{
+    char projectPath[260] = {};
+    strncpy_s(projectPath, sizeof(projectPath), m_projectPath, _TRUNCATE);
+    if (!SaveFileDialog(m_hwnd, projectPath, sizeof(projectPath),
+                        "Project Files\0*.json\0All Files\0*.*\0",
+                        "Save Project"))
+    {
+        return true;
+    }
+
+    strncpy_s(m_projectPath, sizeof(m_projectPath), projectPath, _TRUNCATE);
+    const bool ok = SaveProject(m_projectPath);
+    if (ok)
+        UpdateWindowTitle();
+    return ok;
+}
+
+bool App::SaveRoads(const char* path)
+{
+    if (path == nullptr || path[0] == '\0')
+        return SaveRoadsAs();
+
+    m_editor.SetFilePath(path);
+    if (!m_editor.Save(path))
+    {
+        SetStatusMessage(std::string("Road save failed: ") + path);
+        return false;
+    }
+
+    SetStatusMessage(std::string("Roads saved: ") + path);
+    return true;
+}
+
+bool App::SaveRoadsAs()
+{
+    char roadPath[260] = {};
+    strncpy_s(roadPath, sizeof(roadPath), m_editor.GetFilePath(), _TRUNCATE);
+    if (!SaveFileDialog(m_hwnd, roadPath, sizeof(roadPath),
+                        "Road Files\0*.json\0All Files\0*.*\0",
+                        "Save Roads"))
+    {
+        return false;
+    }
+
+    return SaveRoads(roadPath);
+}
+
+bool App::LoadRoadsFromPath(const char* path)
+{
+    if (path == nullptr || path[0] == '\0')
+        return false;
+
+    m_editor.SetFilePath(path);
+    if (!m_editor.Load(path))
+    {
+        SetStatusMessage(std::string("Road load failed: ") + path);
+        return false;
+    }
+
+    SetStatusMessage(std::string("Roads loaded: ") + path);
+    return true;
+}
+
+bool App::OpenRoads()
+{
+    char roadPath[260] = {};
+    strncpy_s(roadPath, sizeof(roadPath), m_editor.GetFilePath(), _TRUNCATE);
+    if (!OpenFileDialog(m_hwnd, roadPath, sizeof(roadPath),
+                        "Road Files\0*.json\0All Files\0*.*\0",
+                        "Open Roads"))
+    {
+        return false;
+    }
+
+    return LoadRoadsFromPath(roadPath);
 }
 
 bool App::SaveProject(const char* path)
 {
     try
     {
-        if (m_editor.GetFilePath()[0] != '\0' && !m_editor.Save(m_editor.GetFilePath()))
+        if (path == nullptr || path[0] == '\0')
+            return SaveProjectAs();
+
+        if (m_editor.GetFilePath()[0] != '\0' && !SaveRoads(m_editor.GetFilePath()))
         {
-            SetStatusMessage(std::string("Road save failed: ") + m_editor.GetFilePath());
             return false;
         }
 
         nlohmann::json root;
+        const std::string relativeTerrainPath = MakePathRelativeToProject(path, m_terrainPath);
+        const std::string relativeTerrainTexturePath =
+            MakePathRelativeToProject(path, m_terrainTexturePath);
+        const std::string relativeRoadPath =
+            MakePathRelativeToProject(path, m_editor.GetFilePath());
         root["version"] = 1;
         root["terrain"] =
         {
-            { "path",        m_terrainPath            },
-            { "texturePath", m_terrainTexturePath     },
+            { "path",        relativeTerrainPath      },
+            { "texturePath", relativeTerrainTexturePath },
             { "divisionsX",  m_loadResW               },
             { "divisionsY",  m_loadResH               },
             { "widthM",      m_loadWidthM             },
@@ -734,7 +863,7 @@ bool App::SaveProject(const char* path)
         };
         root["roads"] =
         {
-            { "path", m_editor.GetFilePath() }
+            { "path", relativeRoadPath }
         };
         root["camera"] =
         {
@@ -751,6 +880,7 @@ bool App::SaveProject(const char* path)
             return false;
 
         ofs << root.dump(2);
+        UpdateWindowTitle();
         SetStatusMessage(std::string("Project saved: ") + path);
         return true;
     }
@@ -776,15 +906,15 @@ bool App::LoadProject(const char* path)
         if (root.contains("terrain"))
         {
             const auto& t = root["terrain"];
-            std::string terrainPath = t.value("path", std::string());
-            std::string terrainTexturePath = t.value("texturePath", std::string());
+            std::string terrainPath = ResolvePathFromProject(path, t.value("path", std::string()));
+            std::string terrainTexturePath = ResolvePathFromProject(path, t.value("texturePath", std::string()));
             strncpy_s(m_terrainPath, sizeof(m_terrainPath), terrainPath.c_str(), _TRUNCATE);
             strncpy_s(m_terrainTexturePath, sizeof(m_terrainTexturePath), terrainTexturePath.c_str(), _TRUNCATE);
-            m_loadResW    = t.value("divisionsX", 0);
-            m_loadResH    = t.value("divisionsY", 0);
-            m_loadWidthM  = t.value("widthM", 255.0f);
-            m_loadDepthM  = t.value("depthM", 255.0f);
-            m_loadHeightM = t.value("heightM", 100.0f);
+            m_loadResW    = t.value("divisionsX", 1024);
+            m_loadResH    = t.value("divisionsY", 1024);
+            m_loadWidthM  = t.value("widthM", 1024.0f);
+            m_loadDepthM  = t.value("depthM", 1024.0f);
+            m_loadHeightM = t.value("heightM", 1024.0f);
             m_loadOffsetX = t.value("offsetX", 0.0f);
             m_loadOffsetZ = t.value("offsetZ", 0.0f);
             m_terrain->colorMode = t.value("colorMode", 1);
@@ -819,18 +949,20 @@ bool App::LoadProject(const char* path)
         if (root.contains("roads"))
         {
             const auto& r = root["roads"];
-            std::string roadPath = r.value("path", std::string());
+            std::string roadPath = ResolvePathFromProject(path, r.value("path", std::string()));
             m_editor.SetFilePath(roadPath.c_str());
             if (roadPath.empty())
             {
                 m_roadNetwork.roads.clear();
             }
-            else if (!m_editor.Load(roadPath.c_str()))
+            else if (!LoadRoadsFromPath(roadPath.c_str()))
             {
-                SetStatusMessage(std::string("Road load failed: ") + roadPath);
                 return false;
             }
         }
+
+        strncpy_s(m_projectPath, sizeof(m_projectPath), path, _TRUNCATE);
+        UpdateWindowTitle();
 
         if (root.contains("camera"))
         {
@@ -1013,7 +1145,7 @@ bool App::CreateAppWindow(HINSTANCE hInstance, int nCmdShow)
 
     m_hwnd = CreateWindowExW(
         0, L"RoadEditorClass",
-        L"Road Editor - Phase 3",
+        L"Road Editor",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 1600, 900,
         nullptr, nullptr, hInstance,
@@ -1024,6 +1156,7 @@ bool App::CreateAppWindow(HINSTANCE hInstance, int nCmdShow)
 
     ShowWindow(m_hwnd, nCmdShow);
     UpdateWindow(m_hwnd);
+    UpdateWindowTitle();
     return true;
 }
 
@@ -1069,6 +1202,26 @@ bool App::Initialize(HINSTANCE hInstance, int nCmdShow)
     LoadViewSettings();
 
     return true;
+}
+
+void App::UpdateWindowTitle() const
+{
+    if (!m_hwnd)
+        return;
+
+    std::wstring title = L"Road Editor";
+    if (m_projectPath[0] != '\0')
+    {
+        const std::filesystem::path projectPath(m_projectPath);
+        const std::string projectName = projectPath.stem().string();
+        if (!projectName.empty())
+        {
+            title += L" - ";
+            title += std::wstring(projectName.begin(), projectName.end());
+        }
+    }
+
+    SetWindowTextW(m_hwnd, title.c_str());
 }
 
 // --- Run (main loop) ---------------------------------------------------------
@@ -1256,13 +1409,24 @@ void App::Render()
             }
             if (ImGui::MenuItem(u8"\u540D\u524D\u3092\u4ED8\u3051\u3066\u4FDD\u5B58..."))
             {
-                if (SaveFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
-                                   "Project Files\0*.json\0All Files\0*.*\0",
-                                   "Save Project"))
-                {
-                    if (!SaveProject(m_projectPath))
-                        ImGui::OpenPopup("ProjectSaveError");
-                }
+                if (!SaveProjectAs())
+                    ImGui::OpenPopup("ProjectSaveError");
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u3092\u958B\u304F..."))
+            {
+                if (!OpenRoads())
+                    ImGui::OpenPopup("RoadLoadError");
+            }
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u3092\u4FDD\u5B58"))
+            {
+                if (!SaveRoads(m_editor.GetFilePath()))
+                    ImGui::OpenPopup("RoadSaveError");
+            }
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u3092\u5225\u540D\u3067\u4FDD\u5B58..."))
+            {
+                if (!SaveRoadsAs())
+                    ImGui::OpenPopup("RoadSaveError");
             }
             ImGui::EndMenu();
         }
@@ -1341,6 +1505,18 @@ void App::Render()
     if (ImGui::BeginPopup("ProjectLoadError"))
     {
         ImGui::Text(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F: %s", m_projectPath);
+        if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+    if (ImGui::BeginPopup("RoadSaveError"))
+    {
+        ImGui::Text(u8"\u9053\u8DEF\u306E\u4FDD\u5B58\u306B\u5931\u6557\u3057\u307E\u3057\u305F: %s", m_editor.GetFilePath());
+        if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+    if (ImGui::BeginPopup("RoadLoadError"))
+    {
+        ImGui::Text(u8"\u9053\u8DEF\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F: %s", m_editor.GetFilePath());
         if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
@@ -1516,11 +1692,11 @@ void App::Render()
         if (ImGui::Button(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u30AF\u30EA\u30A2", ImVec2(-1, 0)))
         {
             m_terrain->Reset();
-            m_loadResW = 0;
-            m_loadResH = 0;
-            m_loadWidthM = 255.0f;
-            m_loadDepthM = 255.0f;
-            m_loadHeightM = 100.0f;
+            m_loadResW = 1024;
+            m_loadResH = 1024;
+            m_loadWidthM = 1024.0f;
+            m_loadDepthM = 1024.0f;
+            m_loadHeightM = 1024.0f;
             m_loadOffsetX = 0.0f;
             m_loadOffsetZ = 0.0f;
             m_contourSegments.clear();

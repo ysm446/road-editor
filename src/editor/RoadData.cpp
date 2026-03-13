@@ -1,8 +1,12 @@
 #include "RoadData.h"
 
 #include <fstream>
+#include <cmath>
+#include <limits>
 #include <rpc.h>
 #include <stdexcept>
+#include <unordered_map>
+#include <utility>
 
 #pragma comment(lib, "Rpcrt4.lib")
 
@@ -13,6 +17,36 @@ namespace
 constexpr int kCurveRoadTypeDefault = 0;
 constexpr float kCurveDefaultTargetSpeed = 30.0f;
 constexpr float kCurveDefaultFriction = 0.15f;
+
+float JsonToFloat(const nlohmann::json& value, float defaultValue)
+{
+    if (value.is_number_float())
+        return value.get<float>();
+    if (value.is_number_integer())
+        return static_cast<float>(value.get<int>());
+    if (value.is_number_unsigned())
+        return static_cast<float>(value.get<unsigned int>());
+    return defaultValue;
+}
+
+std::string LegacyIntersectionTypeToString(const nlohmann::json& value)
+{
+    if (value.is_number_integer())
+    {
+        return value.get<int>() == 1 ? "roundabout" : "intersection";
+    }
+    if (value.is_string())
+    {
+        const std::string type = value.get<std::string>();
+        return type.empty() ? "intersection" : type;
+    }
+    return "intersection";
+}
+
+nlohmann::json PointJsonToArray(const XMFLOAT3& pos)
+{
+    return nlohmann::json::array({ pos.x, pos.y, pos.z });
+}
 
 std::string GenerateUuidString()
 {
@@ -194,11 +228,14 @@ static RoadPoint PointFromJson(const nlohmann::json& j)
 
 static nlohmann::json CurvePointToJson(const RoadPoint& p)
 {
-    return {
-        { "pos", { p.pos.x, p.pos.y, p.pos.z } },
-        { "useCurvatureRadius", 0 },
-        { "curvatureRadius", 0.0f }
-    };
+    nlohmann::json pointJson =
+        (p.curveData.is_object() ? p.curveData : nlohmann::json::object());
+    pointJson["pos"] = PointJsonToArray(p.pos);
+    if (!pointJson.contains("useCurvatureRadius"))
+        pointJson["useCurvatureRadius"] = 0;
+    if (!pointJson.contains("curvatureRadius"))
+        pointJson["curvatureRadius"] = 0.0f;
+    return pointJson;
 }
 
 static RoadPoint CurvePointFromJson(const nlohmann::json& j)
@@ -218,11 +255,15 @@ static RoadPoint CurvePointFromJson(const nlohmann::json& j)
         p.pos = { 0.0f, 0.0f, 0.0f };
     }
     p.width = 3.0f;
+    if (j.is_object())
+        p.curveData = j;
     return p;
 }
 
 static nlohmann::json RoadToJson(const Road& r)
 {
+    nlohmann::json roadJson =
+        (r.legacyData.is_object() ? r.legacyData : nlohmann::json::object());
     nlohmann::json legacyPoints = nlohmann::json::array();
     nlohmann::json pts = nlohmann::json::array();
     for (const auto& p : r.points)
@@ -231,49 +272,65 @@ static nlohmann::json RoadToJson(const Road& r)
         pts.push_back(CurvePointToJson(p));
     }
 
-    return {
-        { "id", r.id },
-        { "name", r.name },
-        { "groupId", r.groupId },
-        { "closed", r.closed },
-        { "points", legacyPoints },
-        { "startIntersectionId", r.startIntersectionId },
-        { "endIntersectionId", r.endIntersectionId },
-        { "laneWidth", r.laneWidth },
-        { "laneLeft", r.laneLeft },
-        { "laneRight", r.laneRight },
-        { "roadType", kCurveRoadTypeDefault },
-        { "defaultTargetSpeed", kCurveDefaultTargetSpeed },
-        { "defaultFriction", kCurveDefaultFriction },
-        { "active", 1 },
-        { "point", pts },
-        { "verticalCurve", nlohmann::json::array() },
-        { "bankAngle", nlohmann::json::array() },
-        { "laneSection", nlohmann::json::array() }
-    };
+    roadJson["id"] = r.id;
+    roadJson["name"] = r.name;
+    roadJson["groupId"] = r.groupId;
+    roadJson["closed"] = r.closed;
+    roadJson["points"] = legacyPoints;
+    roadJson["startIntersectionId"] = r.startIntersectionId;
+    roadJson["endIntersectionId"] = r.endIntersectionId;
+    roadJson["laneWidth"] = r.laneWidth;
+    roadJson["laneLeft"] = r.laneLeft;
+    roadJson["laneRight"] = r.laneRight;
+    if (!roadJson.contains("roadType"))
+        roadJson["roadType"] = kCurveRoadTypeDefault;
+    if (!roadJson.contains("defaultTargetSpeed"))
+        roadJson["defaultTargetSpeed"] = kCurveDefaultTargetSpeed;
+    if (!roadJson.contains("defaultFriction"))
+        roadJson["defaultFriction"] = kCurveDefaultFriction;
+    if (!roadJson.contains("active"))
+        roadJson["active"] = 1;
+    if (!roadJson.contains("defaultWidthLaneLeft1"))
+        roadJson["defaultWidthLaneLeft1"] = r.laneWidth;
+    if (!roadJson.contains("defaultWidthLaneCenter"))
+        roadJson["defaultWidthLaneCenter"] = 0.0f;
+    if (!roadJson.contains("defaultWidthLaneRight1"))
+        roadJson["defaultWidthLaneRight1"] = r.laneWidth;
+    roadJson["point"] = pts;
+    if (!roadJson.contains("verticalCurve"))
+        roadJson["verticalCurve"] = nlohmann::json::array();
+    if (!roadJson.contains("bankAngle"))
+        roadJson["bankAngle"] = nlohmann::json::array();
+    if (!roadJson.contains("laneSection"))
+        roadJson["laneSection"] = nlohmann::json::array();
+    return roadJson;
 }
 
 static Road RoadFromJson(const nlohmann::json& j)
 {
     Road r;
+    if (j.is_object())
+        r.legacyData = j;
     r.id = j.value("id", std::string());
     r.name = j.value("name", std::string("Road"));
     r.groupId = j.value("groupId", std::string());
     r.closed = j.value("closed", false);
     r.startIntersectionId = j.value("startIntersectionId", std::string());
     r.endIntersectionId = j.value("endIntersectionId", std::string());
-    r.laneWidth = j.value("laneWidth", 3.0f);
+    r.laneWidth = j.contains("laneWidth")
+        ? JsonToFloat(j["laneWidth"], 3.0f)
+        : JsonToFloat(j.value("defaultWidthLaneRight1", nlohmann::json()), 3.0f);
     r.laneLeft = j.value("laneLeft", 1);
     r.laneRight = j.value("laneRight", 1);
-    if (j.contains("points"))
-    {
-        for (const auto& p : j["points"])
-            r.points.push_back(PointFromJson(p));
-    }
-    else if (j.contains("point"))
+    if (j.contains("point"))
     {
         for (const auto& p : j["point"])
             r.points.push_back(CurvePointFromJson(p));
+    }
+    else if (j.contains("points"))
+    {
+        for (const auto& p : j["points"])
+            r.points.push_back(PointFromJson(p));
     }
     EnsureRoadId(r);
     return r;
@@ -281,23 +338,28 @@ static Road RoadFromJson(const nlohmann::json& j)
 
 static nlohmann::json IntersectionToJson(const Intersection& i)
 {
-    return {
-        { "id",     i.id     },
-        { "name",   i.name   },
-        { "groupId", i.groupId },
-        { "type",   i.type   },
-        { "pos",    { i.pos.x, i.pos.y, i.pos.z } },
-        { "radius", i.radius }
-    };
+    nlohmann::json intersectionJson =
+        (i.legacyData.is_object() ? i.legacyData : nlohmann::json::object());
+    intersectionJson["id"] = i.id;
+    intersectionJson["name"] = i.name;
+    intersectionJson["groupId"] = i.groupId;
+    if (!intersectionJson.contains("type") || intersectionJson["type"].is_string())
+        intersectionJson["type"] = i.type;
+    intersectionJson["pos"] = PointJsonToArray(i.pos);
+    intersectionJson["radius"] = i.radius;
+    return intersectionJson;
 }
 
 static Intersection IntersectionFromJson(const nlohmann::json& j)
 {
     Intersection i;
+    if (j.is_object())
+        i.legacyData = j;
     i.id     = j.value("id", std::string());
     i.name   = j.value("name", std::string("Intersection"));
     i.groupId = j.value("groupId", std::string());
-    i.type   = j.value("type", std::string("intersection"));
+    if (j.contains("type"))
+        i.type = LegacyIntersectionTypeToString(j["type"]);
     if (j.contains("pos") && j["pos"].is_array() && j["pos"].size() >= 3)
     {
         i.pos =
@@ -311,9 +373,209 @@ static Intersection IntersectionFromJson(const nlohmann::json& j)
     {
         i.pos = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
     }
-    i.radius = j.value("radius", 4.0f);
+    i.radius = j.contains("radius")
+        ? JsonToFloat(j["radius"], 4.0f)
+        : JsonToFloat(j.value("outerRadius", nlohmann::json()), 4.0f);
     EnsureIntersectionId(i);
     return i;
+}
+
+static void MergeLegacyIntersectionData(
+    const nlohmann::json& legacyIntersections,
+    std::vector<Road>& roads,
+    std::vector<Intersection>& intersections,
+    const std::string& defaultGroupId)
+{
+    if (!legacyIntersections.is_array())
+        return;
+
+    std::unordered_map<std::string, std::vector<std::pair<int, bool>>> roadEndpoints;
+    roadEndpoints.reserve(roads.size());
+    for (int roadIndex = 0; roadIndex < static_cast<int>(roads.size()); ++roadIndex)
+    {
+        const Road& road = roads[roadIndex];
+        if (!road.id.empty() && !road.points.empty())
+        {
+            roadEndpoints[road.id].push_back({ roadIndex, true });
+            if (road.points.size() > 1)
+                roadEndpoints[road.id].push_back({ roadIndex, false });
+        }
+    }
+
+    for (const auto& item : legacyIntersections)
+    {
+        Intersection intersection = IntersectionFromJson(item);
+        if (intersection.groupId.empty())
+            intersection.groupId = defaultGroupId;
+
+        bool hasExplicitPosition =
+            item.contains("pos") ||
+            item.contains("x") ||
+            item.contains("y") ||
+            item.contains("z");
+
+        struct EndpointCandidate
+        {
+            int roadIndex = -1;
+            bool isStart = true;
+            XMFLOAT3 pos = { 0.0f, 0.0f, 0.0f };
+        };
+
+        std::vector<EndpointCandidate> candidates;
+        if (item.contains("connectedIds") && item["connectedIds"].is_array())
+        {
+            for (const auto& connected : item["connectedIds"])
+            {
+                if (!connected.is_object())
+                    continue;
+                const std::string roadId = connected.value("prim_id", std::string());
+                const auto endpointIt = roadEndpoints.find(roadId);
+                if (endpointIt == roadEndpoints.end() || endpointIt->second.empty())
+                    continue;
+
+                for (auto& endpoint : endpointIt->second)
+                {
+                    Road& road = roads[endpoint.first];
+                    const XMFLOAT3& endpointPos = endpoint.second
+                        ? road.points.front().pos
+                        : road.points.back().pos;
+                    candidates.push_back({ endpoint.first, endpoint.second, endpointPos });
+                }
+            }
+        }
+
+        XMFLOAT3 centroid = intersection.pos;
+        if (!hasExplicitPosition && !candidates.empty())
+        {
+            float bestPairDistance = (std::numeric_limits<float>::max)();
+            bool foundPair = false;
+            for (size_t a = 0; a < candidates.size(); ++a)
+            {
+                for (size_t b = a + 1; b < candidates.size(); ++b)
+                {
+                    if (candidates[a].roadIndex == candidates[b].roadIndex)
+                        continue;
+                    const float dx = candidates[a].pos.x - candidates[b].pos.x;
+                    const float dy = candidates[a].pos.y - candidates[b].pos.y;
+                    const float dz = candidates[a].pos.z - candidates[b].pos.z;
+                    const float distance = dx * dx + dy * dy + dz * dz;
+                    if (distance < bestPairDistance)
+                    {
+                        bestPairDistance = distance;
+                        centroid =
+                        {
+                            (candidates[a].pos.x + candidates[b].pos.x) * 0.5f,
+                            (candidates[a].pos.y + candidates[b].pos.y) * 0.5f,
+                            (candidates[a].pos.z + candidates[b].pos.z) * 0.5f
+                        };
+                        foundPair = true;
+                    }
+                }
+            }
+
+            if (!foundPair)
+            {
+                centroid = { 0.0f, 0.0f, 0.0f };
+                for (const EndpointCandidate& candidate : candidates)
+                {
+                    centroid.x += candidate.pos.x;
+                    centroid.y += candidate.pos.y;
+                    centroid.z += candidate.pos.z;
+                }
+                const float invCount = 1.0f / static_cast<float>(candidates.size());
+                centroid = { centroid.x * invCount, centroid.y * invCount, centroid.z * invCount };
+            }
+        }
+
+        XMFLOAT3 assignedSum = { 0.0f, 0.0f, 0.0f };
+        int assignedCount = 0;
+        if (item.contains("connectedIds") && item["connectedIds"].is_array())
+        {
+            for (const auto& connected : item["connectedIds"])
+            {
+                if (!connected.is_object())
+                    continue;
+                const std::string roadId = connected.value("prim_id", std::string());
+                const auto endpointIt = roadEndpoints.find(roadId);
+                if (endpointIt == roadEndpoints.end() || endpointIt->second.empty())
+                    continue;
+
+                float bestDistance = (std::numeric_limits<float>::max)();
+                std::pair<int, bool> bestEndpoint = endpointIt->second.front();
+                for (const auto& endpoint : endpointIt->second)
+                {
+                    const Road& road = roads[endpoint.first];
+                    const XMFLOAT3& endpointPos = endpoint.second
+                        ? road.points.front().pos
+                        : road.points.back().pos;
+                    const float dx = endpointPos.x - centroid.x;
+                    const float dy = endpointPos.y - centroid.y;
+                    const float dz = endpointPos.z - centroid.z;
+                    const float distance = dx * dx + dy * dy + dz * dz;
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        bestEndpoint = endpoint;
+                    }
+                }
+
+                Road& road = roads[bestEndpoint.first];
+                const bool assignStart = bestEndpoint.second;
+                const bool slotAvailable = assignStart
+                    ? (road.startIntersectionId.empty() || road.startIntersectionId == intersection.id)
+                    : (road.endIntersectionId.empty() || road.endIntersectionId == intersection.id);
+                if (!slotAvailable && road.points.size() > 1)
+                {
+                    const bool fallbackIsStart = !assignStart;
+                    const bool fallbackAvailable = fallbackIsStart
+                        ? (road.startIntersectionId.empty() || road.startIntersectionId == intersection.id)
+                        : (road.endIntersectionId.empty() || road.endIntersectionId == intersection.id);
+                    if (fallbackAvailable)
+                    {
+                        if (fallbackIsStart)
+                            road.startIntersectionId = intersection.id;
+                        else
+                            road.endIntersectionId = intersection.id;
+
+                        const XMFLOAT3& endpointPos = fallbackIsStart
+                            ? road.points.front().pos
+                            : road.points.back().pos;
+                        assignedSum.x += endpointPos.x;
+                        assignedSum.y += endpointPos.y;
+                        assignedSum.z += endpointPos.z;
+                        ++assignedCount;
+                        continue;
+                    }
+                }
+
+                if (assignStart)
+                    road.startIntersectionId = intersection.id;
+                else
+                    road.endIntersectionId = intersection.id;
+
+                const XMFLOAT3& endpointPos = assignStart
+                    ? road.points.front().pos
+                    : road.points.back().pos;
+                assignedSum.x += endpointPos.x;
+                assignedSum.y += endpointPos.y;
+                assignedSum.z += endpointPos.z;
+                ++assignedCount;
+            }
+        }
+
+        if ((hasExplicitPosition || !candidates.empty()) && assignedCount > 0)
+        {
+            const float invCount = 1.0f / static_cast<float>(assignedCount);
+            intersection.pos =
+            {
+                assignedSum.x * invCount,
+                assignedSum.y * invCount,
+                assignedSum.z * invCount
+            };
+        }
+
+        intersections.push_back(std::move(intersection));
+    }
 }
 
 static nlohmann::json GroupToJson(const RoadGroup& group)
@@ -393,6 +655,9 @@ bool RoadNetwork::LoadFromFile(const char* path)
             return true;
         }
 
+        if (root.contains("roadsLegacy") && root["roadsLegacy"].is_array())
+            root["roads"] = root["roadsLegacy"];
+
         if (root.contains("groups"))
         {
             for (const auto& group : root["groups"])
@@ -408,6 +673,14 @@ bool RoadNetwork::LoadFromFile(const char* path)
         {
             for (const auto& i : root["intersections"])
                 intersections.push_back(IntersectionFromJson(i));
+        }
+        else if (root.contains("intersectionsLegacy"))
+        {
+            MergeLegacyIntersectionData(
+                root["intersectionsLegacy"],
+                roads,
+                intersections,
+                groups.front().id);
         }
 
         const std::string defaultGroupId = groups.front().id;

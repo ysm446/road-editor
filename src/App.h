@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <DirectXMath.h>
 
 #include "renderer/D3D11Context.h"
@@ -39,6 +40,12 @@ private:
     bool    CreateAppWindow(HINSTANCE hInstance, int nCmdShow);
     bool    SaveProject(const char* path);
     bool    LoadProject(const char* path);
+    bool    SaveProjectAs();
+    bool    SaveRoads(const char* path);
+    bool    SaveRoadsAs();
+    bool    LoadRoadsFromPath(const char* path);
+    bool    OpenRoads();
+    void    UpdateWindowTitle() const;
     void    NewProject();
     void    ApplyTerrainSettings();
     void    LoadViewSettings();
@@ -96,14 +103,14 @@ private:
 
     char m_terrainPath[260] = "data/heightmap.png";
     char m_terrainTexturePath[260] = "";
-    char m_projectPath[260] = "data/project.json";
+    char m_projectPath[260] = "";
 
     // Load mesh divisions (cell counts, 0 = native image resolution - 1)
-    int m_loadResW = 0;
-    int m_loadResH = 0;
-    float m_loadWidthM  = 255.0f;
-    float m_loadDepthM  = 255.0f;
-    float m_loadHeightM = 100.0f;
+    int m_loadResW = 1024;
+    int m_loadResH = 1024;
+    float m_loadWidthM  = 1024.0f;
+    float m_loadDepthM  = 1024.0f;
+    float m_loadHeightM = 1024.0f;
     float m_loadOffsetX = 0.0f;
     float m_loadOffsetZ = 0.0f;
 

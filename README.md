@@ -58,6 +58,13 @@ cmake --build build --config Debug
 build\Debug\RoadEditor.exe
 ```
 
+### Visual Studio 2022でビルド
+```bash
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Debug
+
+build\Debug\RoadEditor.exe
+```
+
 初回ビルド時に CMake FetchContent が以下を自動取得します（インターネット接続が必要）。
 
 | ライブラリ | バージョン |

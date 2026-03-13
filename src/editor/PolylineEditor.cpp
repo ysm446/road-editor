@@ -3746,6 +3746,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                         continue;
 
                     const bool selected = IsRoadSelected(i);
+                    ImGui::PushID(road.id.empty() ? i : std::hash<std::string>{}(road.id));
                     if (ImGui::Selectable(road.name.c_str(), selected))
                     {
                         if (ImGui::GetIO().KeyCtrl)
@@ -3767,6 +3768,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                         }
                         ImGui::EndPopup();
                     }
+                    ImGui::PopID();
                 }
                 ImGui::TreePop();
             }
@@ -3788,13 +3790,14 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                         continue;
 
                     const bool selected = (i == m_activeIntersection);
-            if (ImGui::Selectable(isec.name.c_str(), selected))
-            {
-                SelectSingleIntersection(i);
-                ClearRoadSelection();
-                ClearPointSelection();
-                m_activeGroup = gi;
-            }
+                    ImGui::PushID(isec.id.empty() ? i : std::hash<std::string>{}(isec.id));
+                    if (ImGui::Selectable(isec.name.c_str(), selected))
+                    {
+                        SelectSingleIntersection(i);
+                        ClearRoadSelection();
+                        ClearPointSelection();
+                        m_activeGroup = gi;
+                    }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
                         if (ImGui::MenuItem(u8"\u4EA4\u5DEE\u70B9\u524A\u9664"))
@@ -3806,6 +3809,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                         }
                         ImGui::EndPopup();
                     }
+                    ImGui::PopID();
                 }
                 ImGui::TreePop();
             }
@@ -4005,48 +4009,6 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             PushUndoState();
             isec.radius = isecRadius;
         }
-    }
-
-    ImGui::Separator();
-
-    // Save / load
-    ImGui::InputText("Path", m_filePath, sizeof(m_filePath));
-    if (ImGui::Button("Save"))
-    {
-        if (!Save(m_filePath))
-        {
-            m_statusMessage = std::string("Road save failed: ") + m_filePath;
-            ImGui::OpenPopup("SaveError");
-        }
-        else
-        {
-            m_statusMessage = std::string("Roads saved: ") + m_filePath;
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Load"))
-    {
-        if (!Load(m_filePath))
-        {
-            m_statusMessage = std::string("Road load failed: ") + m_filePath;
-            ImGui::OpenPopup("LoadError");
-        }
-        else
-        {
-            m_statusMessage = std::string("Roads loaded: ") + m_filePath;
-        }
-    }
-    if (ImGui::BeginPopup("SaveError"))
-    {
-        ImGui::Text("Save failed: %s", m_filePath);
-        if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
-    }
-    if (ImGui::BeginPopup("LoadError"))
-    {
-        ImGui::Text("Load failed: %s", m_filePath);
-        if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
     }
 
     ImGui::End();
