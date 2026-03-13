@@ -18,11 +18,12 @@
     1.0
   ],
   "intersectionScreenGizmoRadius": 6.0,
+  "previewCurveThickness": 2.0,
   "recentProjectPaths": [
     "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.json"
   ],
   "roadGradeRedThresholdPercent": 15.0,
-  "roadLineThickness": 2.0,
+  "roadLineThickness": 1.0,
   "roadVertexColor": [
     0.6274510025978088,
     0.6274510025978088,
@@ -34,7 +35,7 @@
     1.0,
     1.0
   ],
-  "selectedRoadLineThickness": 3.0,
+  "selectedRoadLineThickness": 2.0,
   "showCameraWindow": true,
   "showContours": true,
   "showFps": true,

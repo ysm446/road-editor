@@ -546,6 +546,7 @@ void App::LoadViewSettings()
     m_gridBaseScale = 1.0f;
     m_gridFadeDistance = 1200.0f;
     m_roadLineThickness = 2.0f;
+    m_previewCurveThickness = 2.0f;
     m_selectedRoadLineThickness = 3.0f;
     m_roadVertexScreenRadius = 3.0f;
     m_intersectionScreenGizmoRadius = 10.0f;
@@ -579,6 +580,7 @@ void App::LoadViewSettings()
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
             m_gridFadeDistance = root.value("gridFadeDistance", 1200.0f);
             m_roadLineThickness = root.value("roadLineThickness", 2.0f);
+            m_previewCurveThickness = root.value("previewCurveThickness", 2.0f);
             m_selectedRoadLineThickness = root.value("selectedRoadLineThickness", 3.0f);
             m_roadVertexScreenRadius = root.value("roadVertexScreenRadius", 3.0f);
             m_intersectionScreenGizmoRadius = root.value("intersectionScreenGizmoRadius", 10.0f);
@@ -637,6 +639,7 @@ void App::LoadViewSettings()
     m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
     m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
     m_editor.SetRoadLineThickness(m_roadLineThickness);
+    m_editor.SetPreviewCurveThickness(m_previewCurveThickness);
     m_editor.SetSelectedRoadLineThickness(m_selectedRoadLineThickness);
     m_editor.SetRoadVertexScreenRadius(m_roadVertexScreenRadius);
     m_editor.SetRoadVertexColor(m_roadVertexColor);
@@ -668,6 +671,7 @@ void App::SaveViewSettings() const
             { "gridBaseScale", m_gridBaseScale },
             { "gridFadeDistance", m_gridFadeDistance },
             { "roadLineThickness", m_roadLineThickness },
+            { "previewCurveThickness", m_previewCurveThickness },
             { "selectedRoadLineThickness", m_selectedRoadLineThickness },
             { "roadVertexScreenRadius", m_roadVertexScreenRadius },
             { "intersectionScreenGizmoRadius", m_intersectionScreenGizmoRadius },
@@ -1789,6 +1793,19 @@ void App::Render()
                 {
                     m_roadLineThickness = roadLineThickness;
                     m_editor.SetRoadLineThickness(m_roadLineThickness);
+                    SaveViewSettings();
+                }
+
+                float previewCurveThickness = m_previewCurveThickness;
+                if (ImGui::SliderFloat(
+                        u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u30AB\u30FC\u30D6\u306E\u592A\u3055 (px)",
+                        &previewCurveThickness,
+                        1.0f,
+                        16.0f,
+                        "%.1f"))
+                {
+                    m_previewCurveThickness = previewCurveThickness;
+                    m_editor.SetPreviewCurveThickness(m_previewCurveThickness);
                     SaveViewSettings();
                 }
 

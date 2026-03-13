@@ -3433,22 +3433,6 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
         if (!IsRoadVisible(road))
             continue;
 
-        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
-        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
-        {
-            XMFLOAT4 segmentColor = colorPreview;
-            if (m_showRoadGradeGradient)
-            {
-                const float horizontalDistance = DistanceXZ3(previewCurve[sampleIndex], previewCurve[sampleIndex + 1]);
-                if (horizontalDistance > 1e-4f)
-                {
-                    const float dy = previewCurve[sampleIndex + 1].y - previewCurve[sampleIndex].y;
-                    const float gradePercent = fabsf(dy) / horizontalDistance * 100.0f;
-                    segmentColor = PreviewGradeColor(gradePercent, m_roadGradeRedThresholdPercent);
-                }
-            }
-            dd.AddLine(previewCurve[sampleIndex], previewCurve[sampleIndex + 1], segmentColor);
-        }
     }
 
     for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
@@ -3596,6 +3580,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     };
     const float kRadius    = (std::max)(1.0f, m_roadVertexScreenRadius);
     const float kRoadThickness = (std::max)(1.0f, m_roadLineThickness);
+    const float kPreviewCurveThickness = (std::max)(1.0f, m_previewCurveThickness);
     const float kSelectedRoadThickness = (std::max)(1.0f, m_selectedRoadLineThickness);
     const ImU32 colPoint    = colorFromFloat3(m_roadVertexColor, 220);
     const ImU32 colRoad     = IM_COL32(184, 184, 191, 255);
@@ -3648,6 +3633,43 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
             continue;
         drawRoadOverlay(road, colRoadSel, kSelectedRoadThickness);
+    }
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road))
+            continue;
+
+        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
+        {
+            ImVec2 a;
+            ImVec2 b;
+            if (!WorldToScreen(previewCurve[sampleIndex], viewProj, vpW, vpH, a) ||
+                !WorldToScreen(previewCurve[sampleIndex + 1], viewProj, vpW, vpH, b))
+                continue;
+
+            ImU32 segmentColor = colorFromFloat3({ 0.45f, 0.95f, 0.95f }, 230);
+            if (m_showRoadGradeGradient)
+            {
+                const float horizontalDistance = DistanceXZ3(previewCurve[sampleIndex], previewCurve[sampleIndex + 1]);
+                if (horizontalDistance > 1e-4f)
+                {
+                    const float dy = previewCurve[sampleIndex + 1].y - previewCurve[sampleIndex].y;
+                    const float gradePercent = fabsf(dy) / horizontalDistance * 100.0f;
+                    const XMFLOAT4 gradeColor =
+                        PreviewGradeColor(gradePercent, m_roadGradeRedThresholdPercent);
+                    segmentColor = IM_COL32(
+                        static_cast<int>(gradeColor.x * 255.0f + 0.5f),
+                        static_cast<int>(gradeColor.y * 255.0f + 0.5f),
+                        static_cast<int>(gradeColor.z * 255.0f + 0.5f),
+                        static_cast<int>(gradeColor.w * 255.0f + 0.5f));
+                }
+            }
+
+            dl->AddLine(a, b, segmentColor, kPreviewCurveThickness);
+        }
     }
 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)

@@ -87,6 +87,7 @@ public:
     void SetShowRoadGradeGradient(bool show) { m_showRoadGradeGradient = show; }
     void SetRoadGradeRedThresholdPercent(float value) { m_roadGradeRedThresholdPercent = value; }
     void SetRoadLineThickness(float value) { m_roadLineThickness = value; }
+    void SetPreviewCurveThickness(float value) { m_previewCurveThickness = value; }
     void SetSelectedRoadLineThickness(float value) { m_selectedRoadLineThickness = value; }
     void SetRoadVertexScreenRadius(float value) { m_roadVertexScreenRadius = value; }
     void SetRoadVertexColor(DirectX::XMFLOAT3 value) { m_roadVertexColor = value; }
@@ -274,6 +275,7 @@ private:
     bool m_scaleXZMode = false;
     float m_roadGradeRedThresholdPercent = 12.0f;
     float m_roadLineThickness = 2.0f;
+    float m_previewCurveThickness = 2.0f;
     float m_selectedRoadLineThickness = 3.0f;
     float m_roadVertexScreenRadius = 3.0f;
     float m_intersectionScreenGizmoRadius = 10.0f;
