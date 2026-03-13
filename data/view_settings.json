@@ -38,15 +38,15 @@
   "selectedRoadLineThickness": 2.0,
   "showCameraWindow": true,
   "showContours": false,
-  "showDisplaySettingsWindow": false,
+  "showDisplaySettingsWindow": true,
   "showFps": false,
   "showGrid": true,
-  "showIntersectionNames": false,
+  "showIntersectionNames": true,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
   "showRoadGradeGradient": true,
-  "showRoadGuidelines": true,
+  "showRoadGuidelines": false,
   "showRoadNames": false,
   "showRoadPreviewMetrics": false,
-  "showTerrainWindow": true
+  "showTerrainWindow": false
 }

@@ -1657,7 +1657,7 @@ void App::Render()
         }
         if (ImGui::BeginMenu(u8"\u30A6\u30A4\u30F3\u30C9\u30A6"))
         {
-            if (ImGui::MenuItem(u8"\u5730\u5F62", nullptr, m_showTerrainWindow))
+            if (ImGui::MenuItem(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9", nullptr, m_showTerrainWindow))
             {
                 m_showTerrainWindow = !m_showTerrainWindow;
                 SaveViewSettings();
@@ -2096,7 +2096,7 @@ void App::Render()
     if (m_showTerrainWindow)
     {
         ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
-        ImGui::Begin(u8"\u5730\u5F62", &m_showTerrainWindow, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Begin(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9", &m_showTerrainWindow, ImGuiWindowFlags_AlwaysAutoResize);
         {
         ImGui::Checkbox(u8"\u30EF\u30A4\u30E4\u30FC\u30D5\u30EC\u30FC\u30E0", &m_terrain->wireframe);
         ImGui::Separator();
