@@ -1934,6 +1934,45 @@ void App::Render()
                 }
             }
 
+            if (ImGui::CollapsingHeader(u8"\u9053\u8DEF", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u30AC\u30A4\u30C9\u30E9\u30A4\u30F3", &m_showRoadGuidelines))
+                {
+                    m_editor.SetShowRoadGuidelines(m_showRoadGuidelines);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u540D", &m_showRoadNames))
+                {
+                    m_editor.SetShowRoadNames(m_showRoadNames);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u4EA4\u5DEE\u70B9\u540D", &m_showIntersectionNames))
+                {
+                    m_editor.SetShowIntersectionNames(m_showIntersectionNames);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u30D7\u30EC\u30D3\u30E5\u30FC\u60C5\u5831", &m_showRoadPreviewMetrics))
+                {
+                    m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u52FE\u914D\u30B0\u30E9\u30C7\u30FC\u30B7\u30E7\u30F3", &m_showRoadGradeGradient))
+                {
+                    m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
+                    SaveViewSettings();
+                }
+                if (m_showRoadGradeGradient)
+                {
+                    float threshold = m_roadGradeRedThresholdPercent;
+                    if (ImGui::InputFloat(u8"\u8D64\u95BE\u5024 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
+                    {
+                        m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
+                        m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
+                        SaveViewSettings();
+                    }
+                }
+            }
+
             if (ImGui::CollapsingHeader(u8"\u5730\u5F62", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::Checkbox(u8"\u5730\u5F62\u3092\u8868\u793A", &m_terrain->visible);
@@ -2025,45 +2064,6 @@ void App::Render()
                 {
                     m_contourColor = { contourColor[0], contourColor[1], contourColor[2] };
                     SaveViewSettings();
-                }
-            }
-
-            if (ImGui::CollapsingHeader(u8"\u9053\u8DEF", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                if (ImGui::Checkbox(u8"\u9053\u8DEF\u30AC\u30A4\u30C9\u30E9\u30A4\u30F3", &m_showRoadGuidelines))
-                {
-                    m_editor.SetShowRoadGuidelines(m_showRoadGuidelines);
-                    SaveViewSettings();
-                }
-                if (ImGui::Checkbox(u8"\u9053\u8DEF\u540D", &m_showRoadNames))
-                {
-                    m_editor.SetShowRoadNames(m_showRoadNames);
-                    SaveViewSettings();
-                }
-                if (ImGui::Checkbox(u8"\u4EA4\u5DEE\u70B9\u540D", &m_showIntersectionNames))
-                {
-                    m_editor.SetShowIntersectionNames(m_showIntersectionNames);
-                    SaveViewSettings();
-                }
-                if (ImGui::Checkbox(u8"\u9053\u8DEF\u30D7\u30EC\u30D3\u30E5\u30FC\u60C5\u5831", &m_showRoadPreviewMetrics))
-                {
-                    m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
-                    SaveViewSettings();
-                }
-                if (ImGui::Checkbox(u8"\u9053\u8DEF\u52FE\u914D\u30B0\u30E9\u30C7\u30FC\u30B7\u30E7\u30F3", &m_showRoadGradeGradient))
-                {
-                    m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
-                    SaveViewSettings();
-                }
-                if (m_showRoadGradeGradient)
-                {
-                    float threshold = m_roadGradeRedThresholdPercent;
-                    if (ImGui::InputFloat(u8"\u8D64\u95BE\u5024 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
-                    {
-                        m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
-                        m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
-                        SaveViewSettings();
-                    }
                 }
             }
         }

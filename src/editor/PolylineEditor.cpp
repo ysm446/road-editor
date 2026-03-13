@@ -2377,6 +2377,9 @@ void PolylineEditor::SetMode(EditorMode mode)
     m_mode = mode;
     if (mode == EditorMode::PointEdit)
     {
+        if (m_selectedPoints.empty() && !m_selectedRoads.empty())
+            SelectAllPointsOnSelectedRoads();
+
         if (m_selectedPoints.empty() && m_selectedIntersections.empty())
             SelectAllPointsOnSelectedRoads();
     }
