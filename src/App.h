@@ -52,6 +52,7 @@ private:
     void    AddRecentProjectPath(const char* path);
     void    NewProject();
     void    ApplyTerrainSettings();
+    void    RefreshTerrainPathDisplayBuffers();
     void    LoadViewSettings();
     void    SaveViewSettings() const;
     void    SetStatusMessage(const std::string& message);
@@ -107,6 +108,8 @@ private:
 
     char m_terrainPath[260] = "data/heightmap.png";
     char m_terrainTexturePath[260] = "";
+    char m_terrainPathDisplay[260] = "data/heightmap.png";
+    char m_terrainTexturePathDisplay[260] = "";
     char m_projectPath[260] = "";
 
     // Load mesh divisions (cell counts, 0 = native image resolution - 1)

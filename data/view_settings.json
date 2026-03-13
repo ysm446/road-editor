@@ -20,7 +20,7 @@
   "intersectionScreenGizmoRadius": 6.0,
   "previewCurveThickness": 2.0,
   "recentProjectPaths": [
-    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.json"
+    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj"
   ],
   "roadGradeRedThresholdPercent": 15.0,
   "roadLineThickness": 1.0,

@@ -265,7 +265,7 @@ private:
     bool  m_snapToPoints = false;
 
     // Save/load path buffer
-    char m_filePath[260] = "data/roads.json";
+    char m_filePath[260] = "data/roads.roadnet";
     std::string m_statusMessage;
     bool m_showRoadNames = false;
     bool m_showIntersectionNames = true;

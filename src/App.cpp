@@ -460,6 +460,21 @@ std::string NormalizePathString(const char* path)
     const fs::path normalized = fs::weakly_canonical(fs::path(path), ec);
     return ec ? fs::path(path).string() : normalized.string();
 }
+
+}
+
+void App::RefreshTerrainPathDisplayBuffers()
+{
+    const std::string terrainDisplay =
+        MakePathRelativeToProject(m_projectPath, m_terrainPath);
+    const std::string textureDisplay =
+        MakePathRelativeToProject(m_projectPath, m_terrainTexturePath);
+    strncpy_s(m_terrainPathDisplay, sizeof(m_terrainPathDisplay), terrainDisplay.c_str(), _TRUNCATE);
+    strncpy_s(
+        m_terrainTexturePathDisplay,
+        sizeof(m_terrainTexturePathDisplay),
+        textureDisplay.c_str(),
+        _TRUNCATE);
 }
 
 // ---------------------------------------------------------------------------
@@ -853,12 +868,13 @@ void App::NewProject()
     m_terrainTexturePath[0] = '\0';
     m_roadNetwork = RoadNetwork();
     m_editor.SetNetwork(&m_roadNetwork);
-    m_editor.SetFilePath("data/roads.json");
+    m_editor.SetFilePath("data/roads.roadnet");
     m_editor.ResetState();
     m_camera->SetOrbitState({ 0.0f, 0.0f, 0.0f }, 20.0f, 0.785f, 0.4f);
     m_sunAzimuth = 0.98f;
     m_sunElevation = 0.78f;
     m_terrain->sunDirection = ComputeSunDirection();
+    RefreshTerrainPathDisplayBuffers();
     m_terrain->lightingMode = Terrain::LightingModeBasic;
     UpdateWindowTitle();
     SetStatusMessage("New project");
@@ -869,7 +885,7 @@ bool App::SaveProjectAs()
     char projectPath[260] = {};
     strncpy_s(projectPath, sizeof(projectPath), m_projectPath, _TRUNCATE);
     if (!SaveFileDialog(m_hwnd, projectPath, sizeof(projectPath),
-                        "Project Files\0*.json\0All Files\0*.*\0",
+                        "Project Files\0*.roadproj\0Legacy JSON\0*.json\0All Files\0*.*\0",
                         "Save Project"))
     {
         return true;
@@ -907,7 +923,7 @@ bool App::SaveRoadsAs()
     char roadPath[260] = {};
     strncpy_s(roadPath, sizeof(roadPath), m_editor.GetFilePath(), _TRUNCATE);
     if (!SaveFileDialog(m_hwnd, roadPath, sizeof(roadPath),
-                        "Road Files\0*.json\0All Files\0*.*\0",
+                        "Road Files\0*.roadnet\0Legacy JSON\0*.json\0All Files\0*.*\0",
                         "Save Roads"))
     {
         return false;
@@ -937,7 +953,7 @@ bool App::OpenRoads()
     char roadPath[260] = {};
     strncpy_s(roadPath, sizeof(roadPath), m_editor.GetFilePath(), _TRUNCATE);
     if (!OpenFileDialog(m_hwnd, roadPath, sizeof(roadPath),
-                        "Road Files\0*.json\0All Files\0*.*\0",
+                        "Road Files\0*.roadnet;*.json\0Road Network (*.roadnet)\0*.roadnet\0Legacy JSON\0*.json\0All Files\0*.*\0",
                         "Open Roads"))
     {
         return false;
@@ -952,6 +968,9 @@ bool App::SaveProject(const char* path)
     {
         if (path == nullptr || path[0] == '\0')
             return SaveProjectAs();
+
+        strncpy_s(m_projectPath, sizeof(m_projectPath), path, _TRUNCATE);
+        RefreshTerrainPathDisplayBuffers();
 
         if (m_editor.GetFilePath()[0] != '\0' && !SaveRoads(m_editor.GetFilePath()))
         {
@@ -1090,6 +1109,7 @@ bool App::LoadProject(const char* path)
         }
 
         strncpy_s(m_projectPath, sizeof(m_projectPath), path, _TRUNCATE);
+        RefreshTerrainPathDisplayBuffers();
         AddRecentProjectPath(path);
         SaveViewSettings();
         UpdateWindowTitle();
@@ -1555,7 +1575,7 @@ void App::Render()
             if (ImGui::MenuItem(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u958B\u304F..."))
             {
                 if (OpenFileDialog(m_hwnd, m_projectPath, sizeof(m_projectPath),
-                                   "Project Files\0*.json\0All Files\0*.*\0",
+                                   "Project Files\0*.roadproj;*.json\0Project (*.roadproj)\0*.roadproj\0Legacy JSON\0*.json\0All Files\0*.*\0",
                                    "Open Project"))
                 {
                     if (!LoadProject(m_projectPath))
@@ -1977,7 +1997,10 @@ void App::Render()
         {
             ImGui::TextDisabled(u8"\u5730\u5F62\u30C6\u30AF\u30B9\u30C1\u30E3");
             ImGui::SetNextItemWidth(260.0f);
-            ImGui::InputText("##terraintex", m_terrainTexturePath, sizeof(m_terrainTexturePath));
+            ImGui::InputText(
+                "##terraintex",
+                m_terrainTexturePathDisplay,
+                sizeof(m_terrainTexturePathDisplay));
             bool texturePathCommitted = ImGui::IsItemDeactivatedAfterEdit();
             ImGui::SameLine();
             if (ImGui::Button(u8"\u53C2\u7167..."))
@@ -1986,11 +2009,20 @@ void App::Render()
                                    "Image Files\0*.png;*.bmp;*.tga;*.jpg;*.jpeg\0All Files\0*.*\0",
                                    "Open Terrain Texture"))
                 {
+                    RefreshTerrainPathDisplayBuffers();
                     texturePathCommitted = true;
                 }
             }
             if (texturePathCommitted)
             {
+                const std::string resolvedTexturePath =
+                    ResolvePathFromProject(m_projectPath, m_terrainTexturePathDisplay);
+                strncpy_s(
+                    m_terrainTexturePath,
+                    sizeof(m_terrainTexturePath),
+                    resolvedTexturePath.c_str(),
+                    _TRUNCATE);
+
                 if (m_terrainTexturePath[0] == '\0')
                 {
                     m_terrain->ClearColorTexture();
@@ -2003,6 +2035,7 @@ void App::Render()
                 {
                     SetStatusMessage(std::string("Terrain texture loaded: ") + m_terrainTexturePath);
                 }
+                RefreshTerrainPathDisplayBuffers();
             }
         }
 
@@ -2027,13 +2060,25 @@ void App::Render()
 
         ImGui::TextDisabled(u8"\u30CF\u30A4\u30C8\u30DE\u30C3\u30D7");
         ImGui::SetNextItemWidth(-60);
-        ImGui::InputText("##hmap", m_terrainPath, sizeof(m_terrainPath));
+        ImGui::InputText("##hmap", m_terrainPathDisplay, sizeof(m_terrainPathDisplay));
+        bool terrainPathCommitted = ImGui::IsItemDeactivatedAfterEdit();
         ImGui::SameLine();
         if (ImGui::Button(u8"\u53C2\u7167"))
         {
-            OpenFileDialog(m_hwnd, m_terrainPath, sizeof(m_terrainPath),
-                           "Image Files\0*.png;*.bmp;*.tga;*.jpg\0All Files\0*.*\0",
-                           "Open Heightmap");
+            if (OpenFileDialog(m_hwnd, m_terrainPath, sizeof(m_terrainPath),
+                               "Image Files\0*.png;*.bmp;*.tga;*.jpg\0All Files\0*.*\0",
+                               "Open Heightmap"))
+            {
+                RefreshTerrainPathDisplayBuffers();
+            }
+        }
+
+        if (terrainPathCommitted)
+        {
+            const std::string resolvedTerrainPath =
+                ResolvePathFromProject(m_projectPath, m_terrainPathDisplay);
+            strncpy_s(m_terrainPath, sizeof(m_terrainPath), resolvedTerrainPath.c_str(), _TRUNCATE);
+            RefreshTerrainPathDisplayBuffers();
         }
 
         bool applyToCurrentTerrain = false;
