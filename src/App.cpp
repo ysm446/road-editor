@@ -1,4 +1,5 @@
 #include "App.h"
+#include "resource.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 
@@ -1260,11 +1261,28 @@ XMFLOAT4X4 App::ComputeLightViewProjMatrix() const
 
 bool App::CreateAppWindow(HINSTANCE hInstance, int nCmdShow)
 {
+    HICON largeIcon = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_APP_ICON),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXICON),
+        GetSystemMetrics(SM_CYICON),
+        0));
+    HICON smallIcon = static_cast<HICON>(LoadImageW(
+        hInstance,
+        MAKEINTRESOURCEW(IDI_APP_ICON),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        0));
+
     WNDCLASSEXW wc    = {};
     wc.cbSize          = sizeof(wc);
     wc.style           = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc     = StaticWndProc;
     wc.hInstance       = hInstance;
+    wc.hIcon           = largeIcon;
+    wc.hIconSm         = smallIcon;
     wc.hCursor         = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground   = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
     wc.lpszClassName   = L"RoadEditorClass";

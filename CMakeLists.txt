@@ -39,6 +39,7 @@ FetchContent_MakeAvailable(stb)
 set(SOURCES
     src/main.cpp
     src/App.cpp
+    src/app.rc
     src/renderer/D3D11Context.cpp
     src/renderer/Shader.cpp
     src/scene/Camera.cpp
