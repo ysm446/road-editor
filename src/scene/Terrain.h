@@ -20,7 +20,7 @@ struct TerrainCB
     float             shadowStrength; // 4 bytes
     DirectX::XMFLOAT2 shadowMapTexelSize; // 8 bytes
     float             shadowBias; // 4 bytes
-    float             padding; // 4 bytes
+    float             opacity; // 4 bytes
 };                               // = 48 bytes
 
 struct TerrainShadowCB
@@ -92,6 +92,7 @@ public:
     DirectX::XMFLOAT3 sunDirection = { 0.6f, 1.0f, 0.4f };
     float shadowStrength   = 0.72f;
     float shadowBias       = 0.0015f;
+    float opacity          = 1.0f;
     std::string colorTexturePath;
 
 private:
@@ -112,6 +113,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsSolid;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsWireframe;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rsShadow;
+    Microsoft::WRL::ComPtr<ID3D11BlendState>      m_blendStateAlpha;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_dsStateOpaque;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_dsStateTransparent;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_colorTextureSRV;
     Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_colorTextureSampler;
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_shadowMap;

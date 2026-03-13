@@ -87,6 +87,30 @@ bool Terrain::Initialize(ID3D11Device* device)
     shadowRd.DepthBiasClamp = 0.0f;
     device->CreateRasterizerState(&shadowRd, &m_rsShadow);
 
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    if (FAILED(device->CreateBlendState(&blendDesc, &m_blendStateAlpha)))
+        return false;
+
+    D3D11_DEPTH_STENCIL_DESC opaqueDepthDesc = {};
+    opaqueDepthDesc.DepthEnable = TRUE;
+    opaqueDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    opaqueDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    if (FAILED(device->CreateDepthStencilState(&opaqueDepthDesc, &m_dsStateOpaque)))
+        return false;
+
+    D3D11_DEPTH_STENCIL_DESC transparentDepthDesc = opaqueDepthDesc;
+    transparentDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    if (FAILED(device->CreateDepthStencilState(&transparentDepthDesc, &m_dsStateTransparent)))
+        return false;
+
     D3D11_SAMPLER_DESC sd = {};
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -570,7 +594,7 @@ void Terrain::Render(ID3D11DeviceContext* ctx,
     tcb.shadowStrength = shadowStrength;
     tcb.shadowMapTexelSize = { 1.0f / 2048.0f, 1.0f / 2048.0f };
     tcb.shadowBias = shadowBias;
-    tcb.padding = 0.0f;
+    tcb.opacity = opacity;
     m_terrainCB.Update(ctx, tcb);
 
     TerrainShadowCB shadowCb = {};
@@ -592,6 +616,11 @@ void Terrain::Render(ID3D11DeviceContext* ctx,
     ID3D11SamplerState* shadowSampler = m_shadowSampler.Get();
     ctx->PSSetSamplers(1, 1, &shadowSampler);
 
+    const float clampedOpacity = (std::clamp)(opacity, 0.0f, 1.0f);
+    const bool useAlphaBlend = clampedOpacity < 0.999f;
+    float blendFactor[4] = {};
+    ctx->OMSetBlendState(useAlphaBlend ? m_blendStateAlpha.Get() : nullptr, blendFactor, 0xFFFFFFFF);
+    ctx->OMSetDepthStencilState(useAlphaBlend ? m_dsStateTransparent.Get() : m_dsStateOpaque.Get(), 0);
     ctx->RSSetState(wireframe ? m_rsWireframe.Get() : m_rsSolid.Get());
     ctx->IASetInputLayout(m_inputLayout.Get());
     ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -605,6 +634,8 @@ void Terrain::Render(ID3D11DeviceContext* ctx,
     ID3D11ShaderResourceView* nullSrv = nullptr;
     ctx->PSSetShaderResources(0, 1, &nullSrv);
     ctx->PSSetShaderResources(1, 1, &nullSrv);
+    ctx->OMSetBlendState(nullptr, blendFactor, 0xFFFFFFFF);
+    ctx->OMSetDepthStencilState(nullptr, 0);
     ctx->RSSetState(nullptr);
 }
 
@@ -619,6 +650,9 @@ void Terrain::Shutdown()
     m_rsSolid.Reset();
     m_rsWireframe.Reset();
     m_rsShadow.Reset();
+    m_blendStateAlpha.Reset();
+    m_dsStateOpaque.Reset();
+    m_dsStateTransparent.Reset();
     m_shadowVS.Reset();
     m_colorTextureSRV.Reset();
     m_colorTextureSampler.Reset();

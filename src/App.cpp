@@ -881,6 +881,7 @@ void App::NewProject()
     m_sunAzimuth = 0.98f;
     m_sunElevation = 0.78f;
     m_terrain->sunDirection = ComputeSunDirection();
+    m_terrain->opacity = 1.0f;
     RefreshTerrainPathDisplayBuffers();
     m_terrain->lightingMode = Terrain::LightingModeBasic;
     UpdateWindowTitle();
@@ -1009,6 +1010,7 @@ bool App::SaveProject(const char* path)
             { "sunElevation", m_sunElevation          },
             { "shadowStrength", m_terrain->shadowStrength },
             { "shadowBias",  m_terrain->shadowBias    },
+            { "opacity",     m_terrain->opacity       },
             { "visible",     m_terrain->visible       },
             { "wireframe",   m_terrain->wireframe     }
         };
@@ -1077,6 +1079,7 @@ bool App::LoadProject(const char* path)
             m_sunElevation = t.value("sunElevation", 0.78f);
             m_terrain->shadowStrength = t.value("shadowStrength", 0.72f);
             m_terrain->shadowBias = t.value("shadowBias", 0.0015f);
+            m_terrain->opacity = std::clamp(t.value("opacity", 1.0f), 0.0f, 1.0f);
             m_terrain->sunDirection = ComputeSunDirection();
             m_terrain->visible   = t.value("visible", true);
             m_terrain->wireframe = t.value("wireframe", false);
@@ -1934,6 +1937,7 @@ void App::Render()
             if (ImGui::CollapsingHeader(u8"\u5730\u5F62", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::Checkbox(u8"\u5730\u5F62\u3092\u8868\u793A", &m_terrain->visible);
+                ImGui::SliderFloat(u8"\u900F\u660E\u5EA6", &m_terrain->opacity, 0.0f, 1.0f, "%.2f");
 
                 static const char* kTerrainColorModes[] =
                 {

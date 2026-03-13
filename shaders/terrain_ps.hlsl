@@ -13,7 +13,7 @@ cbuffer TerrainParams : register(b1)
     float  shadowStrength;
     float2 shadowMapTexelSize;
     float  shadowBias;
-    float  _padding;
+    float  opacity;
 };
 
 Texture2D terrainTexture : register(t0);
@@ -126,5 +126,5 @@ float4 main(PSInput input) : SV_TARGET
     float3 ambient = albedo * ((lightingMode == 1) ? 0.32 : 0.25);
     float3 diffuse = albedo * halfLambert * shadow;
 
-    return float4(ambient + diffuse, 1.0);
+    return float4(ambient + diffuse, saturate(opacity));
 }
