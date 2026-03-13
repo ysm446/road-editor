@@ -1573,6 +1573,9 @@ void App::Render()
                 m_editor.PerformUndo();
             if (ImGui::MenuItem("Redo", "Ctrl+Y"))
                 m_editor.PerformRedo();
+            ImGui::Separator();
+            if (ImGui::MenuItem(u8"\u4EA4\u5DEE\u70B9\u3092\u81EA\u52D5\u4F5C\u6210"))
+                m_editor.AutoCreateIntersections();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(u8"\u8868\u793A"))

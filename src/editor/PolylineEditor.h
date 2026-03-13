@@ -96,6 +96,7 @@ public:
     void RecordUndoState() { PushUndoState(); }
     void PerformUndo() { Undo(); }
     void PerformRedo() { Redo(); }
+    bool AutoCreateIntersections();
 
 private:
     // Unproject a screen pixel to a world-space ray
@@ -140,6 +141,7 @@ private:
                              const PointRef* movingPoint,
                              int movingIntersectionIndex,
                              DirectX::XMFLOAT3& outTarget) const;
+    bool AutoCreateIntersectionsFromEndpoints();
     bool SplitSelectedRoadAtPoint();
     bool MergeSelectedRoads();
     int FindSnapIntersectionForSelectedEndpoint(int vpW, int vpH,

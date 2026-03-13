@@ -1186,6 +1186,11 @@ bool PolylineEditor::GetSelectedRoadConnectionId(std::string& outId) const
     return !outId.empty();
 }
 
+bool PolylineEditor::AutoCreateIntersections()
+{
+    return AutoCreateIntersectionsFromEndpoints();
+}
+
 bool PolylineEditor::FindPointSnapTarget(XMFLOAT3 movingPos,
                                          XMMATRIX viewProj,
                                          int vpW, int vpH,
@@ -1250,6 +1255,190 @@ bool PolylineEditor::FindPointSnapTarget(XMFLOAT3 movingPos,
     }
 
     return found;
+}
+
+bool PolylineEditor::AutoCreateIntersectionsFromEndpoints()
+{
+    if (!m_network)
+        return false;
+
+    struct EndpointRef
+    {
+        int roadIndex = -1;
+        int pointIndex = -1;
+        XMFLOAT3 pos = { 0.0f, 0.0f, 0.0f };
+        std::string groupId;
+    };
+
+    constexpr float kEndpointClusterDistance = 5.0f;
+    constexpr float kExistingIntersectionDistance = 5.0f;
+
+    std::vector<EndpointRef> endpoints;
+    for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+    {
+        const Road& road = m_network->roads[roadIndex];
+        if (!IsRoadVisible(road) || road.points.size() < 2)
+            continue;
+
+        if (road.startIntersectionId.empty())
+        {
+            endpoints.push_back(
+                { roadIndex, 0, road.points.front().pos, road.groupId });
+        }
+
+        const int lastPointIndex = static_cast<int>(road.points.size()) - 1;
+        if (road.endIntersectionId.empty())
+        {
+            endpoints.push_back(
+                { roadIndex, lastPointIndex, road.points.back().pos, road.groupId });
+        }
+    }
+
+    if (endpoints.size() < 2)
+    {
+        m_statusMessage = "No overlapping road endpoints found";
+        return false;
+    }
+
+    std::vector<int> clusterAssignment(endpoints.size(), -1);
+    std::vector<std::vector<int>> clusters;
+    for (size_t seedIndex = 0; seedIndex < endpoints.size(); ++seedIndex)
+    {
+        if (clusterAssignment[seedIndex] >= 0)
+            continue;
+
+        const int clusterIndex = static_cast<int>(clusters.size());
+        clusters.push_back({});
+        clusterAssignment[seedIndex] = clusterIndex;
+        clusters.back().push_back(static_cast<int>(seedIndex));
+
+        bool expanded = true;
+        while (expanded)
+        {
+            expanded = false;
+            for (size_t candidateIndex = 0; candidateIndex < endpoints.size(); ++candidateIndex)
+            {
+                if (clusterAssignment[candidateIndex] >= 0)
+                    continue;
+
+                for (int memberIndex : clusters.back())
+                {
+                    if (Distance3(endpoints[candidateIndex].pos, endpoints[memberIndex].pos) <= kEndpointClusterDistance)
+                    {
+                        clusterAssignment[candidateIndex] = clusterIndex;
+                        clusters.back().push_back(static_cast<int>(candidateIndex));
+                        expanded = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    struct PlannedIntersection
+    {
+        XMFLOAT3 pos = { 0.0f, 0.0f, 0.0f };
+        std::string groupId;
+        std::vector<int> endpointIndices;
+    };
+
+    std::vector<PlannedIntersection> planned;
+    for (const std::vector<int>& cluster : clusters)
+    {
+        if (cluster.size() < 2)
+            continue;
+
+        XMFLOAT3 centroid = { 0.0f, 0.0f, 0.0f };
+        for (int endpointIndex : cluster)
+        {
+            centroid.x += endpoints[endpointIndex].pos.x;
+            centroid.y += endpoints[endpointIndex].pos.y;
+            centroid.z += endpoints[endpointIndex].pos.z;
+        }
+        const float invCount = 1.0f / static_cast<float>(cluster.size());
+        centroid.x *= invCount;
+        centroid.y *= invCount;
+        centroid.z *= invCount;
+
+        bool hasExistingIntersection = false;
+        for (const Intersection& intersection : m_network->intersections)
+        {
+            if (Distance3(intersection.pos, centroid) <= kExistingIntersectionDistance)
+            {
+                hasExistingIntersection = true;
+                break;
+            }
+        }
+        if (hasExistingIntersection)
+            continue;
+
+        PlannedIntersection plan;
+        plan.pos = centroid;
+        plan.endpointIndices = cluster;
+        plan.groupId = endpoints[cluster.front()].groupId;
+        planned.push_back(std::move(plan));
+    }
+
+    if (planned.empty())
+    {
+        m_statusMessage = "No new intersections were needed";
+        return false;
+    }
+
+    PushUndoState();
+    m_network->EnsureDefaultGroup();
+
+    int createdCount = 0;
+    for (const PlannedIntersection& plan : planned)
+    {
+        const int intersectionIndex = m_network->AddIntersection(plan.pos, "Intersection");
+        if (intersectionIndex < 0 ||
+            intersectionIndex >= static_cast<int>(m_network->intersections.size()))
+        {
+            continue;
+        }
+
+        Intersection& intersection = m_network->intersections[intersectionIndex];
+        if (!plan.groupId.empty())
+            intersection.groupId = plan.groupId;
+        intersection.pos = plan.pos;
+
+        for (int endpointIndex : plan.endpointIndices)
+        {
+            const EndpointRef& endpoint = endpoints[endpointIndex];
+            if (endpoint.roadIndex < 0 ||
+                endpoint.roadIndex >= static_cast<int>(m_network->roads.size()))
+            {
+                continue;
+            }
+
+            Road& road = m_network->roads[endpoint.roadIndex];
+            if (endpoint.pointIndex < 0 ||
+                endpoint.pointIndex >= static_cast<int>(road.points.size()))
+            {
+                continue;
+            }
+
+            road.points[endpoint.pointIndex].pos = intersection.pos;
+            if (endpoint.pointIndex == 0)
+                road.startIntersectionId = intersection.id;
+            else if (endpoint.pointIndex == static_cast<int>(road.points.size()) - 1)
+                road.endIntersectionId = intersection.id;
+        }
+
+        ++createdCount;
+    }
+
+    if (createdCount <= 0)
+    {
+        m_statusMessage = "Intersection creation failed";
+        return false;
+    }
+
+    m_statusMessage = createdCount == 1
+        ? "1 intersection created"
+        : std::to_string(createdCount) + " intersections created";
+    return true;
 }
 
 void PolylineEditor::SetSelectedRoadConnectionId(const std::string& intersectionId)
