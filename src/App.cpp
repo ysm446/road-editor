@@ -1615,26 +1615,22 @@ void App::Render()
                 m_showEditorDisplaySettings = true;
             ImGui::EndMenu();
         }
-        ImGui::EndMainMenuBar();
-    }
 
-    if (m_showFps)
-    {
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
-        const ImVec2 pos(viewport->WorkPos.x + 10.0f, viewport->WorkPos.y + 10.0f);
-        ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(0.0f);
-        ImGuiWindowFlags flags =
-            ImGuiWindowFlags_NoDecoration |
-            ImGuiWindowFlags_NoDocking |
-            ImGuiWindowFlags_AlwaysAutoResize |
-            ImGuiWindowFlags_NoSavedSettings |
-            ImGuiWindowFlags_NoFocusOnAppearing |
-            ImGuiWindowFlags_NoNav |
-            ImGuiWindowFlags_NoMove;
-        if (ImGui::Begin("##fps_overlay", nullptr, flags))
-            ImGui::Text("FPS: %.0f", ImGui::GetIO().Framerate);
-        ImGui::End();
+        if (m_showFps)
+        {
+            char fpsLabel[32] = {};
+            sprintf_s(fpsLabel, "FPS: %.0f", ImGui::GetIO().Framerate);
+            const float fpsWidth = ImGui::CalcTextSize(fpsLabel).x;
+            const float targetX = ImGui::GetWindowWidth() - fpsWidth - ImGui::GetStyle().ItemSpacing.x * 2.0f;
+            const float cursorX = ImGui::GetCursorPosX();
+            if (targetX > cursorX)
+                ImGui::SetCursorPosX(targetX);
+            else
+                ImGui::SameLine();
+            ImGui::TextUnformatted(fpsLabel);
+        }
+
+        ImGui::EndMainMenuBar();
     }
 
     if (ImGui::BeginPopup("ProjectSaveError"))
