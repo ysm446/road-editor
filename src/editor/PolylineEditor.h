@@ -94,6 +94,8 @@ public:
     void SetIntersectionScreenGizmoRadius(float value) { m_intersectionScreenGizmoRadius = value; }
     void SetIntersectionCircleColor(DirectX::XMFLOAT3 value) { m_intersectionCircleColor = value; }
     void RecordUndoState() { PushUndoState(); }
+    void PerformUndo() { Undo(); }
+    void PerformRedo() { Redo(); }
 
 private:
     // Unproject a screen pixel to a world-space ray
@@ -132,6 +134,12 @@ private:
     bool GetSelectedRoadConnectionId(std::string& outId) const;
     void SetSelectedRoadConnectionId(const std::string& intersectionId);
     void ClearSelectedRoadConnection();
+    bool FindPointSnapTarget(DirectX::XMFLOAT3 movingPos,
+                             DirectX::XMMATRIX viewProj,
+                             int vpW, int vpH,
+                             const PointRef* movingPoint,
+                             int movingIntersectionIndex,
+                             DirectX::XMFLOAT3& outTarget) const;
     bool SplitSelectedRoadAtPoint();
     bool MergeSelectedRoads();
     int FindSnapIntersectionForSelectedEndpoint(int vpW, int vpH,
@@ -191,6 +199,7 @@ private:
         int hoverSnapIntersection = -1;
         float defaultWidth = 3.0f;
         bool snapToTerrain = true;
+        bool snapToPoints = false;
         bool rotateYMode = false;
         bool scaleXZMode = false;
     };
@@ -250,6 +259,7 @@ private:
     // Default width for new points
     float m_defaultWidth = 3.0f;
     bool  m_snapToTerrain = true;
+    bool  m_snapToPoints = false;
 
     // Save/load path buffer
     char m_filePath[260] = "data/roads.json";

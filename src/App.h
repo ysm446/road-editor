@@ -124,6 +124,7 @@ private:
     DirectX::XMFLOAT3 m_cursorHitPos   = {};
     std::string       m_statusMessage  = "Ready";
     bool              m_prevFocusKey   = false;
+    bool              m_showGrid = true;
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
     bool              m_showRoadPreviewMetrics = false;

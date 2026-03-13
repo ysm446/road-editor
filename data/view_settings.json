@@ -36,6 +36,7 @@
   "selectedRoadLineThickness": 3.0,
   "showContours": true,
   "showFps": true,
+  "showGrid": true,
   "showIntersectionNames": false,
   "showRoadGradeGradient": true,
   "showRoadNames": false,

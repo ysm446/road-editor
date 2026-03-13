@@ -534,6 +534,7 @@ void App::LoadViewSettings()
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
     m_showRoadGradeGradient = false;
+    m_showGrid = true;
     m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
@@ -561,6 +562,7 @@ void App::LoadViewSettings()
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
+            m_showGrid = root.value("showGrid", true);
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
@@ -644,6 +646,7 @@ void App::SaveViewSettings() const
             { "showIntersectionNames", m_showIntersectionNames },
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
             { "showRoadGradeGradient", m_showRoadGradeGradient },
+            { "showGrid", m_showGrid },
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
@@ -1479,7 +1482,8 @@ void App::Render()
 
     // 3D scene  (order: terrain -> grid -> debug lines)
     m_terrain->Render(m_d3d->GetContext(), m_perFrameCB.Get(), lightViewProj);
-    m_grid->Render(m_d3d->GetContext(), m_perFrameCB.Get());
+    if (m_showGrid)
+        m_grid->Render(m_d3d->GetContext(), m_perFrameCB.Get());
 
     m_editor.DrawNetwork(m_debugDraw, vp, m_d3d->GetWidth(), m_d3d->GetHeight());
     DrawContourPreview();
@@ -1563,6 +1567,14 @@ void App::Render()
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu(u8"\u7DE8\u96C6"))
+        {
+            if (ImGui::MenuItem("Undo", "Ctrl+Z"))
+                m_editor.PerformUndo();
+            if (ImGui::MenuItem("Redo", "Ctrl+Y"))
+                m_editor.PerformRedo();
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu(u8"\u8868\u793A"))
         {
             if (ImGui::MenuItem(u8"\u9053\u8DEF\u540D", nullptr, m_showRoadNames))
@@ -1587,6 +1599,11 @@ void App::Render()
             {
                 m_showRoadGradeGradient = !m_showRoadGradeGradient;
                 m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem(u8"\u30B0\u30EA\u30C3\u30C9", nullptr, m_showGrid))
+            {
+                m_showGrid = !m_showGrid;
                 SaveViewSettings();
             }
             if (ImGui::MenuItem("FPS", nullptr, m_showFps))

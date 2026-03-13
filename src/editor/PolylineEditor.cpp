@@ -647,6 +647,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.hoverSnapIntersection = m_hoverSnapIntersection;
     snapshot.defaultWidth = m_defaultWidth;
     snapshot.snapToTerrain = m_snapToTerrain;
+    snapshot.snapToPoints = m_snapToPoints;
     snapshot.rotateYMode = m_rotateYMode;
     snapshot.scaleXZMode = m_scaleXZMode;
     return snapshot;
@@ -666,6 +667,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_hoverSnapIntersection = snapshot.hoverSnapIntersection;
     m_defaultWidth = snapshot.defaultWidth;
     m_snapToTerrain = snapshot.snapToTerrain;
+    m_snapToPoints = snapshot.snapToPoints;
     m_rotateYMode = snapshot.rotateYMode;
     m_scaleXZMode = snapshot.scaleXZMode;
 
@@ -757,6 +759,7 @@ void PolylineEditor::ResetState()
     m_scaleXZMode = false;
     m_defaultWidth = 3.0f;
     m_snapToTerrain = true;
+    m_snapToPoints = false;
     m_statusMessage.clear();
     ClearHistory();
 }
@@ -1181,6 +1184,72 @@ bool PolylineEditor::GetSelectedRoadConnectionId(std::string& outId) const
     const Road& road = m_network->roads[selectedPoint.roadIndex];
     outId = (selectedPoint.pointIndex == 0) ? road.startIntersectionId : road.endIntersectionId;
     return !outId.empty();
+}
+
+bool PolylineEditor::FindPointSnapTarget(XMFLOAT3 movingPos,
+                                         XMMATRIX viewProj,
+                                         int vpW, int vpH,
+                                         const PointRef* movingPoint,
+                                         int movingIntersectionIndex,
+                                         XMFLOAT3& outTarget) const
+{
+    constexpr float kSnapThresholdPx = 18.0f;
+    const XMFLOAT2 movingScreen = WorldToScreen(movingPos, viewProj, vpW, vpH);
+    if (movingScreen.x < 0.0f)
+        return false;
+
+    bool found = false;
+    float bestDistance = kSnapThresholdPx;
+
+    for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+    {
+        const Road& road = m_network->roads[roadIndex];
+        if (!IsRoadVisible(road))
+            continue;
+
+        for (int pointIndex = 0; pointIndex < static_cast<int>(road.points.size()); ++pointIndex)
+        {
+            if (movingPoint != nullptr && roadIndex == movingPoint->roadIndex)
+                continue;
+            if (IsPointSelected(roadIndex, pointIndex))
+                continue;
+
+            const XMFLOAT2 candidateScreen = WorldToScreen(road.points[pointIndex].pos, viewProj, vpW, vpH);
+            if (candidateScreen.x < 0.0f)
+                continue;
+
+            const float distance = Dist2D(movingScreen, candidateScreen);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                outTarget = road.points[pointIndex].pos;
+                found = true;
+            }
+        }
+    }
+
+    for (int intersectionIndex = 0; intersectionIndex < static_cast<int>(m_network->intersections.size()); ++intersectionIndex)
+    {
+        const Intersection& intersection = m_network->intersections[intersectionIndex];
+        if (!IsIntersectionVisible(intersection))
+            continue;
+        if (intersectionIndex == movingIntersectionIndex || IsIntersectionSelected(intersectionIndex))
+            continue;
+
+        const XMFLOAT2 candidateScreen = WorldToScreen(intersection.pos, viewProj, vpW, vpH);
+        if (candidateScreen.x < 0.0f)
+            continue;
+
+        const float distance = Dist2D(movingScreen, candidateScreen);
+        if (distance < bestDistance)
+        {
+            bestDistance = distance;
+            outTarget = intersection.pos;
+            found = true;
+        }
+    }
+
+    return found;
 }
 
 void PolylineEditor::SetSelectedRoadConnectionId(const std::string& intersectionId)
@@ -2483,6 +2552,8 @@ void PolylineEditor::Update(int vpW, int vpH,
                     XMFLOAT3 delta = { 0.0f, 0.0f, 0.0f };
                     float rotationDelta = 0.0f;
                     float scaleFactor = 1.0f;
+                    std::vector<XMFLOAT3> pointPositions(m_selectedPoints.size());
+                    std::vector<XMFLOAT3> intersectionPositions(m_selectedIntersections.size());
                     if (m_activeGizmoAxis == GizmoAxis::RotateY)
                     {
                         const XMFLOAT2 pivotScreen =
@@ -2613,7 +2684,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                             }
                         }
 
-                        road.points[pointIndex].pos = newPos;
+                        pointPositions[selectionIndex] = newPos;
                     }
 
                     for (size_t selectionIndex = 0; selectionIndex < m_selectedIntersections.size(); ++selectionIndex)
@@ -2660,7 +2731,81 @@ void PolylineEditor::Update(int vpW, int vpH,
                             }
                         }
 
-                        m_network->intersections[intersectionIndex].pos = newPos;
+                        intersectionPositions[selectionIndex] = newPos;
+                    }
+
+                    if (m_snapToPoints && m_activeGizmoAxis == GizmoAxis::Center)
+                    {
+                        XMFLOAT3 snapSource = {};
+                        XMFLOAT3 snapTarget = {};
+                        bool hasSnapTarget = false;
+
+                        PointRef primaryPoint;
+                        if (GetPrimarySelectedPoint(primaryPoint))
+                        {
+                            for (size_t selectionIndex = 0; selectionIndex < m_selectedPoints.size(); ++selectionIndex)
+                            {
+                                if (m_selectedPoints[selectionIndex].roadIndex == primaryPoint.roadIndex &&
+                                    m_selectedPoints[selectionIndex].pointIndex == primaryPoint.pointIndex)
+                                {
+                                    snapSource = pointPositions[selectionIndex];
+                                    hasSnapTarget = FindPointSnapTarget(
+                                        snapSource, viewProj, vpW, vpH, &primaryPoint, -1, snapTarget);
+                                    break;
+                                }
+                            }
+                        }
+                        else if (!m_selectedIntersections.empty() && !intersectionPositions.empty())
+                        {
+                            const int primaryIntersectionIndex = m_selectedIntersections.front();
+                            snapSource = intersectionPositions.front();
+                            hasSnapTarget = FindPointSnapTarget(
+                                snapSource, viewProj, vpW, vpH, nullptr, primaryIntersectionIndex, snapTarget);
+                        }
+
+                        if (hasSnapTarget)
+                        {
+                            const XMFLOAT3 snapDelta =
+                            {
+                                snapTarget.x - snapSource.x,
+                                snapTarget.y - snapSource.y,
+                                snapTarget.z - snapSource.z
+                            };
+                            for (XMFLOAT3& position : pointPositions)
+                            {
+                                position.x += snapDelta.x;
+                                position.y += snapDelta.y;
+                                position.z += snapDelta.z;
+                            }
+                            for (XMFLOAT3& position : intersectionPositions)
+                            {
+                                position.x += snapDelta.x;
+                                position.y += snapDelta.y;
+                                position.z += snapDelta.z;
+                            }
+                        }
+                    }
+
+                    for (size_t selectionIndex = 0; selectionIndex < m_selectedPoints.size(); ++selectionIndex)
+                    {
+                        const PointRef& pointRef = m_selectedPoints[selectionIndex];
+                        if (pointRef.roadIndex < 0 ||
+                            pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                            continue;
+                        Road& road = m_network->roads[pointRef.roadIndex];
+                        const int pointIndex = pointRef.pointIndex;
+                        if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
+                            continue;
+                        road.points[pointIndex].pos = pointPositions[selectionIndex];
+                    }
+
+                    for (size_t selectionIndex = 0; selectionIndex < m_selectedIntersections.size(); ++selectionIndex)
+                    {
+                        const int intersectionIndex = m_selectedIntersections[selectionIndex];
+                        if (intersectionIndex < 0 ||
+                            intersectionIndex >= static_cast<int>(m_network->intersections.size()))
+                            continue;
+                        m_network->intersections[intersectionIndex].pos = intersectionPositions[selectionIndex];
                         SyncRoadConnectionsForIntersection(intersectionIndex);
                     }
 
@@ -2966,6 +3111,14 @@ void PolylineEditor::Update(int vpW, int vpH,
                     m_terrain && m_terrain->IsReady() &&
                     m_activeGizmoAxis != GizmoAxis::Y)
                     newPos.y = m_terrain->GetHeightAt(newPos.x, newPos.z);
+
+                if (m_snapToPoints && m_activeGizmoAxis == GizmoAxis::Center)
+                {
+                    XMFLOAT3 snapTarget = {};
+                    if (FindPointSnapTarget(newPos, viewProj, vpW, vpH, nullptr, m_activeIntersection, snapTarget))
+                        newPos = snapTarget;
+                }
+
                 isec.pos = newPos;
                 SyncRoadConnectionsForIntersection(m_activeIntersection);
             }
@@ -3695,9 +3848,18 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
             }
         }
     }
+    bool snapToPoints = m_snapToPoints;
+    if (ImGui::Checkbox(u8"\u30DD\u30A4\u30F3\u30C8\u306B\u30B9\u30CA\u30C3\u30D7", &snapToPoints))
+    {
+        PushUndoState();
+        m_snapToPoints = snapToPoints;
+    }
     ImGui::TextDisabled(m_snapToTerrain
         ? u8"\u4E2D\u592E/XZ \u30AE\u30BA\u30E2\u79FB\u52D5\u306F\u5730\u5F62\u3078\u30B9\u30CA\u30C3\u30D7\u3057\u307E\u3059"
         : u8"\u30DD\u30A4\u30F3\u30C8\u3068\u4EA4\u5DEE\u70B9\u306F 3D \u7A7A\u9593\u5185\u3092\u81EA\u7531\u306B\u79FB\u52D5\u3057\u307E\u3059");
+    ImGui::TextDisabled(m_snapToPoints
+        ? u8"\u4E2D\u592E\u79FB\u52D5\u4E2D\u306F\u8FD1\u304F\u306E\u9802\u70B9\u307E\u305F\u306F\u4EA4\u5DEE\u70B9\u3078\u5438\u7740\u3057\u307E\u3059"
+        : u8"\u30DD\u30A4\u30F3\u30C8\u30B9\u30CA\u30C3\u30D7\u306F\u7121\u52B9\u3067\u3059");
     ImGui::Separator();
 
     ImGui::Text(u8"\u30B0\u30EB\u30FC\u30D7 (%d)", static_cast<int>(m_network->groups.size()));
