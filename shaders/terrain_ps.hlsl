@@ -117,11 +117,13 @@ float4 main(PSInput input) : SV_TARGET
         }
     }
 
-    // Lambert
+    // Half-Lambert for softer wrap lighting without specular highlights
     float3 sun    = normalize(sunDir);
-    float  NdotL  = saturate(dot(n, sun));
+    float  NdotL  = dot(n, sun);
+    float  halfLambert = saturate(NdotL * 0.5 + 0.5);
+    halfLambert *= halfLambert;
     float3 ambient = albedo * ((lightingMode == 1) ? 0.32 : 0.25);
-    float3 diffuse = albedo * NdotL * shadow;
+    float3 diffuse = albedo * halfLambert * shadow;
 
     return float4(ambient + diffuse, 1.0);
 }

@@ -49,6 +49,7 @@ private:
     bool    LoadRoadsFromPath(const char* path);
     bool    OpenRoads();
     void    UpdateWindowTitle() const;
+    void    AddRecentProjectPath(const char* path);
     void    NewProject();
     void    ApplyTerrainSettings();
     void    LoadViewSettings();
@@ -136,11 +137,20 @@ private:
     float             m_sunElevation = 0.78f;
     bool              m_showContours = false;
     bool              m_showBackgroundSettings = false;
+    bool              m_showEditorDisplaySettings = false;
     float             m_contourInterval = 5.0f;
     float             m_gridBaseScale = 1.0f;
     float             m_gridFadeDistance = 1200.0f;
+    float             m_roadLineThickness = 2.0f;
+    float             m_selectedRoadLineThickness = 3.0f;
+    float             m_roadVertexScreenRadius = 3.0f;
+    float             m_intersectionScreenGizmoRadius = 10.0f;
+    DirectX::XMFLOAT3 m_roadVertexColor = { 160.0f / 255.0f, 160.0f / 255.0f, 160.0f / 255.0f };
+    DirectX::XMFLOAT3 m_selectedRoadColor = { 1.0f, 1.0f, 1.0f };
+    DirectX::XMFLOAT3 m_intersectionCircleColor = { 80.0f / 255.0f, 240.0f / 255.0f, 1.0f };
     DirectX::XMFLOAT3 m_contourColor = { 0.18f, 0.18f, 0.18f };
     DirectX::XMFLOAT3 m_backgroundColor = { 0.12f, 0.12f, 0.14f };
+    std::vector<std::string> m_recentProjectPaths;
     EditorMode        m_prevEditorMode = EditorMode::Navigate;
     PathfindingState  m_pathfinding;
     std::vector<ContourSegment> m_contourSegments;

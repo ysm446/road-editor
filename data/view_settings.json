@@ -9,13 +9,35 @@
     0.23552125692367554,
     0.23552125692367554
   ],
-  "gridBaseScale": 13.199999809265137,
-  "gridFadeDistance": 2219.0,
+  "gridBaseScale": 100.0,
+  "gridFadeDistance": 10000.0,
+  "intersectionCircleColor": [
+    0.3137255012989044,
+    0.9411764740943909,
+    1.0
+  ],
+  "intersectionScreenGizmoRadius": 7.0,
+  "recentProjectPaths": [
+    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.json"
+  ],
   "roadGradeRedThresholdPercent": 15.0,
+  "roadLineThickness": 2.0,
+  "roadVertexColor": [
+    0.6274510025978088,
+    0.6274510025978088,
+    0.6274510025978088
+  ],
+  "roadVertexScreenRadius": 3.0,
+  "selectedRoadColor": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "selectedRoadLineThickness": 3.0,
   "showContours": true,
   "showFps": false,
   "showIntersectionNames": false,
   "showRoadGradeGradient": true,
-  "showRoadNames": true,
+  "showRoadNames": false,
   "showRoadPreviewMetrics": false
 }

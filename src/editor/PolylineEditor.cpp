@@ -3241,21 +3241,34 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const_cast<PolylineEditor*>(this)->SanitizeSelection();
 
     ImDrawList* dl = ImGui::GetBackgroundDrawList();
-    const float kRadius    = 3.0f;
-    const float kSelectedRoadThickness = 2.0f;
-    const ImU32 colPoint    = IM_COL32(160, 160, 160, 220);
-    const ImU32 colRoadSel  = IM_COL32(255, 255, 255, 255);
+    auto colorFromFloat3 = [](const XMFLOAT3& color, int alpha) -> ImU32
+    {
+        const float clampedR = (std::max)(0.0f, (std::min)(1.0f, color.x));
+        const float clampedG = (std::max)(0.0f, (std::min)(1.0f, color.y));
+        const float clampedB = (std::max)(0.0f, (std::min)(1.0f, color.z));
+        return IM_COL32(
+            static_cast<int>(clampedR * 255.0f + 0.5f),
+            static_cast<int>(clampedG * 255.0f + 0.5f),
+            static_cast<int>(clampedB * 255.0f + 0.5f),
+            alpha);
+    };
+    const float kRadius    = (std::max)(1.0f, m_roadVertexScreenRadius);
+    const float kRoadThickness = (std::max)(1.0f, m_roadLineThickness);
+    const float kSelectedRoadThickness = (std::max)(1.0f, m_selectedRoadLineThickness);
+    const ImU32 colPoint    = colorFromFloat3(m_roadVertexColor, 220);
+    const ImU32 colRoad     = IM_COL32(184, 184, 191, 255);
+    const ImU32 colRoadSel  = colorFromFloat3(m_selectedRoadColor, 255);
     const ImU32 colPointSel = IM_COL32(255, 140,  60, 255);
     const ImU32 colCursor   = IM_COL32( 60, 255, 110, 220);
     const ImU32 colAxisX    = IM_COL32(255,  80,  80, 255);
     const ImU32 colAxisY    = IM_COL32( 80, 255, 120, 255);
     const ImU32 colAxisZ    = IM_COL32( 80, 150, 255, 255);
     const ImU32 colScaleXZ  = IM_COL32(255, 110, 220, 255);
-    const ImU32 colIsec     = IM_COL32( 80, 240, 255, 255);
+    const ImU32 colIsec     = colorFromFloat3(m_intersectionCircleColor, 255);
     const ImU32 colIsecSel  = IM_COL32(255, 120, 80, 255);
     const ImU32 colSnap     = IM_COL32(255, 240, 80, 255);
 
-    auto drawSelectedRoadOverlay = [&](const Road& road)
+    auto drawRoadOverlay = [&](const Road& road, ImU32 color, float thickness)
     {
         for (int pi = 0; pi + 1 < static_cast<int>(road.points.size()); ++pi)
         {
@@ -3264,7 +3277,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, a) ||
                 !WorldToScreen(road.points[pi + 1].pos, viewProj, vpW, vpH, b))
                 continue;
-            dl->AddLine(a, b, colRoadSel, kSelectedRoadThickness);
+            dl->AddLine(a, b, color, thickness);
         }
 
         if (road.closed && road.points.size() >= 2)
@@ -3274,7 +3287,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             if (WorldToScreen(road.points.back().pos, viewProj, vpW, vpH, a) &&
                 WorldToScreen(road.points.front().pos, viewProj, vpW, vpH, b))
             {
-                dl->AddLine(a, b, colRoadSel, kSelectedRoadThickness);
+                dl->AddLine(a, b, color, thickness);
             }
         }
     };
@@ -3282,9 +3295,17 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road) || IsRoadSelected(ri) || ri == m_activeRoad)
+            continue;
+        drawRoadOverlay(road, colRoad, kRoadThickness);
+    }
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
         if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
             continue;
-        drawSelectedRoadOverlay(road);
+        drawRoadOverlay(road, colRoadSel, kSelectedRoadThickness);
     }
 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
@@ -3383,11 +3404,13 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             continue;
         const bool selected = (ii == m_activeIntersection) || IsIntersectionSelected(ii);
         const ImU32 col = selected ? colIsecSel : colIsec;
-        dl->AddCircle(sp, 10.0f, col, 24, 2.0f);
-        dl->AddLine(ImVec2(sp.x - 8.0f, sp.y), ImVec2(sp.x + 8.0f, sp.y), col, 2.0f);
-        dl->AddLine(ImVec2(sp.x, sp.y - 8.0f), ImVec2(sp.x, sp.y + 8.0f), col, 2.0f);
+        const float radiusPx = (std::max)(2.0f, m_intersectionScreenGizmoRadius);
+        const float crossPx = radiusPx * 0.8f;
+        dl->AddCircle(sp, radiusPx, col, 24, 2.0f);
+        dl->AddLine(ImVec2(sp.x - crossPx, sp.y), ImVec2(sp.x + crossPx, sp.y), col, 2.0f);
+        dl->AddLine(ImVec2(sp.x, sp.y - crossPx), ImVec2(sp.x, sp.y + crossPx), col, 2.0f);
         if (m_showIntersectionNames)
-            dl->AddText(ImVec2(sp.x + 12.0f, sp.y - 8.0f), col, isec.name.c_str());
+            dl->AddText(ImVec2(sp.x + radiusPx + 2.0f, sp.y - crossPx), col, isec.name.c_str());
     }
 
     if (m_hoverSnapIntersection >= 0 &&

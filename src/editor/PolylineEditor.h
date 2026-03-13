@@ -86,6 +86,13 @@ public:
     void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }
     void SetShowRoadGradeGradient(bool show) { m_showRoadGradeGradient = show; }
     void SetRoadGradeRedThresholdPercent(float value) { m_roadGradeRedThresholdPercent = value; }
+    void SetRoadLineThickness(float value) { m_roadLineThickness = value; }
+    void SetSelectedRoadLineThickness(float value) { m_selectedRoadLineThickness = value; }
+    void SetRoadVertexScreenRadius(float value) { m_roadVertexScreenRadius = value; }
+    void SetRoadVertexColor(DirectX::XMFLOAT3 value) { m_roadVertexColor = value; }
+    void SetSelectedRoadColor(DirectX::XMFLOAT3 value) { m_selectedRoadColor = value; }
+    void SetIntersectionScreenGizmoRadius(float value) { m_intersectionScreenGizmoRadius = value; }
+    void SetIntersectionCircleColor(DirectX::XMFLOAT3 value) { m_intersectionCircleColor = value; }
     void RecordUndoState() { PushUndoState(); }
 
 private:
@@ -254,6 +261,13 @@ private:
     bool m_rotateYMode = false;
     bool m_scaleXZMode = false;
     float m_roadGradeRedThresholdPercent = 12.0f;
+    float m_roadLineThickness = 2.0f;
+    float m_selectedRoadLineThickness = 3.0f;
+    float m_roadVertexScreenRadius = 3.0f;
+    float m_intersectionScreenGizmoRadius = 10.0f;
+    DirectX::XMFLOAT3 m_roadVertexColor = { 160.0f / 255.0f, 160.0f / 255.0f, 160.0f / 255.0f };
+    DirectX::XMFLOAT3 m_selectedRoadColor = { 1.0f, 1.0f, 1.0f };
+    DirectX::XMFLOAT3 m_intersectionCircleColor = { 80.0f / 255.0f, 240.0f / 255.0f, 1.0f };
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
     bool m_prevUndoShortcut = false;

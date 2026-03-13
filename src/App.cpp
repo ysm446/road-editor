@@ -404,10 +404,20 @@ fs::path GetProjectDirectory(const char* projectPath)
     if (projectPath == nullptr || projectPath[0] == '\0')
         return fs::current_path();
 
-    fs::path path(projectPath);
+    std::error_code ec;
+    fs::path path = fs::absolute(fs::path(projectPath), ec);
+    if (ec)
+        path = fs::path(projectPath);
+
     if (path.has_parent_path())
-        return path.parent_path();
-    return fs::current_path();
+    {
+        fs::path parent = path.parent_path();
+        const fs::path normalized = fs::weakly_canonical(parent, ec);
+        return ec ? parent : normalized;
+    }
+
+    const fs::path current = fs::current_path(ec);
+    return ec ? fs::path(".") : current;
 }
 
 std::string MakePathRelativeToProject(const char* projectPath, const char* targetPath)
@@ -438,6 +448,16 @@ std::string ResolvePathFromProject(const char* projectPath, const std::string& s
     std::error_code ec;
     const fs::path resolved = fs::weakly_canonical(projectDir / path, ec);
     return ec ? (projectDir / path).string() : resolved.string();
+}
+
+std::string NormalizePathString(const char* path)
+{
+    if (path == nullptr || path[0] == '\0')
+        return std::string();
+
+    std::error_code ec;
+    const fs::path normalized = fs::weakly_canonical(fs::path(path), ec);
+    return ec ? fs::path(path).string() : normalized.string();
 }
 }
 
@@ -519,8 +539,16 @@ void App::LoadViewSettings()
     m_showContours = false;
     m_gridBaseScale = 1.0f;
     m_gridFadeDistance = 1200.0f;
+    m_roadLineThickness = 2.0f;
+    m_selectedRoadLineThickness = 3.0f;
+    m_roadVertexScreenRadius = 3.0f;
+    m_intersectionScreenGizmoRadius = 10.0f;
+    m_roadVertexColor = { 160.0f / 255.0f, 160.0f / 255.0f, 160.0f / 255.0f };
+    m_selectedRoadColor = { 1.0f, 1.0f, 1.0f };
+    m_intersectionCircleColor = { 80.0f / 255.0f, 240.0f / 255.0f, 1.0f };
     m_contourColor = { 0.18f, 0.18f, 0.18f };
     m_backgroundColor = { 0.12f, 0.12f, 0.14f };
+    m_recentProjectPaths.clear();
 
     try
     {
@@ -538,6 +566,28 @@ void App::LoadViewSettings()
             m_showContours = root.value("showContours", false);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
             m_gridFadeDistance = root.value("gridFadeDistance", 1200.0f);
+            m_roadLineThickness = root.value("roadLineThickness", 2.0f);
+            m_selectedRoadLineThickness = root.value("selectedRoadLineThickness", 3.0f);
+            m_roadVertexScreenRadius = root.value("roadVertexScreenRadius", 3.0f);
+            m_intersectionScreenGizmoRadius = root.value("intersectionScreenGizmoRadius", 10.0f);
+            if (root.contains("roadVertexColor") && root["roadVertexColor"].is_array() && root["roadVertexColor"].size() == 3)
+            {
+                m_roadVertexColor.x = root["roadVertexColor"][0].get<float>();
+                m_roadVertexColor.y = root["roadVertexColor"][1].get<float>();
+                m_roadVertexColor.z = root["roadVertexColor"][2].get<float>();
+            }
+            if (root.contains("selectedRoadColor") && root["selectedRoadColor"].is_array() && root["selectedRoadColor"].size() == 3)
+            {
+                m_selectedRoadColor.x = root["selectedRoadColor"][0].get<float>();
+                m_selectedRoadColor.y = root["selectedRoadColor"][1].get<float>();
+                m_selectedRoadColor.z = root["selectedRoadColor"][2].get<float>();
+            }
+            if (root.contains("intersectionCircleColor") && root["intersectionCircleColor"].is_array() && root["intersectionCircleColor"].size() == 3)
+            {
+                m_intersectionCircleColor.x = root["intersectionCircleColor"][0].get<float>();
+                m_intersectionCircleColor.y = root["intersectionCircleColor"][1].get<float>();
+                m_intersectionCircleColor.z = root["intersectionCircleColor"][2].get<float>();
+            }
             if (root.contains("contourColor") && root["contourColor"].is_array() && root["contourColor"].size() == 3)
             {
                 m_contourColor.x = root["contourColor"][0].get<float>();
@@ -550,6 +600,19 @@ void App::LoadViewSettings()
                 m_backgroundColor.y = root["backgroundColor"][1].get<float>();
                 m_backgroundColor.z = root["backgroundColor"][2].get<float>();
             }
+            if (root.contains("recentProjectPaths") && root["recentProjectPaths"].is_array())
+            {
+                for (const auto& item : root["recentProjectPaths"])
+                {
+                    if (!item.is_string())
+                        continue;
+                    const std::string normalized = NormalizePathString(item.get<std::string>().c_str());
+                    if (!normalized.empty())
+                        m_recentProjectPaths.push_back(normalized);
+                    if (m_recentProjectPaths.size() >= 8)
+                        break;
+                }
+            }
         }
     }
     catch (...)
@@ -561,6 +624,13 @@ void App::LoadViewSettings()
     m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
     m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
     m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
+    m_editor.SetRoadLineThickness(m_roadLineThickness);
+    m_editor.SetSelectedRoadLineThickness(m_selectedRoadLineThickness);
+    m_editor.SetRoadVertexScreenRadius(m_roadVertexScreenRadius);
+    m_editor.SetRoadVertexColor(m_roadVertexColor);
+    m_editor.SetSelectedRoadColor(m_selectedRoadColor);
+    m_editor.SetIntersectionScreenGizmoRadius(m_intersectionScreenGizmoRadius);
+    m_editor.SetIntersectionCircleColor(m_intersectionCircleColor);
     RebuildContourCache();
 }
 
@@ -579,8 +649,16 @@ void App::SaveViewSettings() const
             { "showContours", m_showContours },
             { "gridBaseScale", m_gridBaseScale },
             { "gridFadeDistance", m_gridFadeDistance },
+            { "roadLineThickness", m_roadLineThickness },
+            { "selectedRoadLineThickness", m_selectedRoadLineThickness },
+            { "roadVertexScreenRadius", m_roadVertexScreenRadius },
+            { "intersectionScreenGizmoRadius", m_intersectionScreenGizmoRadius },
+            { "roadVertexColor", { m_roadVertexColor.x, m_roadVertexColor.y, m_roadVertexColor.z } },
+            { "selectedRoadColor", { m_selectedRoadColor.x, m_selectedRoadColor.y, m_selectedRoadColor.z } },
+            { "intersectionCircleColor", { m_intersectionCircleColor.x, m_intersectionCircleColor.y, m_intersectionCircleColor.z } },
             { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
-            { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } }
+            { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } },
+            { "recentProjectPaths", m_recentProjectPaths }
         };
 
         std::ofstream ofs(kViewSettingsPath);
@@ -595,6 +673,20 @@ void App::SaveViewSettings() const
 void App::SetStatusMessage(const std::string& message)
 {
     m_statusMessage = message;
+}
+
+void App::AddRecentProjectPath(const char* path)
+{
+    const std::string normalized = NormalizePathString(path);
+    if (normalized.empty())
+        return;
+
+    m_recentProjectPaths.erase(
+        std::remove(m_recentProjectPaths.begin(), m_recentProjectPaths.end(), normalized),
+        m_recentProjectPaths.end());
+    m_recentProjectPaths.insert(m_recentProjectPaths.begin(), normalized);
+    if (m_recentProjectPaths.size() > 8)
+        m_recentProjectPaths.resize(8);
 }
 
 void App::ResetPathfindingState()
@@ -766,7 +858,11 @@ bool App::SaveProjectAs()
     strncpy_s(m_projectPath, sizeof(m_projectPath), projectPath, _TRUNCATE);
     const bool ok = SaveProject(m_projectPath);
     if (ok)
+    {
+        AddRecentProjectPath(m_projectPath);
+        SaveViewSettings();
         UpdateWindowTitle();
+    }
     return ok;
 }
 
@@ -889,6 +985,8 @@ bool App::SaveProject(const char* path)
             return false;
 
         ofs << root.dump(2);
+        AddRecentProjectPath(path);
+        SaveViewSettings();
         UpdateWindowTitle();
         SetStatusMessage(std::string("Project saved: ") + path);
         return true;
@@ -972,6 +1070,8 @@ bool App::LoadProject(const char* path)
         }
 
         strncpy_s(m_projectPath, sizeof(m_projectPath), path, _TRUNCATE);
+        AddRecentProjectPath(path);
+        SaveViewSettings();
         UpdateWindowTitle();
 
         if (root.contains("camera"))
@@ -1414,6 +1514,27 @@ void App::Render()
                         ImGui::OpenPopup("ProjectLoadError");
                 }
             }
+            if (!m_recentProjectPaths.empty())
+            {
+                ImGui::Separator();
+                if (ImGui::BeginMenu(u8"\u6700\u8FD1\u958B\u3044\u305F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8"))
+                {
+                    for (size_t i = 0; i < m_recentProjectPaths.size() && i < 8; ++i)
+                    {
+                        const std::string& recentPath = m_recentProjectPaths[i];
+                        const std::filesystem::path labelPath(recentPath);
+                        const std::string label =
+                            std::to_string(i + 1) + ". " + labelPath.stem().string();
+                        if (ImGui::MenuItem(label.c_str()))
+                        {
+                            strncpy_s(m_projectPath, sizeof(m_projectPath), recentPath.c_str(), _TRUNCATE);
+                            if (!LoadProject(m_projectPath))
+                                ImGui::OpenPopup("ProjectLoadError");
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+            }
             if (ImGui::MenuItem(u8"\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u4FDD\u5B58"))
             {
                 if (!SaveProject(m_projectPath))
@@ -1490,6 +1611,8 @@ void App::Render()
         {
             if (ImGui::MenuItem(u8"\u80CC\u666F"))
                 m_showBackgroundSettings = true;
+            if (ImGui::MenuItem(u8"\u30A8\u30C7\u30A3\u30BF\u8868\u793A"))
+                m_showEditorDisplaySettings = true;
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -1547,26 +1670,24 @@ void App::Render()
             if (ImGui::CollapsingHeader(u8"\u30B0\u30EA\u30C3\u30C9", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 float gridBaseScale = m_gridBaseScale;
-                if (ImGui::SliderFloat(
+                if (ImGui::InputFloat(
                         u8"\u30B0\u30EA\u30C3\u30C9\u30B5\u30A4\u30BA (m)",
                         &gridBaseScale,
                         0.1f,
-                        100.0f,
-                        "%.2f",
-                        ImGuiSliderFlags_Logarithmic))
+                        1.0f,
+                        "%.2f"))
                 {
                     m_gridBaseScale = (std::max)(0.01f, gridBaseScale);
                     SaveViewSettings();
                 }
 
                 float gridFadeDistance = m_gridFadeDistance;
-                if (ImGui::SliderFloat(
+                if (ImGui::InputFloat(
                         u8"\u30D5\u30A9\u30B0\u8DDD\u96E2 (m)",
                         &gridFadeDistance,
-                        50.0f,
-                        10000.0f,
-                        "%.0f",
-                        ImGuiSliderFlags_Logarithmic))
+                        10.0f,
+                        100.0f,
+                        "%.0f"))
                 {
                     m_gridFadeDistance = (std::max)(1.0f, gridFadeDistance);
                     SaveViewSettings();
@@ -1583,6 +1704,108 @@ void App::Render()
                         ImGuiColorEditFlags_DisplayRGB))
                 {
                     m_backgroundColor = { backgroundColor[0], backgroundColor[1], backgroundColor[2] };
+                    SaveViewSettings();
+                }
+            }
+        }
+        ImGui::End();
+    }
+
+    if (m_showEditorDisplaySettings)
+    {
+        ImGui::SetNextWindowSize(ImVec2(360, 240), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(u8"\u30A8\u30C7\u30A3\u30BF\u8868\u793A", &m_showEditorDisplaySettings))
+        {
+            if (ImGui::CollapsingHeader(u8"\u9053\u8DEF", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                float roadLineThickness = m_roadLineThickness;
+                if (ImGui::SliderFloat(
+                        u8"\u9053\u8DEF\u306E\u592A\u3055 (px)",
+                        &roadLineThickness,
+                        1.0f,
+                        12.0f,
+                        "%.1f"))
+                {
+                    m_roadLineThickness = roadLineThickness;
+                    m_editor.SetRoadLineThickness(m_roadLineThickness);
+                    SaveViewSettings();
+                }
+
+                float selectedRoadLineThickness = m_selectedRoadLineThickness;
+                if (ImGui::SliderFloat(
+                        u8"\u9078\u629E\u6642\u306E\u9053\u8DEF\u306E\u592A\u3055 (px)",
+                        &selectedRoadLineThickness,
+                        1.0f,
+                        16.0f,
+                        "%.1f"))
+                {
+                    m_selectedRoadLineThickness = selectedRoadLineThickness;
+                    m_editor.SetSelectedRoadLineThickness(m_selectedRoadLineThickness);
+                    SaveViewSettings();
+                }
+
+                float roadVertexScreenRadius = m_roadVertexScreenRadius;
+                if (ImGui::SliderFloat(
+                        u8"\u9802\u70B9\u30B5\u30A4\u30BA (px)",
+                        &roadVertexScreenRadius,
+                        2.0f,
+                        20.0f,
+                        "%.0f"))
+                {
+                    m_roadVertexScreenRadius = roadVertexScreenRadius;
+                    m_editor.SetRoadVertexScreenRadius(m_roadVertexScreenRadius);
+                    SaveViewSettings();
+                }
+
+                float roadVertexColor[3] = { m_roadVertexColor.x, m_roadVertexColor.y, m_roadVertexColor.z };
+                if (ImGui::ColorEdit3(
+                        u8"\u8272##roadVertexColor",
+                        roadVertexColor,
+                        ImGuiColorEditFlags_Float |
+                        ImGuiColorEditFlags_DisplayRGB))
+                {
+                    m_roadVertexColor = { roadVertexColor[0], roadVertexColor[1], roadVertexColor[2] };
+                    m_editor.SetRoadVertexColor(m_roadVertexColor);
+                    SaveViewSettings();
+                }
+
+                float selectedRoadColor[3] = { m_selectedRoadColor.x, m_selectedRoadColor.y, m_selectedRoadColor.z };
+                if (ImGui::ColorEdit3(
+                        u8"\u9078\u629E\u6642\u306E\u8272##selectedRoadColor",
+                        selectedRoadColor,
+                        ImGuiColorEditFlags_Float |
+                        ImGuiColorEditFlags_DisplayRGB))
+                {
+                    m_selectedRoadColor = { selectedRoadColor[0], selectedRoadColor[1], selectedRoadColor[2] };
+                    m_editor.SetSelectedRoadColor(m_selectedRoadColor);
+                    SaveViewSettings();
+                }
+            }
+
+            if (ImGui::CollapsingHeader(u8"\u4EA4\u5DEE\u70B9", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                float intersectionScreenGizmoRadius = m_intersectionScreenGizmoRadius;
+                if (ImGui::SliderFloat(
+                        u8"\u4EA4\u5DEE\u70B9\u30B5\u30FC\u30AF\u30EB\u30B5\u30A4\u30BA (px)",
+                        &intersectionScreenGizmoRadius,
+                        4.0f,
+                        40.0f,
+                        "%.0f"))
+                {
+                    m_intersectionScreenGizmoRadius = intersectionScreenGizmoRadius;
+                    m_editor.SetIntersectionScreenGizmoRadius(m_intersectionScreenGizmoRadius);
+                    SaveViewSettings();
+                }
+
+                float intersectionCircleColor[3] = { m_intersectionCircleColor.x, m_intersectionCircleColor.y, m_intersectionCircleColor.z };
+                if (ImGui::ColorEdit3(
+                        u8"\u8272##intersectionCircleColor",
+                        intersectionCircleColor,
+                        ImGuiColorEditFlags_Float |
+                        ImGuiColorEditFlags_DisplayRGB))
+                {
+                    m_intersectionCircleColor = { intersectionCircleColor[0], intersectionCircleColor[1], intersectionCircleColor[2] };
+                    m_editor.SetIntersectionCircleColor(m_intersectionCircleColor);
                     SaveViewSettings();
                 }
             }
