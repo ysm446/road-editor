@@ -535,6 +535,10 @@ void App::LoadViewSettings()
     m_showRoadPreviewMetrics = false;
     m_showRoadGradeGradient = false;
     m_showGrid = true;
+    m_showCameraWindow = true;
+    m_showTerrainWindow = true;
+    m_showRoadEditorWindow = true;
+    m_showPropertiesWindow = true;
     m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
@@ -563,6 +567,10 @@ void App::LoadViewSettings()
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
             m_showGrid = root.value("showGrid", true);
+            m_showCameraWindow = root.value("showCameraWindow", true);
+            m_showTerrainWindow = root.value("showTerrainWindow", true);
+            m_showRoadEditorWindow = root.value("showRoadEditorWindow", true);
+            m_showPropertiesWindow = root.value("showPropertiesWindow", true);
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
@@ -647,6 +655,10 @@ void App::SaveViewSettings() const
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
             { "showRoadGradeGradient", m_showRoadGradeGradient },
             { "showGrid", m_showGrid },
+            { "showCameraWindow", m_showCameraWindow },
+            { "showTerrainWindow", m_showTerrainWindow },
+            { "showRoadEditorWindow", m_showRoadEditorWindow },
+            { "showPropertiesWindow", m_showPropertiesWindow },
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
@@ -1624,7 +1636,30 @@ void App::Render()
                     SaveViewSettings();
                 }
             }
-            ImGui::MenuItem("ImGui Demo", nullptr, false, false);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu(u8"\u30A6\u30A4\u30F3\u30C9\u30A6"))
+        {
+            if (ImGui::MenuItem(u8"\u5730\u5F62", nullptr, m_showTerrainWindow))
+            {
+                m_showTerrainWindow = !m_showTerrainWindow;
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem(u8"\u30AB\u30E1\u30E9", nullptr, m_showCameraWindow))
+            {
+                m_showCameraWindow = !m_showCameraWindow;
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem(u8"\u9053\u8DEF\u30A8\u30C7\u30A3\u30BF", nullptr, m_showRoadEditorWindow))
+            {
+                m_showRoadEditorWindow = !m_showRoadEditorWindow;
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem(u8"\u30D7\u30ED\u30D1\u30C6\u30A3", nullptr, m_showPropertiesWindow))
+            {
+                m_showPropertiesWindow = !m_showPropertiesWindow;
+                SaveViewSettings();
+            }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(u8"\u8A2D\u5B9A"))
@@ -1829,31 +1864,38 @@ void App::Render()
         ImGui::End();
     }
 
-    // Camera panel
-    ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(280, 110), ImGuiCond_FirstUseEver);
-    ImGui::Begin(u8"\u30AB\u30E1\u30E9");
+    const bool wasShowingCameraWindow = m_showCameraWindow;
+    if (m_showCameraWindow)
     {
-        auto p = m_camera->GetPosition();
-        ImGui::Text("Position  %.2f  %.2f  %.2f", p.x, p.y, p.z);
-        ImGui::Separator();
-        if (m_cursorHitValid)
-            ImGui::Text(u8"\u30AB\u30FC\u30BD\u30EB  %.2f  %.2f  %.2f",
-                        m_cursorHitPos.x, m_cursorHitPos.y, m_cursorHitPos.z);
-        else
-            ImGui::TextDisabled(u8"\u30AB\u30FC\u30BD\u30EB  --");
-        ImGui::Separator();
-        ImGui::TextDisabled(u8"Alt + \u5DE6\u30C9\u30E9\u30C3\u30B0 : \u56DE\u8EE2");
-        ImGui::TextDisabled(u8"Alt + \u4E2D\u30C9\u30E9\u30C3\u30B0 : \u30D1\u30F3");
-        ImGui::TextDisabled(u8"\u30DE\u30A6\u30B9\u30DB\u30A4\u30FC\u30EB   : \u30BA\u30FC\u30E0");
-        ImGui::TextDisabled(u8"L + \u5DE6\u30C9\u30E9\u30C3\u30B0   : \u592A\u967D\u65B9\u5411");
+        ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(280, 110), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(u8"\u30AB\u30E1\u30E9", &m_showCameraWindow))
+        {
+            auto p = m_camera->GetPosition();
+            ImGui::Text("Position  %.2f  %.2f  %.2f", p.x, p.y, p.z);
+            ImGui::Separator();
+            if (m_cursorHitValid)
+                ImGui::Text(u8"\u30AB\u30FC\u30BD\u30EB  %.2f  %.2f  %.2f",
+                            m_cursorHitPos.x, m_cursorHitPos.y, m_cursorHitPos.z);
+            else
+                ImGui::TextDisabled(u8"\u30AB\u30FC\u30BD\u30EB  --");
+            ImGui::Separator();
+            ImGui::TextDisabled(u8"Alt + \u5DE6\u30C9\u30E9\u30C3\u30B0 : \u56DE\u8EE2");
+            ImGui::TextDisabled(u8"Alt + \u4E2D\u30C9\u30E9\u30C3\u30B0 : \u30D1\u30F3");
+            ImGui::TextDisabled(u8"\u30DE\u30A6\u30B9\u30DB\u30A4\u30FC\u30EB   : \u30BA\u30FC\u30E0");
+            ImGui::TextDisabled(u8"L + \u5DE6\u30C9\u30E9\u30C3\u30B0   : \u592A\u967D\u65B9\u5411");
+        }
+        ImGui::End();
     }
-    ImGui::End();
+    if (wasShowingCameraWindow != m_showCameraWindow)
+        SaveViewSettings();
 
-    // Terrain panel
-    ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
-    ImGui::Begin(u8"\u5730\u5F62", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    const bool wasShowingTerrainWindow = m_showTerrainWindow;
+    if (m_showTerrainWindow)
     {
+        ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
+        ImGui::Begin(u8"\u5730\u5F62", &m_showTerrainWindow, ImGuiWindowFlags_AlwaysAutoResize);
+        {
         ImGui::Checkbox(u8"\u8868\u793A",   &m_terrain->visible);
         ImGui::SameLine();
         ImGui::Checkbox(u8"\u30EF\u30A4\u30E4\u30FC", &m_terrain->wireframe);
@@ -2050,8 +2092,11 @@ void App::Render()
             SaveViewSettings();
         }
 
+        }
+        ImGui::End();
     }
-    ImGui::End();
+    if (wasShowingTerrainWindow != m_showTerrainWindow)
+        SaveViewSettings();
 
     if (m_editor.GetMode() == EditorMode::Pathfinding)
         DrawPathfindingPanel();
@@ -2067,7 +2112,14 @@ void App::Render()
     }
 
     // Road editor panel
-    m_editor.DrawUI(m_d3d->GetDevice());
+    const bool wasShowingRoadEditorWindow = m_showRoadEditorWindow;
+    const bool wasShowingPropertiesWindow = m_showPropertiesWindow;
+    m_editor.DrawUI(m_d3d->GetDevice(), &m_showRoadEditorWindow, &m_showPropertiesWindow);
+    if (wasShowingRoadEditorWindow != m_showRoadEditorWindow ||
+        wasShowingPropertiesWindow != m_showPropertiesWindow)
+    {
+        SaveViewSettings();
+    }
 
     std::string editorStatus;
     if (m_editor.ConsumeStatusMessage(editorStatus))

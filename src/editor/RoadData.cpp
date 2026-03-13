@@ -346,7 +346,8 @@ static nlohmann::json IntersectionToJson(const Intersection& i)
     if (!intersectionJson.contains("type") || intersectionJson["type"].is_string())
         intersectionJson["type"] = i.type;
     intersectionJson["pos"] = PointJsonToArray(i.pos);
-    intersectionJson["radius"] = i.radius;
+    intersectionJson.erase("radius");
+    intersectionJson["entryDist"] = i.entryDist;
     return intersectionJson;
 }
 
@@ -373,9 +374,11 @@ static Intersection IntersectionFromJson(const nlohmann::json& j)
     {
         i.pos = { j.value("x", 0.0f), j.value("y", 0.0f), j.value("z", 0.0f) };
     }
-    i.radius = j.contains("radius")
-        ? JsonToFloat(j["radius"], 4.0f)
-        : JsonToFloat(j.value("outerRadius", nlohmann::json()), 4.0f);
+    i.entryDist = j.contains("entryDist")
+        ? JsonToFloat(j["entryDist"], 8.0f)
+        : (j.contains("radius")
+            ? JsonToFloat(j["radius"], 8.0f)
+            : JsonToFloat(j.value("outerRadius", nlohmann::json()), 8.0f));
     EnsureIntersectionId(i);
     return i;
 }

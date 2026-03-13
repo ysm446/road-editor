@@ -125,6 +125,10 @@ private:
     std::string       m_statusMessage  = "Ready";
     bool              m_prevFocusKey   = false;
     bool              m_showGrid = true;
+    bool              m_showCameraWindow = true;
+    bool              m_showTerrainWindow = true;
+    bool              m_showRoadEditorWindow = true;
+    bool              m_showPropertiesWindow = true;
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
     bool              m_showRoadPreviewMetrics = false;

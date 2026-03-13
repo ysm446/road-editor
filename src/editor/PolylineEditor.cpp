@@ -552,7 +552,7 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
             ? copiedIntersection.groupId
             : m_network->intersections[newIntersectionIndex].groupId;
         newIntersection.type = copiedIntersection.type;
-        newIntersection.radius = copiedIntersection.radius;
+        newIntersection.entryDist = copiedIntersection.entryDist;
         newIntersection.pos.x += delta.x;
         newIntersection.pos.z += delta.z;
         if (m_terrain && m_terrain->IsReady())
@@ -3460,7 +3460,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
             || IsIntersectionSelected(ii)
             ? colorIntersectionSelected
             : colorIntersection;
-        const float r = (std::max)(1.5f, isec.radius * 0.35f);
+        const float r = (std::max)(1.5f, isec.entryDist * 0.35f);
         dd.AddLine({ isec.pos.x - r, isec.pos.y, isec.pos.z },
                    { isec.pos.x + r, isec.pos.y, isec.pos.z }, col);
         dd.AddLine({ isec.pos.x, isec.pos.y, isec.pos.z - r },
@@ -3887,17 +3887,19 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 // ---------------------------------------------------------------------------
 // DrawUI
 // ---------------------------------------------------------------------------
-void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
+void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow, bool* showPropertiesWindow)
 {
     m_network->EnsureDefaultGroup();
     SanitizeSelection();
 
-    ImGui::SetNextWindowPos(ImVec2(10, 360), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(320, 420), ImGuiCond_FirstUseEver);
-    ImGui::Begin(u8"\u9053\u8DEF\u30A8\u30C7\u30A3\u30BF");
-
-    // Mode toolbar
+    if (showRoadEditorWindow != nullptr && *showRoadEditorWindow)
     {
+        ImGui::SetNextWindowPos(ImVec2(10, 360), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(320, 420), ImGuiCond_FirstUseEver);
+        ImGui::Begin(u8"\u9053\u8DEF\u30A8\u30C7\u30A3\u30BF", showRoadEditorWindow);
+
+        // Mode toolbar
+        {
         bool navActive  = (m_mode == EditorMode::Navigate);
         bool drawActive = (m_mode == EditorMode::PolylineDraw);
         bool editActive = (m_mode == EditorMode::PointEdit);
@@ -4046,12 +4048,20 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
     ImGui::TextDisabled(m_snapToTerrain
         ? u8"\u4E2D\u592E/XZ \u30AE\u30BA\u30E2\u79FB\u52D5\u306F\u5730\u5F62\u3078\u30B9\u30CA\u30C3\u30D7\u3057\u307E\u3059"
         : u8"\u30DD\u30A4\u30F3\u30C8\u3068\u4EA4\u5DEE\u70B9\u306F 3D \u7A7A\u9593\u5185\u3092\u81EA\u7531\u306B\u79FB\u52D5\u3057\u307E\u3059");
-    ImGui::TextDisabled(m_snapToPoints
-        ? u8"\u4E2D\u592E\u79FB\u52D5\u4E2D\u306F\u8FD1\u304F\u306E\u9802\u70B9\u307E\u305F\u306F\u4EA4\u5DEE\u70B9\u3078\u5438\u7740\u3057\u307E\u3059"
-        : u8"\u30DD\u30A4\u30F3\u30C8\u30B9\u30CA\u30C3\u30D7\u306F\u7121\u52B9\u3067\u3059");
-    ImGui::Separator();
+        ImGui::TextDisabled(m_snapToPoints
+            ? u8"\u4E2D\u592E\u79FB\u52D5\u4E2D\u306F\u8FD1\u304F\u306E\u9802\u70B9\u307E\u305F\u306F\u4EA4\u5DEE\u70B9\u3078\u5438\u7740\u3057\u307E\u3059"
+            : u8"\u30DD\u30A4\u30F3\u30C8\u30B9\u30CA\u30C3\u30D7\u306F\u7121\u52B9\u3067\u3059");
+        ImGui::End();
+    }
 
-    ImGui::Text(u8"\u30B0\u30EB\u30FC\u30D7 (%d)", static_cast<int>(m_network->groups.size()));
+    if (showPropertiesWindow != nullptr && *showPropertiesWindow)
+    {
+        ImGui::SetNextWindowPos(ImVec2(10, 790), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(320, 520), ImGuiCond_FirstUseEver);
+        ImGui::Begin(u8"\u30D7\u30ED\u30D1\u30C6\u30A3", showPropertiesWindow);
+
+        ImGui::Separator();
+        ImGui::Text(u8"\u30B0\u30EB\u30FC\u30D7 (%d)", static_cast<int>(m_network->groups.size()));
     if (ImGui::Button(u8"\u30B0\u30EB\u30FC\u30D7\u8FFD\u52A0"))
     {
         PushUndoState();
@@ -4377,13 +4387,14 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/)
                 isec.pos.y = m_terrain->GetHeightAt(isec.pos.x, isec.pos.z);
             SyncRoadConnectionsForIntersection(m_activeIntersection);
         }
-        float isecRadius = isec.radius;
-        if (ImGui::SliderFloat("Radius##isec", &isecRadius, 1.0f, 20.0f))
+        float isecEntryDist = isec.entryDist;
+        if (ImGui::SliderFloat(u8"\u63A5\u7D9A\u8DDD\u96E2 (m)##isec", &isecEntryDist, 1.0f, 20.0f))
         {
             PushUndoState();
-            isec.radius = isecRadius;
+            isec.entryDist = isecEntryDist;
         }
     }
 
-    ImGui::End();
+        ImGui::End();
+    }
 }

@@ -16,7 +16,7 @@
     0.9411764740943909,
     1.0
   ],
-  "intersectionScreenGizmoRadius": 7.0,
+  "intersectionScreenGizmoRadius": 6.0,
   "recentProjectPaths": [
     "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.json"
   ],
@@ -34,11 +34,15 @@
     1.0
   ],
   "selectedRoadLineThickness": 3.0,
+  "showCameraWindow": true,
   "showContours": true,
   "showFps": true,
   "showGrid": true,
   "showIntersectionNames": false,
+  "showPropertiesWindow": true,
+  "showRoadEditorWindow": true,
   "showRoadGradeGradient": true,
   "showRoadNames": false,
-  "showRoadPreviewMetrics": false
+  "showRoadPreviewMetrics": false,
+  "showTerrainWindow": true
 }

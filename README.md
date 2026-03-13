@@ -1,182 +1,245 @@
-# Road Network Editor
+# Road Editor
 
-DirectX 11 + Dear ImGui によるスタンドアロンの道路ネットワークエディタ。
-Houdini の道路エディタ HDA で培った設計思想をベースに、段階的に実装を進めるプロジェクト。
+DirectX 11 と Dear ImGui で作られた道路編集ツールです。  
+ハイトマップ地形の上で道路ポリラインと交差点を編集し、JSON 形式で保存できます。
 
-## 現在の機能
+## 主な機能
 
-- 無限グリッド表示
-- 右手座標系のオービットカメラ操作
-- 画面左下の XYZ 軸表示
-- ハイトマップ画像からの地形生成
-- Terrain パネルからの Divisions X / Z、Size X / Z / Y、Offset X / Z の調整
-- Terrain 未ロード時の XZ 平面配置
-- 道路ポリラインと交差点の作成、編集、削除
-- ポイント挿入、複数選択、矩形選択、gizmo 移動
-- 各道路ポリラインに対する 2 次ベジェ曲線プレビュー表示
-- 道路と交差点のグループ管理、表示 / 非表示、ロック
-- 道路名 / 交差点名の表示切り替えと永続化
-- Undo / Redo (`Ctrl+Z` / `Ctrl+Y`)
-- UUID ベースの道路データ JSON 保存・読み込み
-- グループや表示設定を含むプロジェクト初期化 (`File -> New Project`)
+- ハイトマップの読み込み
+- 地形サイズ、分割数、オフセットの調整
+- 道路の作成、編集、保存、読込
+- 交差点の作成、編集、保存
+- 道路端点の交差点スナップ
+- 近いポイントへのスナップ
+- グループ管理
+- Undo / Redo
+- 最近開いたプロジェクト
+- 背景、グリッド、エディタ表示の調整
+- 旧フォーマット道路 / 交差点 JSON の読込互換
 
-## 技術スタック
+## 動作環境
 
-| 項目 | 選定 |
-|------|------|
-| グラフィックスAPI | DirectX 11 |
-| UI | Dear ImGui (docking branch) |
-| 数学 | DirectXMath |
-| ビルド | CMake 3.20+ |
-| 言語 | C++17 |
-| シェーダー | HLSL Shader Model 5.0 |
-
-## 必要環境
-
-- Windows 10/11
-- Visual Studio 2022 / 2026 (MSVC)
+- Windows 10 / 11
+- Visual Studio 2022 または 2026
 - CMake 3.20 以上
-- DirectX 11 対応 GPU
+- DirectX 11 が動作する GPU
 
-## ビルド手順
+## ビルド
 
-```bash
-# 1. リポジトリをクローン
-git clone https://github.com/<your-name>/road-editor.git
-cd road-editor
+### CMake が PATH に通っている場合
 
-# 2. CMake 構成 (Visual Studio 2026 の場合)
+```powershell
 cmake -B build -S . -G "Visual Studio 18 2026" -A x64
-
-# Visual Studio 2022 の場合
-cmake -B build -S . -G "Visual Studio 17 2022" -A x64
-
-# 3. ビルド
 cmake --build build --config Debug
-
-# 4. 実行
-build\Debug\RoadEditor.exe
 ```
 
-### Visual Studio 2022でビルド
-```bash
+Visual Studio 2022 を使う場合:
+
+```powershell
+cmake -B build -S . -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Debug
+```
+
+### PowerShell で `cmake` が見つからない場合
+
+この環境では Visual Studio 同梱の `cmake.exe` を直接呼べます。
+
+```powershell
 & 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Debug
-
-build\Debug\RoadEditor.exe
 ```
 
-初回ビルド時に CMake FetchContent が以下を自動取得します（インターネット接続が必要）。
+初回構成から行う場合:
 
-| ライブラリ | バージョン |
-|-----------|-----------|
-| Dear ImGui | docking branch |
-| nlohmann/json | v3.11.3 |
-| stb | master |
-
-## カメラ操作
-
-| 操作 | 入力 |
-|------|------|
-| 回転 | Alt + 左ドラッグ |
-| パン | Alt + 中ドラッグ |
-| ズーム | スクロールホイール |
-| フォーカス | `F` |
-
-`F` は選択中の道路、道路ポイント、交差点にフォーカスします。
-
-## Terrain の使い方
-
-- `Browse` でハイトマップ画像を選択して `Load` を押すと地形を生成します。
-- `Divisions X / Z` はワイヤーフレーム格子のセル数です。`0` を指定すると画像解像度に合わせて `image size - 1` が使われます。
-- `Size X / Z / Y (m)` は地形の幅、奥行き、高さです。
-- `Offset X / Z (m)` は地形全体の水平オフセットです。
-- 地形ロード後も同じ UI を使い続けられ、`Divisions` や `Size` を変更するとその地形が再構築されます。
-- `Wireframe` をオンにすると地形メッシュをワイヤーフレーム表示できます。
-- `Clear Height Field` を押すとハイトフィールドを解除し、XZ 平面ベースの編集に戻せます。
-
-## エディタ操作
-
-| 操作 | 入力 |
-|------|------|
-| 道路選択 | クリック |
-| 交差点選択 | クリック |
-| 道路ポイント選択 | 道路選択後にポイントをクリック |
-| ポイント / 交差点の追加選択 | `Ctrl + Click` |
-| ポイント / 交差点の矩形選択 | 空いた場所をドラッグ |
-| 矩形の追加選択 | `Ctrl + ドラッグ` |
-| 矩形の解除選択 | `Ctrl + Shift + ドラッグ` |
-| gizmo 編集に入る | `W` |
-| Undo / Redo | `Ctrl + Z` / `Ctrl + Y` |
-| 選択道路の削除 | `Delete` |
-| 選択交差点の削除 | `Delete` |
-| 選択ポイントの削除 | `Delete` |
-
-- `Navigate` と `PointEdit` の両方で矩形選択が使えます。
-- `PointEdit` では、道路ポイントと交差点を混在選択したまま同時移動できます。
-- 道路ポイント間のラインをクリックすると、その位置に新しいポイントを挿入できます。
-- 単一の道路端点を選択して移動した場合は、近い交差点へスナップ / 接続できます。
-- 各道路には、制御点として道路ポイントを使った 2 次ベジェ曲線プレビューが重ねて表示されます。
-- ベジェ曲線は道路ポイント自体は通らず、各エッジ上の中間点を通ります。
-- 中間点は隣接エッジ長に比例した位置に置かれます。
-
-## グループと表示
-
-- 道路と交差点はグループに所属できます。
-- グループはツリー UI で管理でき、表示 / 非表示とロックを切り替えられます。
-- `View` メニューから `Road Names` と `Intersection Names` を切り替えできます。
-- 表示設定は次回起動時のために保存されます。
-
-## 実装状況
-
-- [x] Phase 1: D3D11 初期化 / Dear ImGui 統合 / オービットカメラ / 無限グリッド
-- [x] Phase 2: ハイトマップ地形表示
-- [~] Phase 3: ポリライン道路配置・編集 / JSON 保存・読み込み
-- [ ] Phase 4: スプライン補間による道路メッシュ自動生成
-
-## プロジェクト構成
-
-```
-RoadEditor/
-├── CMakeLists.txt
-├── data/
-│   ├── heightmap.png
-│   └── roads.json
-├── shaders/
-│   ├── common.hlsli
-│   ├── grid_vs.hlsl
-│   ├── grid_ps.hlsl
-│   ├── line_vs.hlsl
-│   ├── line_ps.hlsl
-│   ├── terrain_vs.hlsl
-│   └── terrain_ps.hlsl
-├── src/
-│   ├── main.cpp
-│   ├── App.h / App.cpp
-│   ├── editor/
-│   │   ├── EditorState.h
-│   │   ├── PolylineEditor.h / .cpp
-│   │   └── RoadData.h / .cpp
-│   ├── renderer/
-│   │   ├── D3D11Context.h / .cpp
-│   │   ├── Shader.h / .cpp
-│   │   ├── Buffer.h
-│   │   └── DebugDraw.h / .cpp
-│   ├── scene/
-│   │   ├── Camera.h / .cpp
-│   │   ├── Grid.h / .cpp
-│   │   └── Terrain.h / .cpp
-│   └── ui/
-│       └── ImGuiLayer.h / .cpp
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' -B build -S . -G "Visual Studio 18 2026" -A x64
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe' --build build --config Debug
 ```
 
-## メモ
+実行ファイル:
 
-- 初回ロード前でも Terrain パネルの `Divisions` と `Size` を設定できます。
-- ロード後も UI は切り替わらず、同じ項目で地形パラメータを編集できます。
-- ハイトフィールド未ロード時は `y=0` の XZ 平面に道路と交差点を配置します。
-- ベジェプレビューは道路メッシュ生成ではなく、現時点では編集用の可視化です。
-- 道路、交差点、グループは UUID を持ち、JSON 上でもそのまま保存されます。
-- `build\Debug\RoadEditor.exe` の出力先は環境や CMake ジェネレータによって変わる場合があります。
+```powershell
+.\build\Debug\RoadEditor.exe
+```
+
+## 画面構成
+
+上部メニュー:
+
+- `ファイル`
+- `編集`
+- `表示`
+- `ウインドウ`
+- `設定`
+
+`ウインドウ` メニューから次のウィンドウを開閉できます。
+
+- `地形`
+- `カメラ`
+- `道路エディタ`
+- `プロパティ`
+
+各ウィンドウは右上の閉じるボタンでも閉じられます。  
+開閉状態は `data/view_settings.json` に保存されます。
+
+## ファイルメニュー
+
+- `新規プロジェクト`
+- `プロジェクトを開く...`
+- `最近開いたプロジェクト`
+- `プロジェクトを保存`
+- `名前を付けて保存...`
+- `道路を開く...`
+- `道路を保存`
+- `道路を別名で保存...`
+
+## 編集メニュー
+
+- `Undo`
+- `Redo`
+- `交差点を自動作成`
+
+`交差点を自動作成` は、未接続の道路端点が近接している場所に交差点が無い場合、新しい交差点を作成して端点を接続します。
+
+## 表示メニュー
+
+- 道路名
+- 交差点名
+- 道路プレビュー情報
+- 道路勾配グラデーション
+- グリッド
+- FPS
+
+## 設定メニュー
+
+- `背景`
+  - グリッドサイズ
+  - フォグ距離
+  - 背景色
+- `エディタ表示`
+  - 道路
+    - 道路の太さ
+    - 選択時の道路の太さ
+    - 頂点サイズ
+    - 色
+    - 選択時の色
+  - 交差点
+    - 交差点サークルサイズ
+    - 色
+
+## 地形ウィンドウ
+
+主な項目:
+
+- 表示
+- ワイヤー
+- 表示モード
+- ライティング
+- 地形テクスチャ
+- ハイトマップ
+- 分割数 X / Z
+- サイズ X / Z / Y (m)
+- オフセット X / Y / Z (m)
+- 等高線表示
+
+初期値:
+
+- 分割数: `1024 x 1024`
+- サイズ: `1024 x 1024 x 1024`
+
+標準ライティングは Half-Lambert です。スペキュラーは入っていません。
+
+## 道路エディタウィンドウ
+
+主に編集モード切り替えと編集補助を置いています。
+
+- オブジェクト
+- ポイント編集
+- 道路作成
+- 交差点作成
+- 交差点編集
+- 経路探索
+- 地形にスナップ
+- ポイントにスナップ
+
+`ポイントにスナップ` を有効にすると、道路頂点や交差点の移動中に近いポイントへ吸着します。  
+道路頂点を動かす場合は、同じ道路内の頂点には吸着しません。
+
+## プロパティウィンドウ
+
+次の詳細編集をまとめています。
+
+- グループ
+- 道路
+- 選択中ポイント
+- 交差点
+
+交差点プロパティには `接続距離 (m)` があります。  
+内部保存名は `entryDist` で、既定値は `8.0` です。
+
+## 保存仕様
+
+### プロジェクトファイル
+
+プロジェクト保存時、次のパスはプロジェクトファイル基準の相対パスで保存されます。
+
+- `terrain.path`
+- `terrain.texturePath`
+- `roads.path`
+
+読み込み時は、プロジェクトファイルの場所から相対解決します。
+
+### 道路 / 交差点 JSON
+
+道路データは UUID ベースの JSON で保存されます。  
+旧フォーマットに含まれる次の情報も保持して保存できます。
+
+- `bankAngle`
+- `laneSection`
+- `verticalCurve`
+- 各ポイントの追加パラメータ
+
+### 表示設定
+
+次の内容は `data/view_settings.json` に保存されます。
+
+- 背景設定
+- エディタ表示設定
+- 最近開いたプロジェクト
+- 各ウィンドウの開閉状態
+
+## 操作
+
+カメラ:
+
+- 回転: `Alt + 左ドラッグ`
+- パン: `Alt + 中ドラッグ`
+- ズーム: マウスホイール
+- フォーカス: `F`
+
+編集:
+
+- Undo: `Ctrl + Z`
+- Redo: `Ctrl + Y`
+- 削除: `Delete`
+- gizmo 移動: `W`
+- Y 回転 gizmo: `E`
+- XZ 拡大 gizmo: `R`
+
+## 旧フォーマット統合メモ
+
+`data/test` 以下の旧道路 / 交差点データは、現行形式へ統合した JSON を作成できます。  
+作成済みサンプル:
+
+- `data/test/new_curve.json`
+
+## 主要ファイル
+
+- `src/App.cpp`
+- `src/editor/PolylineEditor.cpp`
+- `src/editor/RoadData.cpp`
+- `src/scene/Terrain.cpp`
+- `shaders/terrain_ps.hlsl`
+- `shaders/grid_ps.hlsl`
 
 ## ライセンス
 

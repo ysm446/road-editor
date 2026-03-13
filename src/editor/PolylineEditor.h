@@ -64,7 +64,7 @@ public:
     void DrawOverlay(DirectX::XMMATRIX viewProj, int vpW, int vpH) const;
 
     // UI panels (called inside ImGui frame)
-    void DrawUI(ID3D11Device* device);
+    void DrawUI(ID3D11Device* device, bool* showRoadEditorWindow, bool* showPropertiesWindow);
 
     // Mode switching (also called from toolbar in App)
     void SetMode(EditorMode mode);

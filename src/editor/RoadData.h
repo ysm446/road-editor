@@ -39,7 +39,7 @@ struct Intersection
     std::string         groupId;
     std::string         type = "intersection";
     DirectX::XMFLOAT3   pos = { 0.0f, 0.0f, 0.0f };
-    float               radius = 4.0f;
+    float               entryDist = 8.0f;
     nlohmann::json      legacyData = nlohmann::json::object();
 };
 
