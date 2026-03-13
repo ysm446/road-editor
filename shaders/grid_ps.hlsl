@@ -64,14 +64,15 @@ PSOutput main(PSInput input)
 
     float3 worldPos = input.nearPoint + t * (input.farPoint - input.nearPoint);
 
-    // Distance-based fade so the grid disappears at the horizon
+    // Distance-based fade controlled from the app settings.
     float dist = length(worldPos.xz - cameraPos.xz);
-    float fade = 1.0 - saturate(dist / 200.0);
+    float fade = 1.0 - saturate(dist / max(gridFadeDistance, 1.0));
 
-    // Overlay two grid scales: 1 m and 10 m
-    float4 c1    = GridColor(worldPos, 1.0);
-    float4 c2    = GridColor(worldPos, 10.0);
-    float4 color = c1 + c2 * 0.6;
+    float fineScale = max(gridBaseScale, 0.01);
+    float coarseScale = fineScale * 10.0;
+    float4 fineGrid = GridColor(worldPos, fineScale);
+    float4 coarseGrid = GridColor(worldPos, coarseScale);
+    float4 color = fineGrid + coarseGrid * 0.6;
     color.a     *= fade;
 
     [branch]

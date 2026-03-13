@@ -1,18 +1,20 @@
 {
   "backgroundColor": [
-    0.3137255012989044,
-    0.3137255012989044,
-    0.3137255012989044
+    0.2664092779159546,
+    0.2664092779159546,
+    0.2664092779159546
   ],
   "contourColor": [
     0.23552125692367554,
     0.23552125692367554,
     0.23552125692367554
   ],
+  "gridBaseScale": 13.199999809265137,
+  "gridFadeDistance": 2219.0,
   "roadGradeRedThresholdPercent": 15.0,
   "showContours": true,
   "showFps": false,
-  "showIntersectionNames": true,
+  "showIntersectionNames": false,
   "showRoadGradeGradient": true,
   "showRoadNames": true,
   "showRoadPreviewMetrics": false

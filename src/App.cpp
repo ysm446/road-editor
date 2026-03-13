@@ -502,6 +502,7 @@ void App::ApplyTerrainSettings()
     m_terrain->horizontalScaleZ = m_loadDepthM / static_cast<float>((cellsH > 0) ? cellsH : 1);
     m_terrain->heightScale      = m_loadHeightM;
     m_terrain->offsetX          = m_loadOffsetX;
+    m_terrain->offsetY          = m_loadOffsetY;
     m_terrain->offsetZ          = m_loadOffsetZ;
     m_terrain->Rebuild(m_d3d->GetDevice());
     RebuildContourCache();
@@ -516,6 +517,8 @@ void App::LoadViewSettings()
     m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
+    m_gridBaseScale = 1.0f;
+    m_gridFadeDistance = 1200.0f;
     m_contourColor = { 0.18f, 0.18f, 0.18f };
     m_backgroundColor = { 0.12f, 0.12f, 0.14f };
 
@@ -533,6 +536,8 @@ void App::LoadViewSettings()
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
+            m_gridBaseScale = root.value("gridBaseScale", 1.0f);
+            m_gridFadeDistance = root.value("gridFadeDistance", 1200.0f);
             if (root.contains("contourColor") && root["contourColor"].is_array() && root["contourColor"].size() == 3)
             {
                 m_contourColor.x = root["contourColor"][0].get<float>();
@@ -572,6 +577,8 @@ void App::SaveViewSettings() const
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
+            { "gridBaseScale", m_gridBaseScale },
+            { "gridFadeDistance", m_gridFadeDistance },
             { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
             { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } }
         };
@@ -722,6 +729,7 @@ void App::NewProject()
     m_loadDepthM = 1024.0f;
     m_loadHeightM = 1024.0f;
     m_loadOffsetX = 0.0f;
+    m_loadOffsetY = 0.0f;
     m_loadOffsetZ = 0.0f;
 
     m_cursorHitValid = false;
@@ -851,6 +859,7 @@ bool App::SaveProject(const char* path)
             { "depthM",      m_loadDepthM             },
             { "heightM",     m_loadHeightM            },
             { "offsetX",     m_loadOffsetX            },
+            { "offsetY",     m_loadOffsetY            },
             { "offsetZ",     m_loadOffsetZ            },
             { "colorMode",   m_terrain->colorMode     },
             { "lightingMode", m_terrain->lightingMode },
@@ -916,6 +925,7 @@ bool App::LoadProject(const char* path)
             m_loadDepthM  = t.value("depthM", 1024.0f);
             m_loadHeightM = t.value("heightM", 1024.0f);
             m_loadOffsetX = t.value("offsetX", 0.0f);
+            m_loadOffsetY = t.value("offsetY", 0.0f);
             m_loadOffsetZ = t.value("offsetZ", 0.0f);
             m_terrain->colorMode = t.value("colorMode", 1);
             m_terrain->lightingMode = t.value("lightingMode", Terrain::LightingModeBasic);
@@ -1363,6 +1373,8 @@ void App::Render()
     XMStoreFloat4x4(&pfd.invViewProj, XMMatrixInverse(nullptr, vp));
     pfd.cameraPos = m_camera->GetPosition();
     pfd.time      = m_time;
+    pfd.gridBaseScale = m_gridBaseScale;
+    pfd.gridFadeDistance = m_gridFadeDistance;
     m_perFrameCB.Update(m_d3d->GetContext(), pfd);
 
     // 3D scene  (order: terrain -> grid -> debug lines)
@@ -1474,6 +1486,12 @@ void App::Render()
             ImGui::MenuItem("ImGui Demo", nullptr, false, false);
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu(u8"\u8A2D\u5B9A"))
+        {
+            if (ImGui::MenuItem(u8"\u80CC\u666F"))
+                m_showBackgroundSettings = true;
+            ImGui::EndMenu();
+        }
         ImGui::EndMainMenuBar();
     }
 
@@ -1519,6 +1537,57 @@ void App::Render()
         ImGui::Text(u8"\u9053\u8DEF\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F: %s", m_editor.GetFilePath());
         if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
+    }
+
+    if (m_showBackgroundSettings)
+    {
+        ImGui::SetNextWindowSize(ImVec2(340, 220), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(u8"\u80CC\u666F\u8A2D\u5B9A", &m_showBackgroundSettings))
+        {
+            if (ImGui::CollapsingHeader(u8"\u30B0\u30EA\u30C3\u30C9", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                float gridBaseScale = m_gridBaseScale;
+                if (ImGui::SliderFloat(
+                        u8"\u30B0\u30EA\u30C3\u30C9\u30B5\u30A4\u30BA (m)",
+                        &gridBaseScale,
+                        0.1f,
+                        100.0f,
+                        "%.2f",
+                        ImGuiSliderFlags_Logarithmic))
+                {
+                    m_gridBaseScale = (std::max)(0.01f, gridBaseScale);
+                    SaveViewSettings();
+                }
+
+                float gridFadeDistance = m_gridFadeDistance;
+                if (ImGui::SliderFloat(
+                        u8"\u30D5\u30A9\u30B0\u8DDD\u96E2 (m)",
+                        &gridFadeDistance,
+                        50.0f,
+                        10000.0f,
+                        "%.0f",
+                        ImGuiSliderFlags_Logarithmic))
+                {
+                    m_gridFadeDistance = (std::max)(1.0f, gridFadeDistance);
+                    SaveViewSettings();
+                }
+            }
+
+            if (ImGui::CollapsingHeader(u8"\u80CC\u666F\u8272", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                float backgroundColor[3] = { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z };
+                if (ImGui::ColorEdit3(
+                        u8"\u80CC\u666F\u8272",
+                        backgroundColor,
+                        ImGuiColorEditFlags_Float |
+                        ImGuiColorEditFlags_DisplayRGB))
+                {
+                    m_backgroundColor = { backgroundColor[0], backgroundColor[1], backgroundColor[2] };
+                    SaveViewSettings();
+                }
+            }
+        }
+        ImGui::End();
     }
 
     // Camera panel
@@ -1666,10 +1735,11 @@ void App::Render()
         if (m_loadDepthM < 1.0f) m_loadDepthM = 1.0f;
         if (m_loadHeightM < 1.0f) m_loadHeightM = 1.0f;
 
-        float loadOffsetM[2] = { m_loadOffsetX, m_loadOffsetZ };
-        ImGui::InputFloat2(u8"\u30AA\u30D5\u30BB\u30C3\u30C8 X / Z (m)", loadOffsetM, "%.1f");
+        float loadOffsetM[3] = { m_loadOffsetX, m_loadOffsetY, m_loadOffsetZ };
+        ImGui::InputFloat3(u8"\u30AA\u30D5\u30BB\u30C3\u30C8 X / Y / Z (m)", loadOffsetM, "%.1f");
         m_loadOffsetX = loadOffsetM[0];
-        m_loadOffsetZ = loadOffsetM[1];
+        m_loadOffsetY = loadOffsetM[1];
+        m_loadOffsetZ = loadOffsetM[2];
         if (ImGui::IsItemDeactivatedAfterEdit())
             applyToCurrentTerrain = true;
 
@@ -1698,6 +1768,7 @@ void App::Render()
             m_loadDepthM = 1024.0f;
             m_loadHeightM = 1024.0f;
             m_loadOffsetX = 0.0f;
+            m_loadOffsetY = 0.0f;
             m_loadOffsetZ = 0.0f;
             m_contourSegments.clear();
             SetStatusMessage("Height field cleared");
@@ -1737,18 +1808,6 @@ void App::Render()
                 ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
         {
             m_contourColor = { contourColor[0], contourColor[1], contourColor[2] };
-            SaveViewSettings();
-        }
-
-        ImGui::TextUnformatted(u8"\u80CC\u666F\u8272");
-        ImGui::SameLine();
-        float backgroundColor[3] = { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z };
-        if (ImGui::ColorEdit3(
-                "##backgroundColor",
-                backgroundColor,
-                ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
-        {
-            m_backgroundColor = { backgroundColor[0], backgroundColor[1], backgroundColor[2] };
             SaveViewSettings();
         }
 

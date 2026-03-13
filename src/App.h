@@ -25,7 +25,10 @@ struct PerFrameData
     DirectX::XMFLOAT4X4 invViewProj;    // 64 bytes
     DirectX::XMFLOAT3   cameraPos;      // 12 bytes
     float               time;           // 4  bytes
-};                                      // = 144 bytes (multiple of 16)
+    float               gridBaseScale;  // 4 bytes
+    float               gridFadeDistance; // 4 bytes
+    DirectX::XMFLOAT2   padding = { 0.0f, 0.0f }; // 8 bytes
+};                                      // = 160 bytes (multiple of 16)
 
 class App
 {
@@ -112,6 +115,7 @@ private:
     float m_loadDepthM  = 1024.0f;
     float m_loadHeightM = 1024.0f;
     float m_loadOffsetX = 0.0f;
+    float m_loadOffsetY = 0.0f;
     float m_loadOffsetZ = 0.0f;
 
     // Mouse-terrain intersection (updated each frame)
@@ -131,7 +135,10 @@ private:
     float             m_sunAzimuth = 0.98f;
     float             m_sunElevation = 0.78f;
     bool              m_showContours = false;
+    bool              m_showBackgroundSettings = false;
     float             m_contourInterval = 5.0f;
+    float             m_gridBaseScale = 1.0f;
+    float             m_gridFadeDistance = 1200.0f;
     DirectX::XMFLOAT3 m_contourColor = { 0.18f, 0.18f, 0.18f };
     DirectX::XMFLOAT3 m_backgroundColor = { 0.12f, 0.12f, 0.14f };
     EditorMode        m_prevEditorMode = EditorMode::Navigate;

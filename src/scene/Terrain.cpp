@@ -282,6 +282,7 @@ void Terrain::BuildMesh(ID3D11Device* device)
     const float sZ     = horizontalScaleZ;
     const float vScale = heightScale;
     const float offX   = offsetX;
+    const float offY   = offsetY;
     const float offZ   = offsetZ;
 
     // Sample m_rawHeights via bilinear interpolation at mesh (col, row)
@@ -321,7 +322,7 @@ void Terrain::BuildMesh(ID3D11Device* device)
     {
         for (int col = 0; col < W; ++col)
         {
-            float y = getH(col, row);
+            float y = getH(col, row) + offY;
             float x = (col - (W - 1) * 0.5f) * sX + offX;
             float z = (row - (H - 1) * 0.5f) * sZ + offZ;
 
@@ -440,7 +441,7 @@ float Terrain::GetHeightAt(float worldX, float worldZ) const
     // Bilinear interpolation
     float h0 = h00 + (h10 - h00) * fc;
     float h1 = h01 + (h11 - h01) * fc;
-    return h0 + (h1 - h0) * fr;
+    return h0 + (h1 - h0) * fr + offsetY;
 }
 
 bool Terrain::Raycast(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
@@ -464,7 +465,7 @@ bool Terrain::Raycast(XMFLOAT3 rayOrigin, XMFLOAT3 rayDir,
     const XMFLOAT3 terrainCenter =
     {
         offsetX,
-        heightScale * 0.5f,
+        offsetY + heightScale * 0.5f,
         offsetZ
     };
     const float originToTerrainCenter = XMVectorGetX(
@@ -644,6 +645,7 @@ void Terrain::Reset()
     horizontalScaleX = 1.0f;
     horizontalScaleZ = 1.0f;
     offsetX = 0.0f;
+    offsetY = 0.0f;
     offsetZ = 0.0f;
     meshSubdivW = 0;
     meshSubdivH = 0;
