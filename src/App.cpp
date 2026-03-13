@@ -547,6 +547,7 @@ void App::ApplyTerrainSettings()
 void App::LoadViewSettings()
 {
     m_showRoadNames = false;
+    m_showRoadGuidelines = true;
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
     m_showRoadGradeGradient = false;
@@ -559,6 +560,7 @@ void App::LoadViewSettings()
     m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
     m_contourInterval = 5.0f;
+    m_showDisplaySettingsWindow = false;
     m_gridBaseScale = 1.0f;
     m_gridFadeDistance = 1200.0f;
     m_roadLineThickness = 2.0f;
@@ -581,6 +583,7 @@ void App::LoadViewSettings()
             nlohmann::json root;
             ifs >> root;
             m_showRoadNames = root.value("showRoadNames", false);
+            m_showRoadGuidelines = root.value("showRoadGuidelines", true);
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
@@ -593,6 +596,7 @@ void App::LoadViewSettings()
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
             m_contourInterval = root.value("contourInterval", 5.0f);
+            m_showDisplaySettingsWindow = root.value("showDisplaySettingsWindow", false);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
             m_gridFadeDistance = root.value("gridFadeDistance", 1200.0f);
             m_roadLineThickness = root.value("roadLineThickness", 2.0f);
@@ -650,6 +654,7 @@ void App::LoadViewSettings()
     }
 
     m_editor.SetShowRoadNames(m_showRoadNames);
+    m_editor.SetShowRoadGuidelines(m_showRoadGuidelines);
     m_editor.SetShowIntersectionNames(m_showIntersectionNames);
     m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
     m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
@@ -672,6 +677,7 @@ void App::SaveViewSettings() const
         nlohmann::json root =
         {
             { "showRoadNames", m_showRoadNames },
+            { "showRoadGuidelines", m_showRoadGuidelines },
             { "showIntersectionNames", m_showIntersectionNames },
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
             { "showRoadGradeGradient", m_showRoadGradeGradient },
@@ -684,6 +690,7 @@ void App::SaveViewSettings() const
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
             { "contourInterval", m_contourInterval },
+            { "showDisplaySettingsWindow", m_showDisplaySettingsWindow },
             { "gridBaseScale", m_gridBaseScale },
             { "gridFadeDistance", m_gridFadeDistance },
             { "roadLineThickness", m_roadLineThickness },
@@ -1644,50 +1651,8 @@ void App::Render()
         }
         if (ImGui::BeginMenu(u8"\u8868\u793A"))
         {
-            if (ImGui::MenuItem(u8"\u9053\u8DEF\u540D", nullptr, m_showRoadNames))
-            {
-                m_showRoadNames = !m_showRoadNames;
-                m_editor.SetShowRoadNames(m_showRoadNames);
-                SaveViewSettings();
-            }
-            if (ImGui::MenuItem(u8"\u4EA4\u5DEE\u70B9\u540D", nullptr, m_showIntersectionNames))
-            {
-                m_showIntersectionNames = !m_showIntersectionNames;
-                m_editor.SetShowIntersectionNames(m_showIntersectionNames);
-                SaveViewSettings();
-            }
-            if (ImGui::MenuItem(u8"\u9053\u8DEF\u30D7\u30EC\u30D3\u30E5\u30FC\u60C5\u5831", nullptr, m_showRoadPreviewMetrics))
-            {
-                m_showRoadPreviewMetrics = !m_showRoadPreviewMetrics;
-                m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
-                SaveViewSettings();
-            }
-            if (ImGui::MenuItem(u8"\u9053\u8DEF\u52FE\u914D\u30B0\u30E9\u30C7\u30FC\u30B7\u30E7\u30F3", nullptr, m_showRoadGradeGradient))
-            {
-                m_showRoadGradeGradient = !m_showRoadGradeGradient;
-                m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
-                SaveViewSettings();
-            }
-            if (ImGui::MenuItem(u8"\u30B0\u30EA\u30C3\u30C9", nullptr, m_showGrid))
-            {
-                m_showGrid = !m_showGrid;
-                SaveViewSettings();
-            }
-            if (ImGui::MenuItem("FPS", nullptr, m_showFps))
-            {
-                m_showFps = !m_showFps;
-                SaveViewSettings();
-            }
-            if (m_showRoadGradeGradient)
-            {
-                float threshold = m_roadGradeRedThresholdPercent;
-                if (ImGui::InputFloat(u8"\u8D64\u95BE\u5024 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
-                {
-                    m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
-                    m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
-                    SaveViewSettings();
-                }
-            }
+            if (ImGui::MenuItem(u8"\u8868\u793A\u8A2D\u5B9A"))
+                m_showDisplaySettingsWindow = true;
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(u8"\u30A6\u30A4\u30F3\u30C9\u30A6"))
@@ -1710,6 +1675,11 @@ void App::Render()
             if (ImGui::MenuItem(u8"\u30D7\u30ED\u30D1\u30C6\u30A3", nullptr, m_showPropertiesWindow))
             {
                 m_showPropertiesWindow = !m_showPropertiesWindow;
+                SaveViewSettings();
+            }
+            if (ImGui::MenuItem(u8"\u8868\u793A\u8A2D\u5B9A", nullptr, m_showDisplaySettingsWindow))
+            {
+                m_showDisplaySettingsWindow = !m_showDisplaySettingsWindow;
                 SaveViewSettings();
             }
             ImGui::EndMenu();
@@ -1929,6 +1899,173 @@ void App::Render()
         ImGui::End();
     }
 
+    if (m_showDisplaySettingsWindow)
+    {
+        ImGui::SetNextWindowSize(ImVec2(360, 320), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(u8"\u8868\u793A\u8A2D\u5B9A", &m_showDisplaySettingsWindow))
+        {
+            if (ImGui::CollapsingHeader(u8"\u4E00\u822C", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (ImGui::Checkbox(u8"\u30B0\u30EA\u30C3\u30C9", &m_showGrid))
+                    SaveViewSettings();
+                if (ImGui::Checkbox("FPS", &m_showFps))
+                    SaveViewSettings();
+
+                static const char* kLightingModes[] =
+                {
+                    u8"\u6A19\u6E96",
+                    u8"\u592A\u967D\u5149 + \u5F71"
+                };
+                int terrainLightingMode = std::clamp(m_terrain->lightingMode, 0, 1);
+                if (ImGui::Combo(u8"\u30E9\u30A4\u30C6\u30A3\u30F3\u30B0", &terrainLightingMode, kLightingModes, IM_ARRAYSIZE(kLightingModes)))
+                    m_terrain->lightingMode = terrainLightingMode;
+
+                if (m_terrain->lightingMode == Terrain::LightingModeSunShadowed)
+                {
+                    ImGui::SliderAngle(u8"\u592A\u967D\u65B9\u4F4D", &m_sunAzimuth, -180.0f, 180.0f);
+                    ImGui::SliderAngle(u8"\u592A\u967D\u9AD8\u5EA6", &m_sunElevation, 3.0f, 87.0f);
+                    ImGui::SliderFloat(u8"\u5F71\u306E\u6FC3\u3055", &m_terrain->shadowStrength, 0.0f, 1.0f);
+                    ImGui::SliderFloat(u8"\u5F71\u30D0\u30A4\u30A2\u30B9", &m_terrain->shadowBias, 0.0001f, 0.01f, "%.4f", ImGuiSliderFlags_Logarithmic);
+                    m_terrain->sunDirection = ComputeSunDirection();
+                    ImGui::TextDisabled(u8"L + \u5DE6\u30C9\u30E9\u30C3\u30B0\u3067\u592A\u967D\u65B9\u5411\u3092\u56DE\u8EE2");
+                }
+            }
+
+            if (ImGui::CollapsingHeader(u8"\u5730\u5F62", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Checkbox(u8"\u5730\u5F62\u3092\u8868\u793A", &m_terrain->visible);
+
+                static const char* kTerrainColorModes[] =
+                {
+                    u8"\u30B0\u30EC\u30FC",
+                    u8"\u5730\u5F62",
+                    u8"\u52FE\u914D",
+                    u8"\u30C6\u30AF\u30B9\u30C1\u30E3"
+                };
+                int terrainColorMode = std::clamp(m_terrain->colorMode, 0, 3);
+                if (ImGui::Combo(u8"\u8868\u793A\u30E2\u30FC\u30C9", &terrainColorMode, kTerrainColorModes, IM_ARRAYSIZE(kTerrainColorModes)))
+                    m_terrain->colorMode = terrainColorMode;
+
+                if (m_terrain->colorMode == 3)
+                {
+                    ImGui::TextDisabled(u8"\u5730\u5F62\u30C6\u30AF\u30B9\u30C1\u30E3");
+                    ImGui::SetNextItemWidth(260.0f);
+                    ImGui::InputText(
+                        "##displayTerrainTex",
+                        m_terrainTexturePathDisplay,
+                        sizeof(m_terrainTexturePathDisplay));
+                    bool texturePathCommitted = ImGui::IsItemDeactivatedAfterEdit();
+                    ImGui::SameLine();
+                    if (ImGui::Button(u8"\u53C2\u7167...##displayTerrainTex"))
+                    {
+                        if (OpenFileDialog(m_hwnd, m_terrainTexturePath, sizeof(m_terrainTexturePath),
+                                           "Image Files\0*.png;*.bmp;*.tga;*.jpg;*.jpeg\0All Files\0*.*\0",
+                                           "Open Terrain Texture"))
+                        {
+                            RefreshTerrainPathDisplayBuffers();
+                            texturePathCommitted = true;
+                        }
+                    }
+                    if (texturePathCommitted)
+                    {
+                        const std::string resolvedTexturePath =
+                            ResolvePathFromProject(m_projectPath, m_terrainTexturePathDisplay);
+                        strncpy_s(
+                            m_terrainTexturePath,
+                            sizeof(m_terrainTexturePath),
+                            resolvedTexturePath.c_str(),
+                            _TRUNCATE);
+
+                        if (m_terrainTexturePath[0] == '\0')
+                        {
+                            m_terrain->ClearColorTexture();
+                        }
+                        else if (!m_terrain->LoadColorTexture(m_d3d->GetDevice(), m_terrainTexturePath))
+                        {
+                            SetStatusMessage(std::string("Terrain texture load failed: ") + m_terrainTexturePath);
+                        }
+                        else
+                        {
+                            SetStatusMessage(std::string("Terrain texture loaded: ") + m_terrainTexturePath);
+                        }
+                        RefreshTerrainPathDisplayBuffers();
+                    }
+                }
+
+                if (ImGui::Checkbox(u8"\u7B49\u9AD8\u7DDA\u3092\u8868\u793A", &m_showContours))
+                {
+                    if (m_showContours)
+                        RebuildContourCache();
+                    SaveViewSettings();
+                }
+
+                float contourInterval = m_contourInterval;
+                ImGui::InputFloat(u8"\u7B49\u9AD8\u7DDA\u9593\u9694 (m)", &contourInterval, 1.0f, 5.0f, "%.1f");
+                if (ImGui::IsItemDeactivatedAfterEdit())
+                {
+                    contourInterval = std::clamp(contourInterval, 0.5f, 1000.0f);
+                    if (fabsf(contourInterval - m_contourInterval) > 1e-4f)
+                    {
+                        m_contourInterval = contourInterval;
+                        RebuildContourCache();
+                        SaveViewSettings();
+                    }
+                }
+
+                float contourColor[3] = { m_contourColor.x, m_contourColor.y, m_contourColor.z };
+                if (ImGui::ColorEdit3(
+                        u8"\u8272##displayContourColor",
+                        contourColor,
+                        ImGuiColorEditFlags_Float |
+                        ImGuiColorEditFlags_DisplayRGB))
+                {
+                    m_contourColor = { contourColor[0], contourColor[1], contourColor[2] };
+                    SaveViewSettings();
+                }
+            }
+
+            if (ImGui::CollapsingHeader(u8"\u9053\u8DEF", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u30AC\u30A4\u30C9\u30E9\u30A4\u30F3", &m_showRoadGuidelines))
+                {
+                    m_editor.SetShowRoadGuidelines(m_showRoadGuidelines);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u540D", &m_showRoadNames))
+                {
+                    m_editor.SetShowRoadNames(m_showRoadNames);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u4EA4\u5DEE\u70B9\u540D", &m_showIntersectionNames))
+                {
+                    m_editor.SetShowIntersectionNames(m_showIntersectionNames);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u30D7\u30EC\u30D3\u30E5\u30FC\u60C5\u5831", &m_showRoadPreviewMetrics))
+                {
+                    m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
+                    SaveViewSettings();
+                }
+                if (ImGui::Checkbox(u8"\u9053\u8DEF\u52FE\u914D\u30B0\u30E9\u30C7\u30FC\u30B7\u30E7\u30F3", &m_showRoadGradeGradient))
+                {
+                    m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
+                    SaveViewSettings();
+                }
+                if (m_showRoadGradeGradient)
+                {
+                    float threshold = m_roadGradeRedThresholdPercent;
+                    if (ImGui::InputFloat(u8"\u8D64\u95BE\u5024 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
+                    {
+                        m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
+                        m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
+                        SaveViewSettings();
+                    }
+                }
+            }
+        }
+        ImGui::End();
+    }
+
     const bool wasShowingCameraWindow = m_showCameraWindow;
     if (m_showCameraWindow)
     {
@@ -1961,84 +2098,7 @@ void App::Render()
         ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
         ImGui::Begin(u8"\u5730\u5F62", &m_showTerrainWindow, ImGuiWindowFlags_AlwaysAutoResize);
         {
-        ImGui::Checkbox(u8"\u8868\u793A",   &m_terrain->visible);
-        ImGui::SameLine();
-        ImGui::Checkbox(u8"\u30EF\u30A4\u30E4\u30FC", &m_terrain->wireframe);
-        static const char* kTerrainColorModes[] =
-        {
-            u8"\u30B0\u30EC\u30FC",
-            u8"\u5730\u5F62",
-            u8"\u52FE\u914D",
-            u8"\u30C6\u30AF\u30B9\u30C1\u30E3"
-        };
-        static const char* kLightingModes[] =
-        {
-            u8"\u6A19\u6E96",
-            u8"\u592A\u967D\u5149 + \u5F71"
-        };
-        int terrainColorMode = std::clamp(m_terrain->colorMode, 0, 3);
-        if (ImGui::Combo(u8"\u8868\u793A\u30E2\u30FC\u30C9", &terrainColorMode, kTerrainColorModes, IM_ARRAYSIZE(kTerrainColorModes)))
-            m_terrain->colorMode = terrainColorMode;
-        int terrainLightingMode = std::clamp(m_terrain->lightingMode, 0, 1);
-        if (ImGui::Combo(u8"\u30E9\u30A4\u30C6\u30A3\u30F3\u30B0", &terrainLightingMode, kLightingModes, IM_ARRAYSIZE(kLightingModes)))
-            m_terrain->lightingMode = terrainLightingMode;
-
-        if (m_terrain->lightingMode == Terrain::LightingModeSunShadowed)
-        {
-            ImGui::SliderAngle(u8"\u592A\u967D\u65B9\u4F4D", &m_sunAzimuth, -180.0f, 180.0f);
-            ImGui::SliderAngle(u8"\u592A\u967D\u9AD8\u5EA6", &m_sunElevation, 3.0f, 87.0f);
-            ImGui::SliderFloat(u8"\u5F71\u306E\u6FC3\u3055", &m_terrain->shadowStrength, 0.0f, 1.0f);
-            ImGui::SliderFloat(u8"\u5F71\u30D0\u30A4\u30A2\u30B9", &m_terrain->shadowBias, 0.0001f, 0.01f, "%.4f", ImGuiSliderFlags_Logarithmic);
-            m_terrain->sunDirection = ComputeSunDirection();
-            ImGui::TextDisabled(u8"L + \u5DE6\u30C9\u30E9\u30C3\u30B0\u3067\u592A\u967D\u65B9\u5411\u3092\u56DE\u8EE2");
-        }
-
-        if (m_terrain->colorMode == 3)
-        {
-            ImGui::TextDisabled(u8"\u5730\u5F62\u30C6\u30AF\u30B9\u30C1\u30E3");
-            ImGui::SetNextItemWidth(260.0f);
-            ImGui::InputText(
-                "##terraintex",
-                m_terrainTexturePathDisplay,
-                sizeof(m_terrainTexturePathDisplay));
-            bool texturePathCommitted = ImGui::IsItemDeactivatedAfterEdit();
-            ImGui::SameLine();
-            if (ImGui::Button(u8"\u53C2\u7167..."))
-            {
-                if (OpenFileDialog(m_hwnd, m_terrainTexturePath, sizeof(m_terrainTexturePath),
-                                   "Image Files\0*.png;*.bmp;*.tga;*.jpg;*.jpeg\0All Files\0*.*\0",
-                                   "Open Terrain Texture"))
-                {
-                    RefreshTerrainPathDisplayBuffers();
-                    texturePathCommitted = true;
-                }
-            }
-            if (texturePathCommitted)
-            {
-                const std::string resolvedTexturePath =
-                    ResolvePathFromProject(m_projectPath, m_terrainTexturePathDisplay);
-                strncpy_s(
-                    m_terrainTexturePath,
-                    sizeof(m_terrainTexturePath),
-                    resolvedTexturePath.c_str(),
-                    _TRUNCATE);
-
-                if (m_terrainTexturePath[0] == '\0')
-                {
-                    m_terrain->ClearColorTexture();
-                }
-                else if (!m_terrain->LoadColorTexture(m_d3d->GetDevice(), m_terrainTexturePath))
-                {
-                    SetStatusMessage(std::string("Terrain texture load failed: ") + m_terrainTexturePath);
-                }
-                else
-                {
-                    SetStatusMessage(std::string("Terrain texture loaded: ") + m_terrainTexturePath);
-                }
-                RefreshTerrainPathDisplayBuffers();
-            }
-        }
-
+        ImGui::Checkbox(u8"\u30EF\u30A4\u30E4\u30FC\u30D5\u30EC\u30FC\u30E0", &m_terrain->wireframe);
         ImGui::Separator();
 
         if (m_terrain->IsReady())
@@ -2149,40 +2209,6 @@ void App::Render()
             ImGui::Text(u8"\u8AAD\u307F\u8FBC\u307F\u5931\u6557: %s", m_terrainPath);
             if (ImGui::Button("OK")) ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
-        }
-
-        ImGui::Separator();
-        bool showContours = m_showContours;
-        if (ImGui::Checkbox(u8"\u7B49\u9AD8\u7DDA\u3092\u8868\u793A", &showContours))
-        {
-            m_showContours = showContours;
-            RebuildContourCache();
-            SaveViewSettings();
-        }
-
-        float contourInterval = m_contourInterval;
-        ImGui::InputFloat(u8"\u7B49\u9AD8\u7DDA\u9593\u9694 (m)", &contourInterval, 1.0f, 5.0f, "%.1f");
-        if (ImGui::IsItemDeactivatedAfterEdit())
-        {
-            contourInterval = std::clamp(contourInterval, 0.5f, 1000.0f);
-            if (fabsf(contourInterval - m_contourInterval) > 1e-4f)
-            {
-                m_contourInterval = contourInterval;
-                RebuildContourCache();
-                SaveViewSettings();
-            }
-        }
-
-        ImGui::TextUnformatted(u8"\u7B49\u9AD8\u7DDA\u306E\u8272");
-        ImGui::SameLine();
-        float contourColor[3] = { m_contourColor.x, m_contourColor.y, m_contourColor.z };
-        if (ImGui::ColorEdit3(
-                "##contourColor",
-                contourColor,
-                ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
-        {
-            m_contourColor = { contourColor[0], contourColor[1], contourColor[2] };
-            SaveViewSettings();
         }
 
         }

@@ -563,13 +563,14 @@ void Terrain::Render(ID3D11DeviceContext* ctx,
     TerrainCB tcb;
     XMVECTOR  sun = XMVector3Normalize(XMLoadFloat3(&sunDirection));
     XMStoreFloat3(&tcb.sunDir, sun);
-    tcb.maxHeight = heightScale;
+    tcb.minHeight = offsetY;
+    tcb.maxHeight = offsetY + heightScale;
     tcb.colorMode = (colorMode == 3 && m_colorTextureSRV) ? 3 : colorMode;
     tcb.lightingMode = lightingMode;
-    tcb.shadowMapTexelSize = { 1.0f / 2048.0f, 1.0f / 2048.0f };
     tcb.shadowStrength = shadowStrength;
+    tcb.shadowMapTexelSize = { 1.0f / 2048.0f, 1.0f / 2048.0f };
     tcb.shadowBias = shadowBias;
-    tcb.padding = { 0.0f, 0.0f };
+    tcb.padding = 0.0f;
     m_terrainCB.Update(ctx, tcb);
 
     TerrainShadowCB shadowCb = {};

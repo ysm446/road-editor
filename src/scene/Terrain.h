@@ -13,13 +13,14 @@
 struct TerrainCB
 {
     DirectX::XMFLOAT3 sunDir;    // 12 bytes  (normalized, pointing toward light)
+    float             minHeight; //  4 bytes
     float             maxHeight; //  4 bytes
     int               colorMode; //  4 bytes
     int               lightingMode; // 4 bytes
-    DirectX::XMFLOAT2 shadowMapTexelSize; // 8 bytes
     float             shadowStrength; // 4 bytes
+    DirectX::XMFLOAT2 shadowMapTexelSize; // 8 bytes
     float             shadowBias; // 4 bytes
-    DirectX::XMFLOAT2 padding; // 8 bytes
+    float             padding; // 4 bytes
 };                               // = 48 bytes
 
 struct TerrainShadowCB

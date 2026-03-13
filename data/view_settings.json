@@ -22,7 +22,7 @@
   "recentProjectPaths": [
     "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj"
   ],
-  "roadGradeRedThresholdPercent": 15.0,
+  "roadGradeRedThresholdPercent": 12.0,
   "roadLineThickness": 1.0,
   "roadVertexColor": [
     0.6274510025978088,
@@ -37,13 +37,15 @@
   ],
   "selectedRoadLineThickness": 2.0,
   "showCameraWindow": true,
-  "showContours": true,
+  "showContours": false,
+  "showDisplaySettingsWindow": false,
   "showFps": false,
   "showGrid": true,
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
   "showRoadGradeGradient": true,
+  "showRoadGuidelines": true,
   "showRoadNames": false,
   "showRoadPreviewMetrics": false,
   "showTerrainWindow": true

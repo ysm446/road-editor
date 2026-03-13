@@ -82,6 +82,7 @@ public:
     bool GetFocusTarget(DirectX::XMFLOAT3& outTarget) const;
     bool GetPrimaryRoadForPathfinding(int& outRoadIndex) const;
     void SetShowRoadNames(bool show) { m_showRoadNames = show; }
+    void SetShowRoadGuidelines(bool show);
     void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
     void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }
     void SetShowRoadGradeGradient(bool show) { m_showRoadGradeGradient = show; }
@@ -129,6 +130,7 @@ private:
                                 DirectX::XMMATRIX viewProj) const;
     int FindGroupIndexById(const std::string& id) const;
     bool IsRoadVisible(const Road& road) const;
+    bool IsRoadGuidelineVisible(const Road& road) const;
     bool IsIntersectionVisible(const Intersection& intersection) const;
     void SetActiveGroupById(const std::string& id);
     int FindIntersectionIndexById(const std::string& id) const;
@@ -187,6 +189,9 @@ private:
     void Undo();
     void Redo();
     void ClearHistory();
+    void QueuePropertyRevealForRoad(int roadIndex);
+    void QueuePropertyRevealForIntersection(int intersectionIndex);
+    void ClearPropertyReveal();
 
     struct EditorSnapshot
     {
@@ -268,6 +273,7 @@ private:
     char m_filePath[260] = "data/roads.roadnet";
     std::string m_statusMessage;
     bool m_showRoadNames = false;
+    bool m_showRoadGuidelines = true;
     bool m_showIntersectionNames = true;
     bool m_showRoadPreviewMetrics = false;
     bool m_showRoadGradeGradient = false;
@@ -289,4 +295,7 @@ private:
     bool m_prevCopyShortcut = false;
     bool m_prevPasteShortcut = false;
     RoadClipboard m_roadClipboard;
+    int m_propertyRevealRoad = -1;
+    int m_propertyRevealIntersection = -1;
+    int m_propertyRevealGroup = -1;
 };

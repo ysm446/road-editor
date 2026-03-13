@@ -6,13 +6,14 @@
 cbuffer TerrainParams : register(b1)
 {
     float3 sunDir;    // normalised, pointing toward light source
+    float  minHeight;
     float  maxHeight;
     int    colorMode;
     int    lightingMode;
-    float2 shadowMapTexelSize;
     float  shadowStrength;
+    float2 shadowMapTexelSize;
     float  shadowBias;
-    float2 _padding;
+    float  _padding;
 };
 
 Texture2D terrainTexture : register(t0);
@@ -65,8 +66,8 @@ float4 main(PSInput input) : SV_TARGET
     else
     {
         applyDesaturation = true;
-        // Altitude [0, 1] relative to the terrain's maximum height
-        float t = saturate(input.worldPos.y / max(maxHeight, 0.001));
+        // Altitude [0, 1] across the terrain's offset-adjusted height range.
+        float t = saturate((input.worldPos.y - minHeight) / max(maxHeight - minHeight, 0.001));
 
         // Colour ramp: grass -> rock -> snow
         float3 colGrass = float3(0.30, 0.52, 0.18);

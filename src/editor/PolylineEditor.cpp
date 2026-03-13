@@ -719,6 +719,37 @@ void PolylineEditor::ClearHistory()
     m_redoStack.clear();
 }
 
+void PolylineEditor::QueuePropertyRevealForRoad(int roadIndex)
+{
+    m_propertyRevealRoad = roadIndex;
+    m_propertyRevealIntersection = -1;
+    m_propertyRevealGroup = -1;
+    if (roadIndex >= 0 &&
+        roadIndex < static_cast<int>(m_network->roads.size()))
+    {
+        m_propertyRevealGroup = FindGroupIndexById(m_network->roads[roadIndex].groupId);
+    }
+}
+
+void PolylineEditor::QueuePropertyRevealForIntersection(int intersectionIndex)
+{
+    m_propertyRevealRoad = -1;
+    m_propertyRevealIntersection = intersectionIndex;
+    m_propertyRevealGroup = -1;
+    if (intersectionIndex >= 0 &&
+        intersectionIndex < static_cast<int>(m_network->intersections.size()))
+    {
+        m_propertyRevealGroup = FindGroupIndexById(m_network->intersections[intersectionIndex].groupId);
+    }
+}
+
+void PolylineEditor::ClearPropertyReveal()
+{
+    m_propertyRevealRoad = -1;
+    m_propertyRevealIntersection = -1;
+    m_propertyRevealGroup = -1;
+}
+
 void PolylineEditor::ResetState()
 {
     m_mode = EditorMode::Navigate;
@@ -762,6 +793,28 @@ void PolylineEditor::ResetState()
     m_snapToPoints = false;
     m_statusMessage.clear();
     ClearHistory();
+}
+
+void PolylineEditor::SetShowRoadGuidelines(bool show)
+{
+    m_showRoadGuidelines = show;
+    if (m_showRoadGuidelines)
+        return;
+
+    if (m_mode == EditorMode::PolylineDraw)
+        CancelRoad();
+    m_mode = EditorMode::Navigate;
+    ClearRoadSelection();
+    ClearPointSelection();
+    m_activeRoad = -1;
+    m_activePoint = -1;
+    m_dragging = false;
+    m_activeGizmoAxis = GizmoAxis::None;
+    m_hoverSnapIntersection = -1;
+    m_rotateYMode = false;
+    m_scaleXZMode = false;
+    m_pointDragStartPositions.clear();
+    m_intersectionDragStartPositions.clear();
 }
 
 void PolylineEditor::SanitizeSelection()
@@ -989,7 +1042,7 @@ void PolylineEditor::FindNearestPoint(int vpW, int vpH, XMFLOAT2 px,
     for (int r = 0; r < static_cast<int>(m_network->roads.size()); ++r)
     {
         const Road& road = m_network->roads[r];
-        if (!IsRoadVisible(road))
+        if (!IsRoadGuidelineVisible(road))
             continue;
         for (int p = 0; p < static_cast<int>(road.points.size()); ++p)
         {
@@ -1014,6 +1067,8 @@ int PolylineEditor::FindNearestPointOnRoad(
         return -1;
 
     const Road& road = m_network->roads[roadIndex];
+    if (!IsRoadGuidelineVisible(road))
+        return -1;
     const float threshold = 12.0f;
     float bestDist = threshold;
     int bestPt = -1;
@@ -1042,6 +1097,8 @@ int PolylineEditor::FindNearestSegmentOnRoad(
         return -1;
 
     const Road& road = m_network->roads[roadIndex];
+    if (!IsRoadGuidelineVisible(road))
+        return -1;
     const float threshold = 10.0f;
     float bestDist = threshold;
     int bestSegment = -1;
@@ -1074,7 +1131,7 @@ int PolylineEditor::FindNearestRoad(
     for (int r = 0; r < static_cast<int>(m_network->roads.size()); ++r)
     {
         const Road& road = m_network->roads[r];
-        if (!IsRoadVisible(road))
+        if (!IsRoadGuidelineVisible(road))
             continue;
         for (int p = 0; p + 1 < static_cast<int>(road.points.size()); ++p)
         {
@@ -1130,6 +1187,11 @@ bool PolylineEditor::IsRoadVisible(const Road& road) const
 {
     const RoadGroup* group = m_network->FindGroupById(road.groupId);
     return group == nullptr || group->visible;
+}
+
+bool PolylineEditor::IsRoadGuidelineVisible(const Road& road) const
+{
+    return m_showRoadGuidelines && IsRoadVisible(road);
 }
 
 bool PolylineEditor::IsIntersectionVisible(const Intersection& intersection) const
@@ -1848,6 +1910,7 @@ void PolylineEditor::SelectSingleRoad(int roadIndex)
         m_selectedRoads.push_back(roadIndex);
     m_activeRoad = roadIndex;
     m_activePoint = -1;
+    QueuePropertyRevealForRoad(roadIndex);
 }
 
 void PolylineEditor::ToggleRoadSelection(int roadIndex)
@@ -1869,6 +1932,7 @@ void PolylineEditor::ToggleRoadSelection(int roadIndex)
     m_selectedRoads.push_back(roadIndex);
     m_activeRoad = roadIndex;
     m_activePoint = -1;
+    QueuePropertyRevealForRoad(roadIndex);
 }
 
 void PolylineEditor::ClearPointSelection()
@@ -1890,6 +1954,7 @@ void PolylineEditor::SelectSinglePoint(int roadIndex, int pointIndex)
         m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
+    QueuePropertyRevealForRoad(roadIndex);
 }
 
 void PolylineEditor::TogglePointSelection(int roadIndex, int pointIndex)
@@ -1923,6 +1988,7 @@ void PolylineEditor::TogglePointSelection(int roadIndex, int pointIndex)
     m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
+    QueuePropertyRevealForRoad(roadIndex);
 }
 
 void PolylineEditor::SelectSingleIntersection(int intersectionIndex)
@@ -1931,6 +1997,7 @@ void PolylineEditor::SelectSingleIntersection(int intersectionIndex)
     if (intersectionIndex >= 0)
         m_selectedIntersections.push_back(intersectionIndex);
     m_activeIntersection = intersectionIndex;
+    QueuePropertyRevealForIntersection(intersectionIndex);
 }
 
 void PolylineEditor::ToggleIntersectionSelection(int intersectionIndex)
@@ -1951,6 +2018,7 @@ void PolylineEditor::ToggleIntersectionSelection(int intersectionIndex)
 
     m_selectedIntersections.push_back(intersectionIndex);
     m_activeIntersection = intersectionIndex;
+    QueuePropertyRevealForIntersection(intersectionIndex);
 }
 
 void PolylineEditor::ApplyMarqueeSelection(
@@ -2030,7 +2098,7 @@ void PolylineEditor::ApplyMarqueeSelection(
         for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
         {
             const Road& road = m_network->roads[ri];
-            if (!IsRoadVisible(road))
+            if (!IsRoadGuidelineVisible(road))
                 continue;
 
             for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
@@ -2076,7 +2144,7 @@ void PolylineEditor::ApplyMarqueeSelection(
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road))
+        if (!IsRoadGuidelineVisible(road))
             continue;
 
         bool selectedByRect = false;
@@ -2296,6 +2364,12 @@ float PolylineEditor::ComputeScaleGizmoRadius(
 // ---------------------------------------------------------------------------
 void PolylineEditor::SetMode(EditorMode mode)
 {
+    if (!m_showRoadGuidelines &&
+        (mode == EditorMode::PointEdit || mode == EditorMode::PolylineDraw))
+    {
+        mode = EditorMode::Navigate;
+    }
+
     // Cancel any in-progress draw
     if (m_mode == EditorMode::PolylineDraw && mode != EditorMode::PolylineDraw)
         CancelRoad();
@@ -2322,6 +2396,9 @@ void PolylineEditor::SetMode(EditorMode mode)
 
 void PolylineEditor::StartNewRoad()
 {
+    if (!m_showRoadGuidelines)
+        return;
+
     m_network->EnsureDefaultGroup();
     PushUndoState();
     m_activeRoad  = m_network->AddRoad("Road " +
@@ -3414,7 +3491,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road) || IsRoadSelected(ri) || ri == m_activeRoad)
+        if (!IsRoadGuidelineVisible(road) || IsRoadSelected(ri) || ri == m_activeRoad)
             continue;
         drawRoadLines(ri, colorRoad);
     }
@@ -3422,7 +3499,7 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
+        if (!IsRoadGuidelineVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
             continue;
         drawRoadLines(ri, colorSelected);
     }
@@ -3435,30 +3512,33 @@ void PolylineEditor::DrawNetwork(DebugDraw& dd, XMMATRIX viewProj, int vpW, int 
 
     }
 
-    for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
+    if (m_showRoadGuidelines)
     {
-        const Intersection& isec = m_network->intersections[ii];
-        if (!IsIntersectionVisible(isec))
-            continue;
-        const XMFLOAT4 col = (ii == m_activeIntersection)
-            || IsIntersectionSelected(ii)
-            ? colorIntersectionSelected
-            : colorIntersection;
-        const float r = (std::max)(1.5f, isec.entryDist * 0.35f);
-        dd.AddLine({ isec.pos.x - r, isec.pos.y, isec.pos.z },
-                   { isec.pos.x + r, isec.pos.y, isec.pos.z }, col);
-        dd.AddLine({ isec.pos.x, isec.pos.y, isec.pos.z - r },
-                   { isec.pos.x, isec.pos.y, isec.pos.z + r }, col);
-        dd.AddLine({ isec.pos.x - r * 0.7f, isec.pos.y, isec.pos.z - r * 0.7f },
-                   { isec.pos.x + r * 0.7f, isec.pos.y, isec.pos.z + r * 0.7f }, col);
-        dd.AddLine({ isec.pos.x - r * 0.7f, isec.pos.y, isec.pos.z + r * 0.7f },
-                   { isec.pos.x + r * 0.7f, isec.pos.y, isec.pos.z - r * 0.7f }, col);
-
-        if (ii == m_hoverSnapIntersection)
+        for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
         {
-            const float rr = r * 1.5f;
-            dd.AddLine({ isec.pos.x - rr, isec.pos.y, isec.pos.z }, { isec.pos.x + rr, isec.pos.y, isec.pos.z }, colorSnapCandidate);
-            dd.AddLine({ isec.pos.x, isec.pos.y, isec.pos.z - rr }, { isec.pos.x, isec.pos.y, isec.pos.z + rr }, colorSnapCandidate);
+            const Intersection& isec = m_network->intersections[ii];
+            if (!IsIntersectionVisible(isec))
+                continue;
+            const XMFLOAT4 col = (ii == m_activeIntersection)
+                || IsIntersectionSelected(ii)
+                ? colorIntersectionSelected
+                : colorIntersection;
+            const float r = (std::max)(1.5f, isec.entryDist * 0.35f);
+            dd.AddLine({ isec.pos.x - r, isec.pos.y, isec.pos.z },
+                       { isec.pos.x + r, isec.pos.y, isec.pos.z }, col);
+            dd.AddLine({ isec.pos.x, isec.pos.y, isec.pos.z - r },
+                       { isec.pos.x, isec.pos.y, isec.pos.z + r }, col);
+            dd.AddLine({ isec.pos.x - r * 0.7f, isec.pos.y, isec.pos.z - r * 0.7f },
+                       { isec.pos.x + r * 0.7f, isec.pos.y, isec.pos.z + r * 0.7f }, col);
+            dd.AddLine({ isec.pos.x - r * 0.7f, isec.pos.y, isec.pos.z + r * 0.7f },
+                       { isec.pos.x + r * 0.7f, isec.pos.y, isec.pos.z - r * 0.7f }, col);
+
+            if (ii == m_hoverSnapIntersection)
+            {
+                const float rr = r * 1.5f;
+                dd.AddLine({ isec.pos.x - rr, isec.pos.y, isec.pos.z }, { isec.pos.x + rr, isec.pos.y, isec.pos.z }, colorSnapCandidate);
+                dd.AddLine({ isec.pos.x, isec.pos.y, isec.pos.z - rr }, { isec.pos.x, isec.pos.y, isec.pos.z + rr }, colorSnapCandidate);
+            }
         }
     }
 
@@ -3622,7 +3702,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road) || IsRoadSelected(ri) || ri == m_activeRoad)
+        if (!IsRoadGuidelineVisible(road) || IsRoadSelected(ri) || ri == m_activeRoad)
             continue;
         drawRoadOverlay(road, colRoad, kRoadThickness);
     }
@@ -3630,7 +3710,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
+        if (!IsRoadGuidelineVisible(road) || (!IsRoadSelected(ri) && ri != m_activeRoad))
             continue;
         drawRoadOverlay(road, colRoadSel, kSelectedRoadThickness);
     }
@@ -3675,7 +3755,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road))
+        if (!IsRoadGuidelineVisible(road))
             continue;
         for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
         {
@@ -3692,49 +3772,53 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             const float radius = pointSelected ? (kRadius + 2.0f) : kRadius;
             dl->AddCircleFilled(sp, radius, col, 20);
         }
+    }
 
-        if ((m_showRoadNames || m_showRoadPreviewMetrics) && !road.points.empty())
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road) || !(m_showRoadNames || m_showRoadPreviewMetrics) || road.points.empty())
+            continue;
+
+        XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+        for (const RoadPoint& point : road.points)
         {
-            XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
-            for (const RoadPoint& point : road.points)
-            {
-                center.x += point.pos.x;
-                center.y += point.pos.y;
-                center.z += point.pos.z;
-            }
-            const float invCount = 1.0f / static_cast<float>(road.points.size());
-            center.x *= invCount;
-            center.y *= invCount;
-            center.z *= invCount;
+            center.x += point.pos.x;
+            center.y += point.pos.y;
+            center.z += point.pos.z;
+        }
+        const float invCount = 1.0f / static_cast<float>(road.points.size());
+        center.x *= invCount;
+        center.y *= invCount;
+        center.z *= invCount;
 
-            ImVec2 labelPos;
-            if (WorldToScreen(center, viewProj, vpW, vpH, labelPos))
-            {
-                const ImVec2 textPos(labelPos.x + 10.0f, labelPos.y - 8.0f);
-                if (m_showRoadNames && !road.name.empty())
-                    dl->AddText(textPos, IM_COL32(255, 215, 90, 255), road.name.c_str());
+        ImVec2 labelPos;
+        if (WorldToScreen(center, viewProj, vpW, vpH, labelPos))
+        {
+            const ImVec2 textPos(labelPos.x + 10.0f, labelPos.y - 8.0f);
+            if (m_showRoadNames && !road.name.empty())
+                dl->AddText(textPos, IM_COL32(255, 215, 90, 255), road.name.c_str());
 
-                if (m_showRoadPreviewMetrics)
-                {
-                    const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
-                    const float previewLength = ComputePolylineLength(previewCurve);
-                    const float averageGradePercent =
-                        ComputeAverageAbsoluteGradePercent(previewCurve);
-                    const float maxGradePercent =
-                        ComputeMaxAbsoluteGradePercent(previewCurve);
-                    char metricsBuf[128] = {};
-                    sprintf_s(
-                        metricsBuf,
-                        "%.0fm / %.1f%%(%.1f%%)",
-                        std::round(previewLength),
-                        averageGradePercent,
-                        maxGradePercent);
-                    const float metricsOffsetY = (m_showRoadNames && !road.name.empty()) ? 10.0f : 0.0f;
-                    dl->AddText(
-                        ImVec2(textPos.x, textPos.y + metricsOffsetY),
-                        IM_COL32(180, 245, 255, 255),
-                        metricsBuf);
-                }
+            if (m_showRoadPreviewMetrics)
+            {
+                const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+                const float previewLength = ComputePolylineLength(previewCurve);
+                const float averageGradePercent =
+                    ComputeAverageAbsoluteGradePercent(previewCurve);
+                const float maxGradePercent =
+                    ComputeMaxAbsoluteGradePercent(previewCurve);
+                char metricsBuf[128] = {};
+                sprintf_s(
+                    metricsBuf,
+                    "%.0fm / %.1f%%(%.1f%%)",
+                    std::round(previewLength),
+                    averageGradePercent,
+                    maxGradePercent);
+                const float metricsOffsetY = (m_showRoadNames && !road.name.empty()) ? 10.0f : 0.0f;
+                dl->AddText(
+                    ImVec2(textPos.x, textPos.y + metricsOffsetY),
+                    IM_COL32(180, 245, 255, 255),
+                    metricsBuf);
             }
         }
     }
@@ -3758,35 +3842,54 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             IM_COL32(255, 220, 80, 35));
     }
 
-    for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
+    if (m_showRoadGuidelines)
     {
-        const Intersection& isec = m_network->intersections[ii];
-        if (!IsIntersectionVisible(isec))
-            continue;
-        ImVec2 sp;
-        if (!WorldToScreen(isec.pos, viewProj, vpW, vpH, sp))
-            continue;
-        const bool selected = (ii == m_activeIntersection) || IsIntersectionSelected(ii);
-        const ImU32 col = selected ? colIsecSel : colIsec;
-        const float radiusPx = (std::max)(2.0f, m_intersectionScreenGizmoRadius);
-        const float crossPx = radiusPx * 0.8f;
-        dl->AddCircle(sp, radiusPx, col, 24, 2.0f);
-        dl->AddLine(ImVec2(sp.x - crossPx, sp.y), ImVec2(sp.x + crossPx, sp.y), col, 2.0f);
-        dl->AddLine(ImVec2(sp.x, sp.y - crossPx), ImVec2(sp.x, sp.y + crossPx), col, 2.0f);
-        if (m_showIntersectionNames)
-            dl->AddText(ImVec2(sp.x + radiusPx + 2.0f, sp.y - crossPx), col, isec.name.c_str());
+        for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
+        {
+            const Intersection& isec = m_network->intersections[ii];
+            if (!IsIntersectionVisible(isec))
+                continue;
+            ImVec2 sp;
+            if (!WorldToScreen(isec.pos, viewProj, vpW, vpH, sp))
+                continue;
+            const bool selected = (ii == m_activeIntersection) || IsIntersectionSelected(ii);
+            const ImU32 col = selected ? colIsecSel : colIsec;
+            const float radiusPx = (std::max)(2.0f, m_intersectionScreenGizmoRadius);
+            const float crossPx = radiusPx * 0.8f;
+            dl->AddCircle(sp, radiusPx, col, 24, 2.0f);
+            dl->AddLine(ImVec2(sp.x - crossPx, sp.y), ImVec2(sp.x + crossPx, sp.y), col, 2.0f);
+            dl->AddLine(ImVec2(sp.x, sp.y - crossPx), ImVec2(sp.x, sp.y + crossPx), col, 2.0f);
+        }
+
+        if (m_hoverSnapIntersection >= 0 &&
+            m_hoverSnapIntersection < static_cast<int>(m_network->intersections.size()))
+        {
+            ImVec2 sp;
+            if (WorldToScreen(m_network->intersections[m_hoverSnapIntersection].pos,
+                              viewProj, vpW, vpH, sp))
+            {
+                dl->AddCircle(sp, 22.0f, colSnap, 32, 3.0f);
+                dl->AddCircle(sp, 30.0f, IM_COL32(255, 240, 80, 120), 32, 2.0f);
+                dl->AddText(ImVec2(sp.x + 18.0f, sp.y - 24.0f), colSnap, "SNAP");
+            }
+        }
     }
 
-    if (m_hoverSnapIntersection >= 0 &&
-        m_hoverSnapIntersection < static_cast<int>(m_network->intersections.size()))
+    if (m_showIntersectionNames)
     {
-        ImVec2 sp;
-        if (WorldToScreen(m_network->intersections[m_hoverSnapIntersection].pos,
-                          viewProj, vpW, vpH, sp))
+        for (int ii = 0; ii < static_cast<int>(m_network->intersections.size()); ++ii)
         {
-            dl->AddCircle(sp, 22.0f, colSnap, 32, 3.0f);
-            dl->AddCircle(sp, 30.0f, IM_COL32(255, 240, 80, 120), 32, 2.0f);
-            dl->AddText(ImVec2(sp.x + 18.0f, sp.y - 24.0f), colSnap, "SNAP");
+            const Intersection& isec = m_network->intersections[ii];
+            if (!IsIntersectionVisible(isec))
+                continue;
+            ImVec2 sp;
+            if (!WorldToScreen(isec.pos, viewProj, vpW, vpH, sp))
+                continue;
+            const bool selected = (ii == m_activeIntersection) || IsIntersectionSelected(ii);
+            const ImU32 col = selected ? colIsecSel : colIsec;
+            const float radiusPx = (std::max)(2.0f, m_intersectionScreenGizmoRadius);
+            const float crossPx = radiusPx * 0.8f;
+            dl->AddText(ImVec2(sp.x + radiusPx + 2.0f, sp.y - crossPx), col, isec.name.c_str());
         }
     }
 
@@ -3935,15 +4038,19 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
 
         ImGui::SameLine();
 
+        ImGui::BeginDisabled(!m_showRoadGuidelines);
         if (editActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
         if (ImGui::Button(u8"\u30DD\u30A4\u30F3\u30C8\u7DE8\u96C6")) SetMode(EditorMode::PointEdit);
         if (editActive) ImGui::PopStyleColor();
+        ImGui::EndDisabled();
 
         ImGui::NewLine();
 
+        ImGui::BeginDisabled(!m_showRoadGuidelines);
         if (drawActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
         if (ImGui::Button(u8"\u9053\u8DEF\u4F5C\u6210")) StartNewRoad();
         if (drawActive) ImGui::PopStyleColor();
+        ImGui::EndDisabled();
 
         ImGui::SameLine();
 
@@ -4082,6 +4189,12 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         ImGui::SetNextWindowSize(ImVec2(320, 520), ImGuiCond_FirstUseEver);
         ImGui::Begin(u8"\u30D7\u30ED\u30D1\u30C6\u30A3", showPropertiesWindow);
 
+        const bool hasPendingPropertyReveal =
+            m_propertyRevealGroup >= 0 ||
+            m_propertyRevealRoad >= 0 ||
+            m_propertyRevealIntersection >= 0;
+        bool propertyRevealHandled = false;
+
         ImGui::Separator();
         ImGui::Text(u8"\u30B0\u30EB\u30FC\u30D7 (%d)", static_cast<int>(m_network->groups.size()));
     if (ImGui::Button(u8"\u30B0\u30EB\u30FC\u30D7\u8FFD\u52A0"))
@@ -4100,11 +4213,26 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         RoadGroup& group = m_network->groups[gi];
         ImGui::PushID(group.id.c_str());
 
+        const bool revealGroup = hasPendingPropertyReveal && m_propertyRevealGroup == gi;
+        const bool revealRoadSection =
+            revealGroup && m_propertyRevealRoad >= 0 &&
+            m_propertyRevealRoad < static_cast<int>(m_network->roads.size()) &&
+            m_network->roads[m_propertyRevealRoad].groupId == group.id;
+        const bool revealIntersectionSection =
+            revealGroup && m_propertyRevealIntersection >= 0 &&
+            m_propertyRevealIntersection < static_cast<int>(m_network->intersections.size()) &&
+            m_network->intersections[m_propertyRevealIntersection].groupId == group.id;
+
+        if (revealGroup)
+            ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+
         ImGuiTreeNodeFlags groupFlags =
             ImGuiTreeNodeFlags_DefaultOpen |
             ImGuiTreeNodeFlags_OpenOnArrow |
             ((gi == m_activeGroup) ? ImGuiTreeNodeFlags_Selected : 0);
         const bool groupOpen = ImGui::TreeNodeEx("Group", groupFlags, "%s", group.name.c_str());
+        if (revealGroup)
+            ImGui::SetScrollHereY(0.2f);
         if (ImGui::IsItemClicked())
             m_activeGroup = gi;
 
@@ -4135,6 +4263,8 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
 
         if (groupOpen)
         {
+            if (revealRoadSection)
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
             if (ImGui::TreeNodeEx("Roads", ImGuiTreeNodeFlags_DefaultOpen,
                                   u8"\u9053\u8DEF (%d)",
                                   static_cast<int>(std::count_if(
@@ -4145,6 +4275,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                                           return road.groupId == group.id;
                                       }))))
             {
+                ImGui::BeginDisabled(!m_showRoadGuidelines);
                 for (int i = 0; i < static_cast<int>(m_network->roads.size()); ++i)
                 {
                     Road& road = m_network->roads[i];
@@ -4164,6 +4295,11 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                         m_activeIntersection = -1;
                         m_activeGroup = gi;
                     }
+                    if (m_propertyRevealRoad == i)
+                    {
+                        ImGui::SetScrollHereY(0.25f);
+                        propertyRevealHandled = true;
+                    }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
                         if (ImGui::MenuItem(u8"\u9053\u8DEF\u524A\u9664"))
@@ -4176,9 +4312,12 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                     }
                     ImGui::PopID();
                 }
+                ImGui::EndDisabled();
                 ImGui::TreePop();
             }
 
+            if (revealIntersectionSection)
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
             if (ImGui::TreeNodeEx("Intersections", ImGuiTreeNodeFlags_DefaultOpen,
                                   u8"\u4EA4\u5DEE\u70B9 (%d)",
                                   static_cast<int>(std::count_if(
@@ -4203,6 +4342,11 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                         ClearRoadSelection();
                         ClearPointSelection();
                         m_activeGroup = gi;
+                    }
+                    if (m_propertyRevealIntersection == i)
+                    {
+                        ImGui::SetScrollHereY(0.25f);
+                        propertyRevealHandled = true;
                     }
                     if (selected && ImGui::BeginPopupContextItem())
                     {
@@ -4232,6 +4376,9 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         SanitizeSelection();
         m_statusMessage = "Group deleted";
     }
+
+    if (propertyRevealHandled)
+        ClearPropertyReveal();
 
     if (m_activeGroup >= 0 &&
         m_activeGroup < static_cast<int>(m_network->groups.size()))
@@ -4263,6 +4410,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
     if (m_activeRoad >= 0 &&
         m_activeRoad < static_cast<int>(m_network->roads.size()))
     {
+        ImGui::BeginDisabled(!m_showRoadGuidelines);
         Road& road = m_network->roads[m_activeRoad];
         ImGui::Separator();
         ImGui::Text(u8"\u9053\u8DEF");
@@ -4323,6 +4471,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
             }
             ImGui::EndCombo();
         }
+        ImGui::EndDisabled();
     }
 
     // Selected point info
@@ -4331,6 +4480,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         selectedPoint.roadIndex >= 0 &&
         selectedPoint.roadIndex < static_cast<int>(m_network->roads.size()))
     {
+        ImGui::BeginDisabled(!m_showRoadGuidelines);
         Road& road = m_network->roads[selectedPoint.roadIndex];
         if (selectedPoint.pointIndex < static_cast<int>(road.points.size()))
         {
@@ -4360,6 +4510,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                 }
             }
         }
+        ImGui::EndDisabled();
     }
 
     if (m_activeIntersection >= 0 &&

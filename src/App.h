@@ -132,6 +132,7 @@ private:
     bool              m_showTerrainWindow = true;
     bool              m_showRoadEditorWindow = true;
     bool              m_showPropertiesWindow = true;
+    bool              m_showRoadGuidelines = true;
     bool              m_showRoadNames = false;
     bool              m_showIntersectionNames = true;
     bool              m_showRoadPreviewMetrics = false;
@@ -146,6 +147,7 @@ private:
     bool              m_showContours = false;
     bool              m_showBackgroundSettings = false;
     bool              m_showEditorDisplaySettings = false;
+    bool              m_showDisplaySettingsWindow = false;
     float             m_contourInterval = 5.0f;
     float             m_gridBaseScale = 1.0f;
     float             m_gridFadeDistance = 1200.0f;
