@@ -5,10 +5,11 @@
     0.2664092779159546
   ],
   "contourColor": [
-    0.23552125692367554,
-    0.23552125692367554,
-    0.23552125692367554
+    0.2509652376174927,
+    0.2509652376174927,
+    0.2509652376174927
   ],
+  "contourInterval": 20.0,
   "gridBaseScale": 100.0,
   "gridFadeDistance": 10000.0,
   "intersectionCircleColor": [
@@ -44,5 +45,5 @@
   "showRoadGradeGradient": true,
   "showRoadNames": false,
   "showRoadPreviewMetrics": false,
-  "showTerrainWindow": true
+  "showTerrainWindow": false
 }

@@ -11,7 +11,7 @@
 class Camera
 {
 public:
-    void Initialize(float distance  = 20.0f,
+    void Initialize(float distance  = 1000.0f,
                     float azimuth   = 0.785f,   // 45 degrees
                     float elevation = 0.4f);
 
@@ -38,7 +38,7 @@ public:
 
 private:
     DirectX::XMFLOAT3 m_target    = { 0.0f, 0.0f, 0.0f };
-    float             m_distance  = 20.0f;
+    float             m_distance  = 1000.0f;
     float             m_azimuth   = 0.785f;
     float             m_elevation = 0.4f;
 

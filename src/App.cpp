@@ -542,6 +542,7 @@ void App::LoadViewSettings()
     m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
     m_showContours = false;
+    m_contourInterval = 5.0f;
     m_gridBaseScale = 1.0f;
     m_gridFadeDistance = 1200.0f;
     m_roadLineThickness = 2.0f;
@@ -574,6 +575,7 @@ void App::LoadViewSettings()
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_showContours = root.value("showContours", false);
+            m_contourInterval = root.value("contourInterval", 5.0f);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
             m_gridFadeDistance = root.value("gridFadeDistance", 1200.0f);
             m_roadLineThickness = root.value("roadLineThickness", 2.0f);
@@ -662,6 +664,7 @@ void App::SaveViewSettings() const
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "showContours", m_showContours },
+            { "contourInterval", m_contourInterval },
             { "gridBaseScale", m_gridBaseScale },
             { "gridFadeDistance", m_gridFadeDistance },
             { "roadLineThickness", m_roadLineThickness },
@@ -797,7 +800,6 @@ void App::RebuildContourCache()
         }
     };
 
-    const float maxHeight = m_terrain->heightScale;
     for (int row = 0; row < rows - 1; ++row)
     {
         for (int col = 0; col < cols - 1; ++col)
@@ -817,8 +819,6 @@ void App::RebuildContourCache()
             for (int levelIndex = firstLevel; levelIndex <= lastLevel; ++levelIndex)
             {
                 const float level = static_cast<float>(levelIndex) * interval;
-                if (level < 0.0f || level > maxHeight)
-                    continue;
                 appendSegmentsForCell(p0, p1, p2, p3, level);
             }
         }
@@ -1098,7 +1098,7 @@ bool App::LoadProject(const char* path)
                     c.value("targetY", 0.0f),
                     c.value("targetZ", 0.0f)
                 },
-                c.value("distance", 20.0f),
+                c.value("distance", 1000.0f),
                 c.value("azimuth", 0.785f),
                 c.value("elevation", 0.4f));
         }
@@ -1306,7 +1306,7 @@ bool App::Initialize(HINSTANCE hInstance, int nCmdShow)
         return false;
 
     m_camera = std::make_unique<Camera>();
-    m_camera->Initialize(20.0f, 0.785f, 0.4f);
+    m_camera->Initialize(1000.0f, 0.785f, 0.4f);
 
     m_grid = std::make_unique<Grid>();
     if (!m_grid->Initialize(m_d3d->GetDevice()))
@@ -1470,6 +1470,9 @@ int App::Run()
 
 void App::Render()
 {
+    if (IsIconic(m_hwnd) || m_d3d->GetWidth() <= 0 || m_d3d->GetHeight() <= 0)
+        return;
+
     const XMFLOAT4X4 lightViewProj = ComputeLightViewProjMatrix();
     if (m_terrain->lightingMode == Terrain::LightingModeSunShadowed)
         m_terrain->RenderShadowMap(m_d3d->GetContext(), lightViewProj);
@@ -2072,12 +2075,15 @@ void App::Render()
 
         float contourInterval = m_contourInterval;
         ImGui::InputFloat(u8"\u7B49\u9AD8\u7DDA\u9593\u9694 (m)", &contourInterval, 1.0f, 5.0f, "%.1f");
-        contourInterval = std::clamp(contourInterval, 0.5f, 1000.0f);
-        if (fabsf(contourInterval - m_contourInterval) > 1e-4f)
+        if (ImGui::IsItemDeactivatedAfterEdit())
         {
-            m_contourInterval = contourInterval;
-            RebuildContourCache();
-            SaveViewSettings();
+            contourInterval = std::clamp(contourInterval, 0.5f, 1000.0f);
+            if (fabsf(contourInterval - m_contourInterval) > 1e-4f)
+            {
+                m_contourInterval = contourInterval;
+                RebuildContourCache();
+                SaveViewSettings();
+            }
         }
 
         ImGui::TextUnformatted(u8"\u7B49\u9AD8\u7DDA\u306E\u8272");
