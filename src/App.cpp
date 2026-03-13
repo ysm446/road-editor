@@ -2050,11 +2050,11 @@ void App::Render()
         if (m_loadResW > 4096) m_loadResW = 4096;
         if (m_loadResH > 4096) m_loadResH = 4096;
 
-        float loadSizeM[3] = { m_loadWidthM, m_loadDepthM, m_loadHeightM };
-        ImGui::InputFloat3(u8"\u30B5\u30A4\u30BA X / Z / Y (m)", loadSizeM, "%.0f");
+        float loadSizeM[3] = { m_loadWidthM, m_loadHeightM, m_loadDepthM };
+        ImGui::InputFloat3(u8"\u30B5\u30A4\u30BA X / Y / Z (m)", loadSizeM, "%.0f");
         m_loadWidthM  = loadSizeM[0];
-        m_loadDepthM  = loadSizeM[1];
-        m_loadHeightM = loadSizeM[2];
+        m_loadHeightM = loadSizeM[1];
+        m_loadDepthM  = loadSizeM[2];
         if (ImGui::IsItemDeactivatedAfterEdit())
             applyToCurrentTerrain = true;
         if (m_loadWidthM < 1.0f) m_loadWidthM = 1.0f;
