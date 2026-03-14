@@ -1,11 +1,20 @@
 {
   "camera": {
-    "azimuth": -7.740128993988037,
-    "distance": 4086.74755859375,
-    "elevation": 0.8250006437301636,
+    "azimuth": -7.910125732421875,
+    "distance": 2785.004150390625,
+    "elevation": 0.6400007605552673,
     "targetX": 360.8360290527344,
     "targetY": 1189.5557861328125,
     "targetZ": 3.7677314281463623
+  },
+  "contours": {
+    "color": [
+      0.6640926599502563,
+      0.6640926599502563,
+      0.6640926599502563
+    ],
+    "interval": 20.0,
+    "show": true
   },
   "roads": {
     "path": "testtrack_road.roadnet"
@@ -27,7 +36,7 @@
     "sunAzimuth": -0.05235987901687622,
     "sunElevation": 0.6283185482025146,
     "texturePath": "testtrack_demcolor_06.png",
-    "visible": false,
+    "visible": true,
     "widthM": 4000.0,
     "wireframe": false
   },

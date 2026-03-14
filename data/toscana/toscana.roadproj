@@ -7,6 +7,15 @@
     "targetY": -146.44277954101563,
     "targetZ": 42.0814208984375
   },
+  "contours": {
+    "color": [
+      0.7837837934494019,
+      0.7837837934494019,
+      0.7837837934494019
+    ],
+    "interval": 2.0,
+    "show": true
+  },
   "roads": {
     "path": "toscana_road.roadnet"
   },

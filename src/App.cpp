@@ -1062,6 +1062,12 @@ bool App::SaveProject(const char* path)
             { "azimuth",   m_camera->GetAzimuth()     },
             { "elevation", m_camera->GetElevation()   }
         };
+        root["contours"] =
+        {
+            { "show", m_showContours },
+            { "interval", m_contourInterval },
+            { "color", { m_contourColor.x, m_contourColor.y, m_contourColor.z } }
+        };
 
         std::ofstream ofs(path);
         if (!ofs)
@@ -1153,11 +1159,27 @@ bool App::LoadProject(const char* path)
             }
         }
 
+        if (root.contains("contours"))
+        {
+            const auto& contours = root["contours"];
+            m_showContours = contours.value("show", m_showContours);
+            m_contourInterval = contours.value("interval", m_contourInterval);
+            if (contours.contains("color") &&
+                contours["color"].is_array() &&
+                contours["color"].size() == 3)
+            {
+                m_contourColor.x = contours["color"][0].get<float>();
+                m_contourColor.y = contours["color"][1].get<float>();
+                m_contourColor.z = contours["color"][2].get<float>();
+            }
+        }
+
         strncpy_s(m_projectPath, sizeof(m_projectPath), path, _TRUNCATE);
         RefreshTerrainPathDisplayBuffers();
         AddRecentProjectPath(path);
         SaveViewSettings();
         UpdateWindowTitle();
+        RebuildContourCache();
 
         if (root.contains("camera"))
         {
