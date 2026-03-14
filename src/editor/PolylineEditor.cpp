@@ -3460,6 +3460,21 @@ void PolylineEditor::Update(int vpW, int vpH,
 
         if (lClick)
         {
+            const int selIntersection = FindNearestIntersection(vpW, vpH, mousePos, viewProj);
+            if (selIntersection >= 0)
+            {
+                if (ctrlDown)
+                    ToggleIntersectionSelection(selIntersection);
+                else
+                {
+                    SelectSingleIntersection(selIntersection);
+                    ClearPointSelection();
+                }
+                SetActiveGroupById(m_network->intersections[selIntersection].groupId);
+                ClearRoadSelection();
+                return;
+            }
+
             if (m_activeRoad >= 0)
             {
                 const int selPoint = FindNearestPointOnRoad(
@@ -3476,21 +3491,6 @@ void PolylineEditor::Update(int vpW, int vpH,
                     SetMode(EditorMode::PointEdit);
                     return;
                 }
-            }
-
-            const int selIntersection = FindNearestIntersection(vpW, vpH, mousePos, viewProj);
-            if (selIntersection >= 0)
-            {
-                if (ctrlDown)
-                    ToggleIntersectionSelection(selIntersection);
-                else
-                {
-                    SelectSingleIntersection(selIntersection);
-                    ClearPointSelection();
-                }
-                SetActiveGroupById(m_network->intersections[selIntersection].groupId);
-                ClearRoadSelection();
-                return;
             }
 
             const int selRoad = FindNearestRoad(vpW, vpH, mousePos, viewProj);
