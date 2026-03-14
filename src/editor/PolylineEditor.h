@@ -141,8 +141,7 @@ private:
                                          DirectX::XMFLOAT2 px,
                                          DirectX::XMMATRIX viewProj,
                                          int& outRoadIndex,
-                                         float& outUCoord,
-                                         DirectX::XMFLOAT3& outWorldPos) const;
+                                         float& outUCoord) const;
     int FindNearestIntersection(int vpW, int vpH,
                                 DirectX::XMFLOAT2 px,
                                 DirectX::XMMATRIX viewProj) const;
@@ -261,8 +260,6 @@ private:
     std::vector<VerticalCurveRef> m_selectedVerticalCurvePoints;
     std::vector<BankAngleRef> m_selectedBankAnglePoints;
     std::vector<int> m_selectedIntersections;
-    int m_activeVerticalCurvePoint = -1;
-    int m_activeBankAnglePoint = -1;
     bool m_verticalCurveDragging = false;
     int m_verticalCurveDragRoad = -1;
     int m_verticalCurveDragPoint = -1;

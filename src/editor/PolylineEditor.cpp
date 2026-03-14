@@ -814,8 +814,6 @@ void PolylineEditor::ResetState()
     m_selectedVerticalCurvePoints.clear();
     m_selectedBankAnglePoints.clear();
     m_selectedIntersections.clear();
-    m_activeVerticalCurvePoint = -1;
-    m_activeBankAnglePoint = -1;
     m_verticalCurveDragging = false;
     m_verticalCurveDragRoad = -1;
     m_verticalCurveDragPoint = -1;
@@ -827,12 +825,6 @@ void PolylineEditor::ResetState()
     m_hoverSnapIntersection = -1;
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
-    m_verticalCurveDragging = false;
-    m_verticalCurveDragRoad = -1;
-    m_verticalCurveDragPoint = -1;
-    m_bankAngleDragging = false;
-    m_bankAngleDragRoad = -1;
-    m_bankAngleDragPoint = -1;
     m_dragOffset = { 0, 0, 0 };
     m_axisDragStartPos = { 0, 0, 0 };
     m_axisDragStartMouse = { 0, 0 };
@@ -966,8 +958,6 @@ void PolylineEditor::SanitizeSelection()
     {
         m_activeRoad = primaryPoint.roadIndex;
         m_activePoint = primaryPoint.pointIndex;
-        m_activeVerticalCurvePoint = -1;
-        m_activeBankAnglePoint = -1;
     }
     else
     {
@@ -976,20 +966,11 @@ void PolylineEditor::SanitizeSelection()
         {
             const VerticalCurveRef& primaryCurve = m_selectedVerticalCurvePoints.front();
             m_activeRoad = primaryCurve.roadIndex;
-            m_activeVerticalCurvePoint = primaryCurve.curveIndex;
-            m_activeBankAnglePoint = -1;
         }
         else if (!m_selectedBankAnglePoints.empty())
         {
             const BankAngleRef& primaryBank = m_selectedBankAnglePoints.front();
             m_activeRoad = primaryBank.roadIndex;
-            m_activeBankAnglePoint = primaryBank.pointIndex;
-            m_activeVerticalCurvePoint = -1;
-        }
-        else
-        {
-            m_activeVerticalCurvePoint = -1;
-            m_activeBankAnglePoint = -1;
         }
         const bool hasCurveSelection =
             !m_selectedVerticalCurvePoints.empty() || !m_selectedBankAnglePoints.empty();
@@ -1289,11 +1270,10 @@ int PolylineEditor::FindNearestRoad(
 
 bool PolylineEditor::FindNearestPreviewCurveLocation(
     int vpW, int vpH, XMFLOAT2 px, XMMATRIX viewProj,
-    int& outRoadIndex, float& outUCoord, XMFLOAT3& outWorldPos) const
+    int& outRoadIndex, float& outUCoord) const
 {
     outRoadIndex = -1;
     outUCoord = 0.0f;
-    outWorldPos = { 0.0f, 0.0f, 0.0f };
 
     const float threshold = 14.0f;
     float bestDist = threshold;
@@ -1344,7 +1324,6 @@ bool PolylineEditor::FindNearestPreviewCurveLocation(
             bestDist = d;
             outRoadIndex = roadIndex;
             outUCoord = sampleLength / totalLength;
-            outWorldPos = Lerp3(previewCurve[pointIndex], previewCurve[pointIndex + 1], segmentT);
         }
     }
 
@@ -2162,8 +2141,6 @@ void PolylineEditor::SelectSingleRoad(int roadIndex)
         m_selectedRoads.push_back(roadIndex);
     m_activeRoad = roadIndex;
     m_activePoint = -1;
-    m_activeVerticalCurvePoint = -1;
-    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2181,8 +2158,6 @@ void PolylineEditor::ToggleRoadSelection(int roadIndex)
         m_selectedRoads.erase(it);
         m_selectedVerticalCurvePoints.clear();
         m_selectedBankAnglePoints.clear();
-        m_activeVerticalCurvePoint = -1;
-        m_activeBankAnglePoint = -1;
         m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
         return;
     }
@@ -2192,8 +2167,6 @@ void PolylineEditor::ToggleRoadSelection(int roadIndex)
     m_selectedBankAnglePoints.clear();
     m_activeRoad = roadIndex;
     m_activePoint = -1;
-    m_activeVerticalCurvePoint = -1;
-    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2206,13 +2179,11 @@ void PolylineEditor::ClearPointSelection()
 void PolylineEditor::ClearVerticalCurveSelection()
 {
     m_selectedVerticalCurvePoints.clear();
-    m_activeVerticalCurvePoint = -1;
 }
 
 void PolylineEditor::ClearBankAngleSelection()
 {
     m_selectedBankAnglePoints.clear();
-    m_activeBankAnglePoint = -1;
 }
 
 void PolylineEditor::ClearIntersectionSelection()
@@ -2230,8 +2201,6 @@ void PolylineEditor::SelectSinglePoint(int roadIndex, int pointIndex)
         m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
-    m_activeVerticalCurvePoint = -1;
-    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2268,8 +2237,6 @@ void PolylineEditor::TogglePointSelection(int roadIndex, int pointIndex)
     m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
-    m_activeVerticalCurvePoint = -1;
-    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2282,8 +2249,6 @@ void PolylineEditor::SelectSingleVerticalCurvePoint(int roadIndex, int curveInde
     m_selectedPoints.clear();
     m_selectedIntersections.clear();
     m_activeRoad = roadIndex;
-    m_activeVerticalCurvePoint = curveIndex;
-    m_activeBankAnglePoint = -1;
     m_activePoint = -1;
     m_activeIntersection = -1;
     QueuePropertyRevealForRoad(roadIndex);
@@ -2298,8 +2263,6 @@ void PolylineEditor::SelectSingleBankAnglePoint(int roadIndex, int pointIndex)
     m_selectedVerticalCurvePoints.clear();
     m_selectedIntersections.clear();
     m_activeRoad = roadIndex;
-    m_activeBankAnglePoint = pointIndex;
-    m_activeVerticalCurvePoint = -1;
     m_activePoint = -1;
     m_activeIntersection = -1;
     QueuePropertyRevealForRoad(roadIndex);
@@ -2953,8 +2916,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             int roadIndex = -1;
             float uCoord = 0.0f;
-            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos) &&
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord) &&
                 roadIndex == m_verticalCurveDragRoad &&
                 m_verticalCurveDragRoad >= 0 &&
                 m_verticalCurveDragRoad < static_cast<int>(m_network->roads.size()))
@@ -3112,8 +3074,7 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             int roadIndex = -1;
             float uCoord = 0.0f;
-            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos))
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord))
             {
                 PushUndoState();
                 VerticalCurvePoint point;
@@ -3171,8 +3132,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             int roadIndex = -1;
             float uCoord = 0.0f;
-            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos) &&
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord) &&
                 roadIndex == m_bankAngleDragRoad &&
                 m_bankAngleDragRoad >= 0 &&
                 m_bankAngleDragRoad < static_cast<int>(m_network->roads.size()))
@@ -3330,8 +3290,7 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             int roadIndex = -1;
             float uCoord = 0.0f;
-            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos))
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord))
             {
                 PushUndoState();
                 BankAnglePoint point;
