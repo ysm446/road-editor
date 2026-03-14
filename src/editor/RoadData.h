@@ -20,6 +20,14 @@ struct VerticalCurvePoint
     float offset = 0.0f;
 };
 
+struct BankAnglePoint
+{
+    float uCoord = 0.0f;
+    float targetSpeed = 40.0f;
+    bool overrideBank = false;
+    float bankAngle = 0.0f;
+};
+
 // A single polyline road
 struct Road
 {
@@ -33,7 +41,10 @@ struct Road
     float                  laneWidth = 3.0f;
     int                    laneLeft = 1;
     int                    laneRight = 1;
+    float                  defaultFriction = 0.15f;
+    float                  defaultTargetSpeed = 40.0f;
     std::vector<VerticalCurvePoint> verticalCurve;
+    std::vector<BankAnglePoint> bankAngle;
     nlohmann::json         legacyData = nlohmann::json::object();
 
     // Convenience

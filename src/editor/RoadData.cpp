@@ -15,7 +15,7 @@ using namespace DirectX;
 namespace
 {
 constexpr int kCurveRoadTypeDefault = 0;
-constexpr float kCurveDefaultTargetSpeed = 30.0f;
+constexpr float kCurveDefaultTargetSpeed = 40.0f;
 constexpr float kCurveDefaultFriction = 0.15f;
 
 float JsonToFloat(const nlohmann::json& value, float defaultValue)
@@ -287,16 +287,43 @@ static nlohmann::json VerticalCurvePointToJson(const VerticalCurvePoint& point)
         });
 }
 
+static BankAnglePoint BankAnglePointFromJson(const nlohmann::json& j)
+{
+    BankAnglePoint point;
+    if (!j.is_object())
+        return point;
+
+    point.uCoord = JsonToFloat(j.value("u_coord", nlohmann::json()), 0.0f);
+    point.targetSpeed = JsonToFloat(j.value("targetSpeed", nlohmann::json()), 40.0f);
+    point.overrideBank = j.value("overrideBank", 0) != 0;
+    point.bankAngle = JsonToFloat(j.value("bankAngle", nlohmann::json()), 0.0f);
+    return point;
+}
+
+static nlohmann::json BankAnglePointToJson(const BankAnglePoint& point)
+{
+    return nlohmann::json::object(
+        {
+            { "u_coord", point.uCoord },
+            { "targetSpeed", point.targetSpeed },
+            { "overrideBank", point.overrideBank ? 1 : 0 },
+            { "bankAngle", point.bankAngle }
+        });
+}
+
 static nlohmann::json RoadToJson(const Road& r)
 {
     nlohmann::json roadJson =
         (r.legacyData.is_object() ? r.legacyData : nlohmann::json::object());
     nlohmann::json pts = nlohmann::json::array();
     nlohmann::json verticalCurveJson = nlohmann::json::array();
+    nlohmann::json bankAngleJson = nlohmann::json::array();
     for (const auto& p : r.points)
         pts.push_back(CurvePointToJson(p));
     for (const VerticalCurvePoint& point : r.verticalCurve)
         verticalCurveJson.push_back(VerticalCurvePointToJson(point));
+    for (const BankAnglePoint& point : r.bankAngle)
+        bankAngleJson.push_back(BankAnglePointToJson(point));
 
     roadJson["id"] = r.id;
     roadJson["name"] = r.name;
@@ -308,12 +335,10 @@ static nlohmann::json RoadToJson(const Road& r)
     roadJson["laneWidth"] = r.laneWidth;
     roadJson["laneLeft"] = r.laneLeft;
     roadJson["laneRight"] = r.laneRight;
+    roadJson["defaultTargetSpeed"] = r.defaultTargetSpeed;
+    roadJson["defaultFriction"] = r.defaultFriction;
     if (!roadJson.contains("roadType"))
         roadJson["roadType"] = kCurveRoadTypeDefault;
-    if (!roadJson.contains("defaultTargetSpeed"))
-        roadJson["defaultTargetSpeed"] = kCurveDefaultTargetSpeed;
-    if (!roadJson.contains("defaultFriction"))
-        roadJson["defaultFriction"] = kCurveDefaultFriction;
     if (!roadJson.contains("active"))
         roadJson["active"] = 1;
     if (!roadJson.contains("defaultWidthLaneLeft1"))
@@ -324,8 +349,7 @@ static nlohmann::json RoadToJson(const Road& r)
         roadJson["defaultWidthLaneRight1"] = r.laneWidth;
     roadJson["point"] = pts;
     roadJson["verticalCurve"] = verticalCurveJson;
-    if (!roadJson.contains("bankAngle"))
-        roadJson["bankAngle"] = nlohmann::json::array();
+    roadJson["bankAngle"] = bankAngleJson;
     if (!roadJson.contains("laneSection"))
         roadJson["laneSection"] = nlohmann::json::array();
     return roadJson;
@@ -347,6 +371,12 @@ static Road RoadFromJson(const nlohmann::json& j)
         : JsonToFloat(j.value("defaultWidthLaneRight1", nlohmann::json()), 3.0f);
     r.laneLeft = j.value("laneLeft", 1);
     r.laneRight = j.value("laneRight", 1);
+    r.defaultTargetSpeed = JsonToFloat(
+        j.value("defaultTargetSpeed", nlohmann::json()),
+        kCurveDefaultTargetSpeed);
+    r.defaultFriction = JsonToFloat(
+        j.value("defaultFriction", nlohmann::json()),
+        kCurveDefaultFriction);
     if (j.contains("point"))
     {
         for (const auto& p : j["point"])
@@ -361,6 +391,11 @@ static Road RoadFromJson(const nlohmann::json& j)
     {
         for (const auto& point : j["verticalCurve"])
             r.verticalCurve.push_back(VerticalCurvePointFromJson(point));
+    }
+    if (j.contains("bankAngle") && j["bankAngle"].is_array())
+    {
+        for (const auto& point : j["bankAngle"])
+            r.bankAngle.push_back(BankAnglePointFromJson(point));
     }
     EnsureRoadId(r);
     return r;

@@ -13,6 +13,7 @@ namespace
 constexpr size_t kMaxUndoStates = 128;
 constexpr int kPreviewCurveSubdivisions = 12;
 constexpr float kVerticalCurveDefaultLength = 50.0f;
+constexpr float kBankAngleDefaultTargetSpeed = 40.0f;
 
 float Distance3(XMFLOAT3 a, XMFLOAT3 b)
 {
@@ -622,6 +623,10 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
         newRoad.laneWidth = copiedRoad.laneWidth;
         newRoad.laneLeft = copiedRoad.laneLeft;
         newRoad.laneRight = copiedRoad.laneRight;
+        newRoad.defaultFriction = copiedRoad.defaultFriction;
+        newRoad.defaultTargetSpeed = copiedRoad.defaultTargetSpeed;
+        newRoad.verticalCurve = copiedRoad.verticalCurve;
+        newRoad.bankAngle = copiedRoad.bankAngle;
         const auto startIt = intersectionIdMap.find(copiedRoad.startIntersectionId);
         const auto endIt = intersectionIdMap.find(copiedRoad.endIntersectionId);
         newRoad.startIntersectionId =
@@ -681,6 +686,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.selectedRoads = m_selectedRoads;
     snapshot.selectedPoints = m_selectedPoints;
     snapshot.selectedVerticalCurvePoints = m_selectedVerticalCurvePoints;
+    snapshot.selectedBankAnglePoints = m_selectedBankAnglePoints;
     snapshot.selectedIntersections = m_selectedIntersections;
     snapshot.activeGroup = m_activeGroup;
     snapshot.activeIntersection = m_activeIntersection;
@@ -702,6 +708,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_selectedRoads = snapshot.selectedRoads;
     m_selectedPoints = snapshot.selectedPoints;
     m_selectedVerticalCurvePoints = snapshot.selectedVerticalCurvePoints;
+    m_selectedBankAnglePoints = snapshot.selectedBankAnglePoints;
     m_selectedIntersections = snapshot.selectedIntersections;
     m_activeGroup = snapshot.activeGroup;
     m_activeIntersection = snapshot.activeIntersection;
@@ -717,6 +724,9 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_verticalCurveDragging = false;
     m_verticalCurveDragRoad = -1;
     m_verticalCurveDragPoint = -1;
+    m_bankAngleDragging = false;
+    m_bankAngleDragRoad = -1;
+    m_bankAngleDragPoint = -1;
     m_pointDragStartPositions.clear();
     m_intersectionDragStartPositions.clear();
     m_marqueeSelecting = false;
@@ -802,11 +812,16 @@ void PolylineEditor::ResetState()
     m_selectedRoads.clear();
     m_selectedPoints.clear();
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     m_selectedIntersections.clear();
     m_activeVerticalCurvePoint = -1;
+    m_activeBankAnglePoint = -1;
     m_verticalCurveDragging = false;
     m_verticalCurveDragRoad = -1;
     m_verticalCurveDragPoint = -1;
+    m_bankAngleDragging = false;
+    m_bankAngleDragRoad = -1;
+    m_bankAngleDragPoint = -1;
     m_activeGroup = -1;
     m_activeIntersection = -1;
     m_hoverSnapIntersection = -1;
@@ -815,6 +830,9 @@ void PolylineEditor::ResetState()
     m_verticalCurveDragging = false;
     m_verticalCurveDragRoad = -1;
     m_verticalCurveDragPoint = -1;
+    m_bankAngleDragging = false;
+    m_bankAngleDragRoad = -1;
+    m_bankAngleDragPoint = -1;
     m_dragOffset = { 0, 0, 0 };
     m_axisDragStartPos = { 0, 0, 0 };
     m_axisDragStartMouse = { 0, 0 };
@@ -868,6 +886,9 @@ void PolylineEditor::SetShowRoadGuidelines(bool show)
     m_verticalCurveDragging = false;
     m_verticalCurveDragRoad = -1;
     m_verticalCurveDragPoint = -1;
+    m_bankAngleDragging = false;
+    m_bankAngleDragRoad = -1;
+    m_bankAngleDragPoint = -1;
     m_pointDragStartPositions.clear();
     m_intersectionDragStartPositions.clear();
 }
@@ -922,12 +943,31 @@ void PolylineEditor::SanitizeSelection()
             }),
         m_selectedVerticalCurvePoints.end());
 
+    m_selectedBankAnglePoints.erase(
+        std::remove_if(
+            m_selectedBankAnglePoints.begin(),
+            m_selectedBankAnglePoints.end(),
+            [this](const BankAngleRef& bankRef)
+            {
+                if (bankRef.roadIndex < 0 ||
+                    bankRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                {
+                    return true;
+                }
+
+                const int bankCount = static_cast<int>(
+                    m_network->roads[bankRef.roadIndex].bankAngle.size());
+                return bankRef.pointIndex < 0 || bankRef.pointIndex >= bankCount;
+            }),
+        m_selectedBankAnglePoints.end());
+
     PointRef primaryPoint;
     if (GetPrimarySelectedPoint(primaryPoint))
     {
         m_activeRoad = primaryPoint.roadIndex;
         m_activePoint = primaryPoint.pointIndex;
         m_activeVerticalCurvePoint = -1;
+        m_activeBankAnglePoint = -1;
     }
     else
     {
@@ -937,14 +977,24 @@ void PolylineEditor::SanitizeSelection()
             const VerticalCurveRef& primaryCurve = m_selectedVerticalCurvePoints.front();
             m_activeRoad = primaryCurve.roadIndex;
             m_activeVerticalCurvePoint = primaryCurve.curveIndex;
+            m_activeBankAnglePoint = -1;
+        }
+        else if (!m_selectedBankAnglePoints.empty())
+        {
+            const BankAngleRef& primaryBank = m_selectedBankAnglePoints.front();
+            m_activeRoad = primaryBank.roadIndex;
+            m_activeBankAnglePoint = primaryBank.pointIndex;
+            m_activeVerticalCurvePoint = -1;
         }
         else
         {
             m_activeVerticalCurvePoint = -1;
+            m_activeBankAnglePoint = -1;
         }
-        const bool hasVerticalSelection = !m_selectedVerticalCurvePoints.empty();
+        const bool hasCurveSelection =
+            !m_selectedVerticalCurvePoints.empty() || !m_selectedBankAnglePoints.empty();
         if (m_activeRoad < 0 || m_activeRoad >= static_cast<int>(m_network->roads.size()) ||
-            (!hasVerticalSelection && !IsRoadSelected(m_activeRoad)))
+            (!hasCurveSelection && !IsRoadSelected(m_activeRoad)))
         {
             m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
         }
@@ -1340,7 +1390,8 @@ bool PolylineEditor::IsRoadVisible(const Road& road) const
 
 bool PolylineEditor::IsRoadGuidelineVisible(const Road& road) const
 {
-    if (m_mode == EditorMode::VerticalCurveEdit)
+    if (m_mode == EditorMode::VerticalCurveEdit ||
+        m_mode == EditorMode::BankAngleEdit)
         return false;
     return m_showRoadGuidelines && IsRoadVisible(road);
 }
@@ -1707,6 +1758,8 @@ bool PolylineEditor::SplitSelectedRoadAtPoint()
     const float originalLaneWidth = sourceRoad.laneWidth;
     const int originalLaneLeft = sourceRoad.laneLeft;
     const int originalLaneRight = sourceRoad.laneRight;
+    const float originalDefaultFriction = sourceRoad.defaultFriction;
+    const float originalDefaultTargetSpeed = sourceRoad.defaultTargetSpeed;
     const std::vector<RoadPoint> originalPoints = sourceRoad.points;
 
     const int newIntersectionIndex = m_network->AddIntersection(splitPos, "Intersection");
@@ -1732,6 +1785,8 @@ bool PolylineEditor::SplitSelectedRoadAtPoint()
     newRoad.laneWidth = originalLaneWidth;
     newRoad.laneLeft = originalLaneLeft;
     newRoad.laneRight = originalLaneRight;
+    newRoad.defaultFriction = originalDefaultFriction;
+    newRoad.defaultTargetSpeed = originalDefaultTargetSpeed;
     newRoad.points.assign(originalPoints.begin() + splitIndex, originalPoints.end());
     newRoad.points.front().pos = splitPos;
 
@@ -1744,6 +1799,8 @@ bool PolylineEditor::SplitSelectedRoadAtPoint()
     updatedSourceRoad.laneWidth = originalLaneWidth;
     updatedSourceRoad.laneLeft = originalLaneLeft;
     updatedSourceRoad.laneRight = originalLaneRight;
+    updatedSourceRoad.defaultFriction = originalDefaultFriction;
+    updatedSourceRoad.defaultTargetSpeed = originalDefaultTargetSpeed;
     updatedSourceRoad.points.assign(originalPoints.begin(), originalPoints.begin() + splitIndex + 1);
     updatedSourceRoad.points.back().pos = splitPos;
 
@@ -2060,6 +2117,26 @@ bool PolylineEditor::GetPrimarySelectedVerticalCurvePoint(VerticalCurveRef& outP
     return true;
 }
 
+bool PolylineEditor::IsBankAngleSelected(int roadIndex, int pointIndex) const
+{
+    return std::find_if(
+        m_selectedBankAnglePoints.begin(),
+        m_selectedBankAnglePoints.end(),
+        [roadIndex, pointIndex](const BankAngleRef& bankRef)
+        {
+            return bankRef.roadIndex == roadIndex && bankRef.pointIndex == pointIndex;
+        }) != m_selectedBankAnglePoints.end();
+}
+
+bool PolylineEditor::GetPrimarySelectedBankAnglePoint(BankAngleRef& outPoint) const
+{
+    if (m_selectedBankAnglePoints.empty())
+        return false;
+
+    outPoint = m_selectedBankAnglePoints.front();
+    return true;
+}
+
 bool PolylineEditor::IsIntersectionSelected(int intersectionIndex) const
 {
     return std::find(
@@ -2073,17 +2150,20 @@ void PolylineEditor::ClearRoadSelection()
     m_selectedRoads.clear();
     m_activeRoad = -1;
     ClearVerticalCurveSelection();
+    ClearBankAngleSelection();
 }
 
 void PolylineEditor::SelectSingleRoad(int roadIndex)
 {
     m_selectedRoads.clear();
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     if (roadIndex >= 0)
         m_selectedRoads.push_back(roadIndex);
     m_activeRoad = roadIndex;
     m_activePoint = -1;
     m_activeVerticalCurvePoint = -1;
+    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2100,16 +2180,20 @@ void PolylineEditor::ToggleRoadSelection(int roadIndex)
     {
         m_selectedRoads.erase(it);
         m_selectedVerticalCurvePoints.clear();
+        m_selectedBankAnglePoints.clear();
         m_activeVerticalCurvePoint = -1;
+        m_activeBankAnglePoint = -1;
         m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
         return;
     }
 
     m_selectedRoads.push_back(roadIndex);
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     m_activeRoad = roadIndex;
     m_activePoint = -1;
     m_activeVerticalCurvePoint = -1;
+    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2125,6 +2209,12 @@ void PolylineEditor::ClearVerticalCurveSelection()
     m_activeVerticalCurvePoint = -1;
 }
 
+void PolylineEditor::ClearBankAngleSelection()
+{
+    m_selectedBankAnglePoints.clear();
+    m_activeBankAnglePoint = -1;
+}
+
 void PolylineEditor::ClearIntersectionSelection()
 {
     m_selectedIntersections.clear();
@@ -2135,11 +2225,13 @@ void PolylineEditor::SelectSinglePoint(int roadIndex, int pointIndex)
 {
     m_selectedPoints.clear();
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     if (roadIndex >= 0 && pointIndex >= 0)
         m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
     m_activeVerticalCurvePoint = -1;
+    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -2172,22 +2264,42 @@ void PolylineEditor::TogglePointSelection(int roadIndex, int pointIndex)
     }
 
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
     m_activeVerticalCurvePoint = -1;
+    m_activeBankAnglePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
 void PolylineEditor::SelectSingleVerticalCurvePoint(int roadIndex, int curveIndex)
 {
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     if (roadIndex >= 0 && curveIndex >= 0)
         m_selectedVerticalCurvePoints.push_back({ roadIndex, curveIndex });
     m_selectedPoints.clear();
     m_selectedIntersections.clear();
     m_activeRoad = roadIndex;
     m_activeVerticalCurvePoint = curveIndex;
+    m_activeBankAnglePoint = -1;
+    m_activePoint = -1;
+    m_activeIntersection = -1;
+    QueuePropertyRevealForRoad(roadIndex);
+}
+
+void PolylineEditor::SelectSingleBankAnglePoint(int roadIndex, int pointIndex)
+{
+    m_selectedBankAnglePoints.clear();
+    if (roadIndex >= 0 && pointIndex >= 0)
+        m_selectedBankAnglePoints.push_back({ roadIndex, pointIndex });
+    m_selectedPoints.clear();
+    m_selectedVerticalCurvePoints.clear();
+    m_selectedIntersections.clear();
+    m_activeRoad = roadIndex;
+    m_activeBankAnglePoint = pointIndex;
+    m_activeVerticalCurvePoint = -1;
     m_activePoint = -1;
     m_activeIntersection = -1;
     QueuePropertyRevealForRoad(roadIndex);
@@ -2197,6 +2309,7 @@ void PolylineEditor::SelectSingleIntersection(int intersectionIndex)
 {
     m_selectedIntersections.clear();
     m_selectedVerticalCurvePoints.clear();
+    m_selectedBankAnglePoints.clear();
     if (intersectionIndex >= 0)
         m_selectedIntersections.push_back(intersectionIndex);
     m_activeIntersection = intersectionIndex;
@@ -2593,11 +2706,19 @@ void PolylineEditor::SetMode(EditorMode mode)
         ClearPointSelection();
         if (mode != EditorMode::VerticalCurveEdit)
             ClearVerticalCurveSelection();
+        if (mode != EditorMode::BankAngleEdit)
+            ClearBankAngleSelection();
         if (mode != EditorMode::VerticalCurveEdit)
         {
             m_verticalCurveDragging = false;
             m_verticalCurveDragRoad = -1;
             m_verticalCurveDragPoint = -1;
+        }
+        if (mode != EditorMode::BankAngleEdit)
+        {
+            m_bankAngleDragging = false;
+            m_bankAngleDragRoad = -1;
+            m_bankAngleDragPoint = -1;
         }
         m_dragging    = false;
         m_activeGizmoAxis = GizmoAxis::None;
@@ -3036,6 +3157,226 @@ void PolylineEditor::Update(int vpW, int vpH,
             m_verticalCurveDragging = false;
             m_verticalCurveDragRoad = -1;
             m_verticalCurveDragPoint = -1;
+            SetMode(EditorMode::Navigate);
+        }
+
+        return;
+    }
+
+    if (m_mode == EditorMode::BankAngleEdit)
+    {
+        const XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
+
+        if (m_bankAngleDragging && lDown)
+        {
+            int roadIndex = -1;
+            float uCoord = 0.0f;
+            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos) &&
+                roadIndex == m_bankAngleDragRoad &&
+                m_bankAngleDragRoad >= 0 &&
+                m_bankAngleDragRoad < static_cast<int>(m_network->roads.size()))
+            {
+                std::vector<BankAnglePoint>& points = m_network->roads[m_bankAngleDragRoad].bankAngle;
+                if (m_bankAngleDragPoint >= 0 &&
+                    m_bankAngleDragPoint < static_cast<int>(points.size()))
+                {
+                    points[m_bankAngleDragPoint].uCoord = std::clamp(uCoord, 0.0f, 1.0f);
+                }
+            }
+            return;
+        }
+
+        if (m_bankAngleDragging && !lDown)
+        {
+            if (m_bankAngleDragRoad >= 0 &&
+                m_bankAngleDragRoad < static_cast<int>(m_network->roads.size()))
+            {
+                std::vector<BankAnglePoint>& points = m_network->roads[m_bankAngleDragRoad].bankAngle;
+                if (m_bankAngleDragPoint >= 0 &&
+                    m_bankAngleDragPoint < static_cast<int>(points.size()))
+                {
+                    const BankAnglePoint movedPoint = points[m_bankAngleDragPoint];
+                    std::sort(
+                        points.begin(),
+                        points.end(),
+                        [](const BankAnglePoint& a, const BankAnglePoint& b)
+                        {
+                            return a.uCoord < b.uCoord;
+                        });
+
+                    int newIndex = -1;
+                    for (int i = 0; i < static_cast<int>(points.size()); ++i)
+                    {
+                        if (fabsf(points[i].uCoord - movedPoint.uCoord) <= 1e-5f &&
+                            fabsf(points[i].targetSpeed - movedPoint.targetSpeed) <= 1e-5f &&
+                            points[i].overrideBank == movedPoint.overrideBank &&
+                            fabsf(points[i].bankAngle - movedPoint.bankAngle) <= 1e-5f)
+                        {
+                            newIndex = i;
+                            break;
+                        }
+                    }
+                    SelectSingleRoad(m_bankAngleDragRoad);
+                    SelectSingleBankAnglePoint(m_bankAngleDragRoad, newIndex);
+                }
+            }
+
+            m_bankAngleDragging = false;
+            m_bankAngleDragRoad = -1;
+            m_bankAngleDragPoint = -1;
+            return;
+        }
+
+        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+            !m_selectedBankAnglePoints.empty())
+        {
+            PushUndoState();
+            std::vector<BankAngleRef> pointsToDelete = m_selectedBankAnglePoints;
+            std::sort(
+                pointsToDelete.begin(),
+                pointsToDelete.end(),
+                [](const BankAngleRef& a, const BankAngleRef& b)
+                {
+                    if (a.roadIndex != b.roadIndex)
+                        return a.roadIndex > b.roadIndex;
+                    return a.pointIndex > b.pointIndex;
+                });
+            pointsToDelete.erase(
+                std::unique(
+                    pointsToDelete.begin(),
+                    pointsToDelete.end(),
+                    [](const BankAngleRef& a, const BankAngleRef& b)
+                    {
+                        return a.roadIndex == b.roadIndex && a.pointIndex == b.pointIndex;
+                    }),
+                pointsToDelete.end());
+
+            for (const BankAngleRef& pointRef : pointsToDelete)
+            {
+                if (pointRef.roadIndex < 0 ||
+                    pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                {
+                    continue;
+                }
+
+                std::vector<BankAnglePoint>& points =
+                    m_network->roads[pointRef.roadIndex].bankAngle;
+                if (pointRef.pointIndex < 0 ||
+                    pointRef.pointIndex >= static_cast<int>(points.size()))
+                {
+                    continue;
+                }
+
+                points.erase(points.begin() + pointRef.pointIndex);
+            }
+
+            ClearBankAngleSelection();
+            SanitizeSelection();
+            m_statusMessage = "Bank angle point deleted";
+            return;
+        }
+
+        if (lClick)
+        {
+            int hitRoadIndex = -1;
+            int hitPointIndex = -1;
+            float bestPointDistance = 14.0f;
+
+            for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+            {
+                const Road& road = m_network->roads[roadIndex];
+                if (!IsRoadVisible(road))
+                    continue;
+
+                const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+                if (previewCurve.size() < 2)
+                    continue;
+
+                const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+                for (int pointIndex = 0; pointIndex < static_cast<int>(road.bankAngle.size()); ++pointIndex)
+                {
+                    XMFLOAT3 bankPos = SamplePolylineAtNormalizedDistance(
+                        previewCurve,
+                        cumulativeLengths,
+                        road.bankAngle[pointIndex].uCoord);
+
+                    const XMFLOAT2 screenPos = WorldToScreen(bankPos, viewProj, vpW, vpH);
+                    if (screenPos.x < 0.0f)
+                        continue;
+
+                    const float d = Dist2D(mousePos, screenPos);
+                    if (d < bestPointDistance)
+                    {
+                        bestPointDistance = d;
+                        hitRoadIndex = roadIndex;
+                        hitPointIndex = pointIndex;
+                    }
+                }
+            }
+
+            if (hitRoadIndex >= 0 && hitPointIndex >= 0)
+            {
+                PushUndoState();
+                SelectSingleRoad(hitRoadIndex);
+                SelectSingleBankAnglePoint(hitRoadIndex, hitPointIndex);
+                ClearPointSelection();
+                ClearIntersectionSelection();
+                m_bankAngleDragging = true;
+                m_bankAngleDragRoad = hitRoadIndex;
+                m_bankAngleDragPoint = hitPointIndex;
+                return;
+            }
+
+            int roadIndex = -1;
+            float uCoord = 0.0f;
+            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos))
+            {
+                PushUndoState();
+                BankAnglePoint point;
+                point.uCoord = uCoord;
+                point.targetSpeed = kBankAngleDefaultTargetSpeed;
+                point.overrideBank = false;
+                point.bankAngle = 0.0f;
+
+                std::vector<BankAnglePoint>& points = m_network->roads[roadIndex].bankAngle;
+                points.push_back(point);
+                std::sort(
+                    points.begin(),
+                    points.end(),
+                    [](const BankAnglePoint& a, const BankAnglePoint& b)
+                    {
+                        return a.uCoord < b.uCoord;
+                    });
+
+                int pointIndex = -1;
+                for (int i = 0; i < static_cast<int>(points.size()); ++i)
+                {
+                    if (fabsf(points[i].uCoord - point.uCoord) <= 1e-5f &&
+                        fabsf(points[i].targetSpeed - point.targetSpeed) <= 1e-5f &&
+                        points[i].overrideBank == point.overrideBank &&
+                        fabsf(points[i].bankAngle - point.bankAngle) <= 1e-5f)
+                    {
+                        pointIndex = i;
+                        break;
+                    }
+                }
+
+                SelectSingleRoad(roadIndex);
+                SelectSingleBankAnglePoint(roadIndex, pointIndex);
+                ClearPointSelection();
+                ClearIntersectionSelection();
+                m_statusMessage = "Bank angle point added";
+                return;
+            }
+        }
+
+        if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+        {
+            m_bankAngleDragging = false;
+            m_bankAngleDragRoad = -1;
+            m_bankAngleDragPoint = -1;
             SetMode(EditorMode::Navigate);
         }
 
@@ -4108,6 +4449,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const ImU32 colSnap     = IM_COL32(255, 240, 80, 255);
     const ImU32 colVertical = IM_COL32(255, 190, 70, 245);
     const ImU32 colVerticalSel = IM_COL32(255, 110, 40, 255);
+    const ImU32 colBank = IM_COL32(110, 210, 255, 245);
+    const ImU32 colBankSel = IM_COL32(40, 140, 255, 255);
 
     auto drawRoadOverlay = [&](const Road& road, ImU32 color, float thickness)
     {
@@ -4212,6 +4555,43 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
                 selected ? (kRadius + 4.5f) : (kRadius + 2.5f),
                 IM_COL32(255, 245, 230, selected ? 255 : 190),
                 20,
+                1.2f);
+        }
+    }
+
+    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    {
+        const Road& road = m_network->roads[ri];
+        if (!IsRoadVisible(road) || m_mode != EditorMode::BankAngleEdit || road.bankAngle.empty())
+            continue;
+
+        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+        if (previewCurve.size() < 2)
+            continue;
+        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        for (int pointIndex = 0; pointIndex < static_cast<int>(road.bankAngle.size()); ++pointIndex)
+        {
+            XMFLOAT3 bankPos = SamplePolylineAtNormalizedDistance(
+                previewCurve,
+                cumulativeLengths,
+                road.bankAngle[pointIndex].uCoord);
+
+            ImVec2 screenPos;
+            if (!WorldToScreen(bankPos, viewProj, vpW, vpH, screenPos))
+                continue;
+
+            const bool selected = IsBankAngleSelected(ri, pointIndex);
+            dl->AddRectFilled(
+                ImVec2(screenPos.x - (selected ? 5.0f : 4.0f), screenPos.y - (selected ? 5.0f : 4.0f)),
+                ImVec2(screenPos.x + (selected ? 5.0f : 4.0f), screenPos.y + (selected ? 5.0f : 4.0f)),
+                selected ? colBankSel : colBank,
+                2.0f);
+            dl->AddRect(
+                ImVec2(screenPos.x - (selected ? 7.0f : 6.0f), screenPos.y - (selected ? 7.0f : 6.0f)),
+                ImVec2(screenPos.x + (selected ? 7.0f : 6.0f), screenPos.y + (selected ? 7.0f : 6.0f)),
+                IM_COL32(235, 248, 255, selected ? 255 : 190),
+                2.0f,
+                0,
                 1.2f);
         }
     }
@@ -4493,6 +4873,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         bool drawActive = (m_mode == EditorMode::PolylineDraw);
         bool editActive = (m_mode == EditorMode::PointEdit);
         bool verticalActive = (m_mode == EditorMode::VerticalCurveEdit);
+        bool bankActive = (m_mode == EditorMode::BankAngleEdit);
         bool isecDrawActive = (m_mode == EditorMode::IntersectionDraw);
         bool isecEditActive = (m_mode == EditorMode::IntersectionEdit);
         bool pathActive = (m_mode == EditorMode::Pathfinding);
@@ -4519,7 +4900,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         };
 
         const float toggleSpacing = ImGui::GetStyle().ItemSpacing.x;
-        const float toggleWidth = (ImGui::GetContentRegionAvail().x - toggleSpacing * 2.0f) / 3.0f;
+        const float toggleWidth = (ImGui::GetContentRegionAvail().x - toggleSpacing * 3.0f) / 4.0f;
 
         if (drawModeToggle(u8"\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8", navActive, ImVec2(toggleWidth, 0.0f)))
             SetMode(EditorMode::Navigate);
@@ -4535,6 +4916,11 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
 
         if (drawModeToggle(u8"\u7E26\u65AD\u66F2\u7DDA\u7DE8\u96C6", verticalActive, ImVec2(toggleWidth, 0.0f)))
             SetMode(EditorMode::VerticalCurveEdit);
+
+        ImGui::SameLine();
+
+        if (drawModeToggle(u8"\u30D0\u30F3\u30AF\u89D2\u7DE8\u96C6", bankActive, ImVec2(toggleWidth, 0.0f)))
+            SetMode(EditorMode::BankAngleEdit);
 
         ImGui::NewLine();
 
@@ -4612,6 +4998,13 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E");
         ImGui::TextDisabled(u8"Delete: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8\u524A\u9664");
         ImGui::TextDisabled(u8"\u30D7\u30ED\u30D1\u30C6\u30A3\u3067 u_coord / vcl / offset \u3092\u7DE8\u96C6");
+        break;
+    case EditorMode::BankAngleEdit:
+        ImGui::TextColored(ImVec4(0.35f,0.78f,1.0f,1), u8"\u30D0\u30F3\u30AF\u89D2\u7DE8\u96C6");
+        ImGui::TextDisabled(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u30AB\u30FC\u30D6\u3092\u30AF\u30EA\u30C3\u30AF: \u30D0\u30F3\u30AF\u89D2\u30DD\u30A4\u30F3\u30C8\u8FFD\u52A0");
+        ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E/\u30C9\u30E9\u30C3\u30B0");
+        ImGui::TextDisabled(u8"Delete: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8\u524A\u9664");
+        ImGui::TextDisabled(u8"\u30D7\u30ED\u30D1\u30C6\u30A3\u3067 u_coord / \u60F3\u5B9A\u901F\u5EA6 / \u30D0\u30F3\u30AF\u89D2 \u3092\u7DE8\u96C6");
         break;
     case EditorMode::IntersectionDraw:
         ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), u8"\u4EA4\u5DEE\u70B9\u4F5C\u6210");
@@ -4951,6 +5344,20 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
             road.laneRight = (std::max)(0, laneRight);
         }
 
+        float defaultFriction = road.defaultFriction;
+        if (ImGui::InputFloat(u8"\u30C7\u30D5\u30A9\u30EB\u30C8\u6469\u64E6\u4FC2\u6570", &defaultFriction, 0.01f, 0.05f, "%.3f"))
+        {
+            PushUndoState();
+            road.defaultFriction = (std::max)(0.0f, defaultFriction);
+        }
+
+        float defaultTargetSpeed = road.defaultTargetSpeed;
+        if (ImGui::InputFloat(u8"\u30C7\u30D5\u30A9\u30EB\u30C8\u60F3\u5B9A\u901F\u5EA6(km/h)", &defaultTargetSpeed, 1.0f, 10.0f, "%.1f"))
+        {
+            PushUndoState();
+            road.defaultTargetSpeed = (std::max)(0.0f, defaultTargetSpeed);
+        }
+
         const RoadGroup* currentGroup = m_network->FindGroupById(road.groupId);
         const char* preview = currentGroup ? currentGroup->name.c_str() : "<none>";
         if (ImGui::BeginCombo(u8"\u30B0\u30EB\u30FC\u30D7##road", preview))
@@ -4987,6 +5394,31 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                 const bool selected = IsVerticalCurveSelected(m_activeRoad, curveIndex);
                 if (ImGui::Selectable(label, selected))
                     SelectSingleVerticalCurvePoint(m_activeRoad, curveIndex);
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Text(u8"\u30D0\u30F3\u30AF\u89D2");
+        if (road.bankAngle.empty())
+        {
+            ImGui::TextDisabled(u8"\u307E\u3060\u30DD\u30A4\u30F3\u30C8\u306F\u3042\u308A\u307E\u305B\u3093");
+        }
+        else
+        {
+            for (int pointIndex = 0; pointIndex < static_cast<int>(road.bankAngle.size()); ++pointIndex)
+            {
+                BankAnglePoint& point = road.bankAngle[pointIndex];
+                char label[128] = {};
+                sprintf_s(
+                    label,
+                    "U=%.3f / %.0fkm / %s / %.1fdeg",
+                    point.uCoord,
+                    point.targetSpeed,
+                    point.overrideBank ? "manual" : "auto",
+                    point.bankAngle);
+                const bool selected = IsBankAngleSelected(m_activeRoad, pointIndex);
+                if (ImGui::Selectable(label, selected))
+                    SelectSingleBankAnglePoint(m_activeRoad, pointIndex);
             }
         }
 
@@ -5059,6 +5491,84 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
                 ClearVerticalCurveSelection();
                 SanitizeSelection();
                 m_statusMessage = "Vertical curve point deleted";
+            }
+        }
+    }
+
+    BankAngleRef selectedBankAngle;
+    if (GetPrimarySelectedBankAnglePoint(selectedBankAngle) &&
+        selectedBankAngle.roadIndex >= 0 &&
+        selectedBankAngle.roadIndex < static_cast<int>(m_network->roads.size()))
+    {
+        Road& road = m_network->roads[selectedBankAngle.roadIndex];
+        if (selectedBankAngle.pointIndex >= 0 &&
+            selectedBankAngle.pointIndex < static_cast<int>(road.bankAngle.size()))
+        {
+            ImGui::Separator();
+            ImGui::Text(u8"\u30D0\u30F3\u30AF\u89D2\u30DD\u30A4\u30F3\u30C8 %d", selectedBankAngle.pointIndex);
+
+            BankAnglePoint currentPoint = road.bankAngle[selectedBankAngle.pointIndex];
+            float uCoord = currentPoint.uCoord;
+            if (ImGui::SliderFloat(u8"u_coord##bank", &uCoord, 0.0f, 1.0f, "%.6f"))
+            {
+                PushUndoState();
+                currentPoint.uCoord = std::clamp(uCoord, 0.0f, 1.0f);
+                road.bankAngle[selectedBankAngle.pointIndex] = currentPoint;
+                std::sort(
+                    road.bankAngle.begin(),
+                    road.bankAngle.end(),
+                    [](const BankAnglePoint& a, const BankAnglePoint& b)
+                    {
+                        return a.uCoord < b.uCoord;
+                    });
+                int newIndex = -1;
+                for (int i = 0; i < static_cast<int>(road.bankAngle.size()); ++i)
+                {
+                    if (fabsf(road.bankAngle[i].uCoord - currentPoint.uCoord) <= 1e-5f &&
+                        fabsf(road.bankAngle[i].targetSpeed - currentPoint.targetSpeed) <= 1e-5f &&
+                        road.bankAngle[i].overrideBank == currentPoint.overrideBank &&
+                        fabsf(road.bankAngle[i].bankAngle - currentPoint.bankAngle) <= 1e-5f)
+                    {
+                        newIndex = i;
+                        break;
+                    }
+                }
+                SelectSingleBankAnglePoint(selectedBankAngle.roadIndex, newIndex);
+                if (newIndex >= 0)
+                {
+                    selectedBankAngle.pointIndex = newIndex;
+                    currentPoint = road.bankAngle[newIndex];
+                }
+            }
+
+            float targetSpeed = currentPoint.targetSpeed;
+            if (ImGui::InputFloat(u8"\u60F3\u5B9A\u901F\u5EA6(km)##bank", &targetSpeed, 1.0f, 10.0f, "%.1f"))
+            {
+                PushUndoState();
+                road.bankAngle[selectedBankAngle.pointIndex].targetSpeed = (std::max)(0.0f, targetSpeed);
+            }
+
+            bool overrideBank = currentPoint.overrideBank;
+            if (ImGui::Checkbox(u8"\u30D0\u30F3\u30AF\u89D2\u8A2D\u5B9A##bank", &overrideBank))
+            {
+                PushUndoState();
+                road.bankAngle[selectedBankAngle.pointIndex].overrideBank = overrideBank;
+            }
+
+            float bankAngle = currentPoint.bankAngle;
+            if (ImGui::SliderFloat(u8"\u30D0\u30F3\u30AF\u89D2##bank", &bankAngle, 0.0f, 90.0f, "%.1f"))
+            {
+                PushUndoState();
+                road.bankAngle[selectedBankAngle.pointIndex].bankAngle = std::clamp(bankAngle, 0.0f, 90.0f);
+            }
+
+            if (ImGui::Button(u8"\u30D0\u30F3\u30AF\u89D2\u30DD\u30A4\u30F3\u30C8\u3092\u524A\u9664"))
+            {
+                PushUndoState();
+                road.bankAngle.erase(road.bankAngle.begin() + selectedBankAngle.pointIndex);
+                ClearBankAngleSelection();
+                SanitizeSelection();
+                m_statusMessage = "Bank angle point deleted";
             }
         }
     }

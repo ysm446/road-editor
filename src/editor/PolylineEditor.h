@@ -27,6 +27,12 @@ public:
         int curveIndex = -1;
     };
 
+    struct BankAngleRef
+    {
+        int roadIndex = -1;
+        int pointIndex = -1;
+    };
+
     enum class GizmoAxis
     {
         None,
@@ -169,6 +175,8 @@ private:
     bool GetPrimarySelectedPoint(PointRef& outPoint) const;
     bool IsVerticalCurveSelected(int roadIndex, int curveIndex) const;
     bool GetPrimarySelectedVerticalCurvePoint(VerticalCurveRef& outPoint) const;
+    bool IsBankAngleSelected(int roadIndex, int pointIndex) const;
+    bool GetPrimarySelectedBankAnglePoint(BankAngleRef& outPoint) const;
     bool IsIntersectionSelected(int intersectionIndex) const;
     void CollectSelectedRoadIndices(std::vector<int>& outRoadIndices) const;
     void CollectSelectedIntersectionIndices(std::vector<int>& outIntersectionIndices) const;
@@ -181,10 +189,12 @@ private:
     void ToggleRoadSelection(int roadIndex);
     void ClearPointSelection();
     void ClearVerticalCurveSelection();
+    void ClearBankAngleSelection();
     void ClearIntersectionSelection();
     void SelectSinglePoint(int roadIndex, int pointIndex);
     void TogglePointSelection(int roadIndex, int pointIndex);
     void SelectSingleVerticalCurvePoint(int roadIndex, int curveIndex);
+    void SelectSingleBankAnglePoint(int roadIndex, int pointIndex);
     void SelectSingleIntersection(int intersectionIndex);
     void ToggleIntersectionSelection(int intersectionIndex);
     void ApplyMarqueeSelection(int vpW, int vpH, DirectX::XMMATRIX viewProj, bool addToSelection, bool removeFromSelection);
@@ -218,6 +228,7 @@ private:
         std::vector<int> selectedRoads;
         std::vector<PointRef> selectedPoints;
         std::vector<VerticalCurveRef> selectedVerticalCurvePoints;
+        std::vector<BankAngleRef> selectedBankAnglePoints;
         std::vector<int> selectedIntersections;
         int activeGroup = -1;
         int activeIntersection = -1;
@@ -248,11 +259,16 @@ private:
     std::vector<int> m_selectedRoads;
     std::vector<PointRef> m_selectedPoints;
     std::vector<VerticalCurveRef> m_selectedVerticalCurvePoints;
+    std::vector<BankAngleRef> m_selectedBankAnglePoints;
     std::vector<int> m_selectedIntersections;
     int m_activeVerticalCurvePoint = -1;
+    int m_activeBankAnglePoint = -1;
     bool m_verticalCurveDragging = false;
     int m_verticalCurveDragRoad = -1;
     int m_verticalCurveDragPoint = -1;
+    bool m_bankAngleDragging = false;
+    int m_bankAngleDragRoad = -1;
+    int m_bankAngleDragPoint = -1;
     int m_activeGroup = -1;
     int m_activeIntersection = -1;
     int m_hoverSnapIntersection = -1;
