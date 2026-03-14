@@ -44,9 +44,9 @@
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": true,
+  "showRoadGradeGradient": false,
   "showRoadGuidelines": true,
-  "showRoadNames": false,
+  "showRoadNames": true,
   "showRoadPreviewMetrics": false,
   "showTerrainWindow": false
 }

@@ -12,6 +12,7 @@ namespace
 {
 constexpr size_t kMaxUndoStates = 128;
 constexpr int kPreviewCurveSubdivisions = 12;
+constexpr float kVerticalCurveDefaultLength = 50.0f;
 
 float Distance3(XMFLOAT3 a, XMFLOAT3 b)
 {
@@ -160,6 +161,44 @@ std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
     }
     samples.push_back(road.points.back().pos);
     return samples;
+}
+
+std::vector<float> BuildPolylineArcLengths(const std::vector<XMFLOAT3>& points)
+{
+    std::vector<float> cumulativeLengths(points.size(), 0.0f);
+    for (size_t i = 1; i < points.size(); ++i)
+        cumulativeLengths[i] = cumulativeLengths[i - 1] + Distance3(points[i - 1], points[i]);
+    return cumulativeLengths;
+}
+
+XMFLOAT3 SamplePolylineAtNormalizedDistance(const std::vector<XMFLOAT3>& points,
+                                           const std::vector<float>& cumulativeLengths,
+                                           float uCoord)
+{
+    if (points.empty())
+        return { 0.0f, 0.0f, 0.0f };
+    if (points.size() == 1 || cumulativeLengths.empty())
+        return points.front();
+
+    const float totalLength = cumulativeLengths.back();
+    if (totalLength <= 1e-5f)
+        return points.front();
+
+    const float targetLength = std::clamp(uCoord, 0.0f, 1.0f) * totalLength;
+    for (size_t i = 1; i < points.size(); ++i)
+    {
+        if (targetLength > cumulativeLengths[i])
+            continue;
+
+        const float segmentLength = cumulativeLengths[i] - cumulativeLengths[i - 1];
+        if (segmentLength <= 1e-5f)
+            return points[i];
+
+        const float t = (targetLength - cumulativeLengths[i - 1]) / segmentLength;
+        return Lerp3(points[i - 1], points[i], t);
+    }
+
+    return points.back();
 }
 
 float ComputePolylineLength(const std::vector<XMFLOAT3>& points)
@@ -641,6 +680,7 @@ PolylineEditor::EditorSnapshot PolylineEditor::CaptureSnapshot() const
     snapshot.activePoint = m_activePoint;
     snapshot.selectedRoads = m_selectedRoads;
     snapshot.selectedPoints = m_selectedPoints;
+    snapshot.selectedVerticalCurvePoints = m_selectedVerticalCurvePoints;
     snapshot.selectedIntersections = m_selectedIntersections;
     snapshot.activeGroup = m_activeGroup;
     snapshot.activeIntersection = m_activeIntersection;
@@ -661,6 +701,7 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
     m_activePoint = snapshot.activePoint;
     m_selectedRoads = snapshot.selectedRoads;
     m_selectedPoints = snapshot.selectedPoints;
+    m_selectedVerticalCurvePoints = snapshot.selectedVerticalCurvePoints;
     m_selectedIntersections = snapshot.selectedIntersections;
     m_activeGroup = snapshot.activeGroup;
     m_activeIntersection = snapshot.activeIntersection;
@@ -673,6 +714,9 @@ void PolylineEditor::RestoreSnapshot(const EditorSnapshot& snapshot)
 
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
+    m_verticalCurveDragging = false;
+    m_verticalCurveDragRoad = -1;
+    m_verticalCurveDragPoint = -1;
     m_pointDragStartPositions.clear();
     m_intersectionDragStartPositions.clear();
     m_marqueeSelecting = false;
@@ -757,12 +801,20 @@ void PolylineEditor::ResetState()
     m_activePoint = -1;
     m_selectedRoads.clear();
     m_selectedPoints.clear();
+    m_selectedVerticalCurvePoints.clear();
     m_selectedIntersections.clear();
+    m_activeVerticalCurvePoint = -1;
+    m_verticalCurveDragging = false;
+    m_verticalCurveDragRoad = -1;
+    m_verticalCurveDragPoint = -1;
     m_activeGroup = -1;
     m_activeIntersection = -1;
     m_hoverSnapIntersection = -1;
     m_dragging = false;
     m_activeGizmoAxis = GizmoAxis::None;
+    m_verticalCurveDragging = false;
+    m_verticalCurveDragRoad = -1;
+    m_verticalCurveDragPoint = -1;
     m_dragOffset = { 0, 0, 0 };
     m_axisDragStartPos = { 0, 0, 0 };
     m_axisDragStartMouse = { 0, 0 };
@@ -813,6 +865,9 @@ void PolylineEditor::SetShowRoadGuidelines(bool show)
     m_hoverSnapIntersection = -1;
     m_rotateYMode = false;
     m_scaleXZMode = false;
+    m_verticalCurveDragging = false;
+    m_verticalCurveDragRoad = -1;
+    m_verticalCurveDragPoint = -1;
     m_pointDragStartPositions.clear();
     m_intersectionDragStartPositions.clear();
 }
@@ -849,17 +904,47 @@ void PolylineEditor::SanitizeSelection()
             }),
         m_selectedPoints.end());
 
+    m_selectedVerticalCurvePoints.erase(
+        std::remove_if(
+            m_selectedVerticalCurvePoints.begin(),
+            m_selectedVerticalCurvePoints.end(),
+            [this](const VerticalCurveRef& curveRef)
+            {
+                if (curveRef.roadIndex < 0 ||
+                    curveRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                {
+                    return true;
+                }
+
+                const int curveCount = static_cast<int>(
+                    m_network->roads[curveRef.roadIndex].verticalCurve.size());
+                return curveRef.curveIndex < 0 || curveRef.curveIndex >= curveCount;
+            }),
+        m_selectedVerticalCurvePoints.end());
+
     PointRef primaryPoint;
     if (GetPrimarySelectedPoint(primaryPoint))
     {
         m_activeRoad = primaryPoint.roadIndex;
         m_activePoint = primaryPoint.pointIndex;
+        m_activeVerticalCurvePoint = -1;
     }
     else
     {
         m_activePoint = -1;
+        if (!m_selectedVerticalCurvePoints.empty())
+        {
+            const VerticalCurveRef& primaryCurve = m_selectedVerticalCurvePoints.front();
+            m_activeRoad = primaryCurve.roadIndex;
+            m_activeVerticalCurvePoint = primaryCurve.curveIndex;
+        }
+        else
+        {
+            m_activeVerticalCurvePoint = -1;
+        }
+        const bool hasVerticalSelection = !m_selectedVerticalCurvePoints.empty();
         if (m_activeRoad < 0 || m_activeRoad >= static_cast<int>(m_network->roads.size()) ||
-            !IsRoadSelected(m_activeRoad))
+            (!hasVerticalSelection && !IsRoadSelected(m_activeRoad)))
         {
             m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
         }
@@ -1152,6 +1237,70 @@ int PolylineEditor::FindNearestRoad(
     return bestRoad;
 }
 
+bool PolylineEditor::FindNearestPreviewCurveLocation(
+    int vpW, int vpH, XMFLOAT2 px, XMMATRIX viewProj,
+    int& outRoadIndex, float& outUCoord, XMFLOAT3& outWorldPos) const
+{
+    outRoadIndex = -1;
+    outUCoord = 0.0f;
+    outWorldPos = { 0.0f, 0.0f, 0.0f };
+
+    const float threshold = 14.0f;
+    float bestDist = threshold;
+
+    for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+    {
+        const Road& road = m_network->roads[roadIndex];
+        if (!IsRoadVisible(road))
+            continue;
+
+        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+        if (previewCurve.size() < 2)
+            continue;
+
+        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        const float totalLength = cumulativeLengths.empty() ? 0.0f : cumulativeLengths.back();
+        if (totalLength <= 1e-5f)
+            continue;
+
+        for (int pointIndex = 0; pointIndex + 1 < static_cast<int>(previewCurve.size()); ++pointIndex)
+        {
+            const XMFLOAT2 a = WorldToScreen(previewCurve[pointIndex], viewProj, vpW, vpH);
+            const XMFLOAT2 b = WorldToScreen(previewCurve[pointIndex + 1], viewProj, vpW, vpH);
+            if (a.x < 0.0f || b.x < 0.0f)
+                continue;
+
+            const float abx = b.x - a.x;
+            const float aby = b.y - a.y;
+            const float ab2 = abx * abx + aby * aby;
+            if (ab2 <= 1e-6f)
+                continue;
+
+            const float apx = px.x - a.x;
+            const float apy = px.y - a.y;
+            const float segmentT = std::clamp((apx * abx + apy * aby) / ab2, 0.0f, 1.0f);
+            const XMFLOAT2 projected =
+            {
+                a.x + abx * segmentT,
+                a.y + aby * segmentT
+            };
+            const float d = Dist2D(px, projected);
+            if (d >= bestDist)
+                continue;
+
+            const float segmentLength = cumulativeLengths[pointIndex + 1] - cumulativeLengths[pointIndex];
+            const float sampleLength = cumulativeLengths[pointIndex] + segmentLength * segmentT;
+
+            bestDist = d;
+            outRoadIndex = roadIndex;
+            outUCoord = sampleLength / totalLength;
+            outWorldPos = Lerp3(previewCurve[pointIndex], previewCurve[pointIndex + 1], segmentT);
+        }
+    }
+
+    return outRoadIndex >= 0;
+}
+
 int PolylineEditor::FindNearestIntersection(
     int vpW, int vpH, XMFLOAT2 px, XMMATRIX viewProj) const
 {
@@ -1191,6 +1340,8 @@ bool PolylineEditor::IsRoadVisible(const Road& road) const
 
 bool PolylineEditor::IsRoadGuidelineVisible(const Road& road) const
 {
+    if (m_mode == EditorMode::VerticalCurveEdit)
+        return false;
     return m_showRoadGuidelines && IsRoadVisible(road);
 }
 
@@ -1889,6 +2040,26 @@ bool PolylineEditor::GetPrimarySelectedPoint(PointRef& outPoint) const
     return true;
 }
 
+bool PolylineEditor::IsVerticalCurveSelected(int roadIndex, int curveIndex) const
+{
+    return std::find_if(
+        m_selectedVerticalCurvePoints.begin(),
+        m_selectedVerticalCurvePoints.end(),
+        [roadIndex, curveIndex](const VerticalCurveRef& curveRef)
+        {
+            return curveRef.roadIndex == roadIndex && curveRef.curveIndex == curveIndex;
+        }) != m_selectedVerticalCurvePoints.end();
+}
+
+bool PolylineEditor::GetPrimarySelectedVerticalCurvePoint(VerticalCurveRef& outPoint) const
+{
+    if (m_selectedVerticalCurvePoints.empty())
+        return false;
+
+    outPoint = m_selectedVerticalCurvePoints.front();
+    return true;
+}
+
 bool PolylineEditor::IsIntersectionSelected(int intersectionIndex) const
 {
     return std::find(
@@ -1901,15 +2072,18 @@ void PolylineEditor::ClearRoadSelection()
 {
     m_selectedRoads.clear();
     m_activeRoad = -1;
+    ClearVerticalCurveSelection();
 }
 
 void PolylineEditor::SelectSingleRoad(int roadIndex)
 {
     m_selectedRoads.clear();
+    m_selectedVerticalCurvePoints.clear();
     if (roadIndex >= 0)
         m_selectedRoads.push_back(roadIndex);
     m_activeRoad = roadIndex;
     m_activePoint = -1;
+    m_activeVerticalCurvePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -1925,13 +2099,17 @@ void PolylineEditor::ToggleRoadSelection(int roadIndex)
     if (it != m_selectedRoads.end())
     {
         m_selectedRoads.erase(it);
+        m_selectedVerticalCurvePoints.clear();
+        m_activeVerticalCurvePoint = -1;
         m_activeRoad = m_selectedRoads.empty() ? -1 : m_selectedRoads.front();
         return;
     }
 
     m_selectedRoads.push_back(roadIndex);
+    m_selectedVerticalCurvePoints.clear();
     m_activeRoad = roadIndex;
     m_activePoint = -1;
+    m_activeVerticalCurvePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -1939,6 +2117,12 @@ void PolylineEditor::ClearPointSelection()
 {
     m_selectedPoints.clear();
     m_activePoint = -1;
+}
+
+void PolylineEditor::ClearVerticalCurveSelection()
+{
+    m_selectedVerticalCurvePoints.clear();
+    m_activeVerticalCurvePoint = -1;
 }
 
 void PolylineEditor::ClearIntersectionSelection()
@@ -1950,10 +2134,12 @@ void PolylineEditor::ClearIntersectionSelection()
 void PolylineEditor::SelectSinglePoint(int roadIndex, int pointIndex)
 {
     m_selectedPoints.clear();
+    m_selectedVerticalCurvePoints.clear();
     if (roadIndex >= 0 && pointIndex >= 0)
         m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
+    m_activeVerticalCurvePoint = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
@@ -1985,15 +2171,32 @@ void PolylineEditor::TogglePointSelection(int roadIndex, int pointIndex)
         return;
     }
 
+    m_selectedVerticalCurvePoints.clear();
     m_selectedPoints.push_back({ roadIndex, pointIndex });
     m_activeRoad = roadIndex;
     m_activePoint = pointIndex;
+    m_activeVerticalCurvePoint = -1;
+    QueuePropertyRevealForRoad(roadIndex);
+}
+
+void PolylineEditor::SelectSingleVerticalCurvePoint(int roadIndex, int curveIndex)
+{
+    m_selectedVerticalCurvePoints.clear();
+    if (roadIndex >= 0 && curveIndex >= 0)
+        m_selectedVerticalCurvePoints.push_back({ roadIndex, curveIndex });
+    m_selectedPoints.clear();
+    m_selectedIntersections.clear();
+    m_activeRoad = roadIndex;
+    m_activeVerticalCurvePoint = curveIndex;
+    m_activePoint = -1;
+    m_activeIntersection = -1;
     QueuePropertyRevealForRoad(roadIndex);
 }
 
 void PolylineEditor::SelectSingleIntersection(int intersectionIndex)
 {
     m_selectedIntersections.clear();
+    m_selectedVerticalCurvePoints.clear();
     if (intersectionIndex >= 0)
         m_selectedIntersections.push_back(intersectionIndex);
     m_activeIntersection = intersectionIndex;
@@ -2388,6 +2591,14 @@ void PolylineEditor::SetMode(EditorMode mode)
         m_rotateYMode = false;
         m_scaleXZMode = false;
         ClearPointSelection();
+        if (mode != EditorMode::VerticalCurveEdit)
+            ClearVerticalCurveSelection();
+        if (mode != EditorMode::VerticalCurveEdit)
+        {
+            m_verticalCurveDragging = false;
+            m_verticalCurveDragRoad = -1;
+            m_verticalCurveDragPoint = -1;
+        }
         m_dragging    = false;
         m_activeGizmoAxis = GizmoAxis::None;
         m_pointDragStartPositions.clear();
@@ -2610,6 +2821,224 @@ void PolylineEditor::Update(int vpW, int vpH,
     {
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
             SetMode(EditorMode::Navigate);
+        return;
+    }
+
+    if (m_mode == EditorMode::VerticalCurveEdit)
+    {
+        const XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
+
+        if (m_verticalCurveDragging && lDown)
+        {
+            int roadIndex = -1;
+            float uCoord = 0.0f;
+            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos) &&
+                roadIndex == m_verticalCurveDragRoad &&
+                m_verticalCurveDragRoad >= 0 &&
+                m_verticalCurveDragRoad < static_cast<int>(m_network->roads.size()))
+            {
+                std::vector<VerticalCurvePoint>& points = m_network->roads[m_verticalCurveDragRoad].verticalCurve;
+                if (m_verticalCurveDragPoint >= 0 &&
+                    m_verticalCurveDragPoint < static_cast<int>(points.size()))
+                {
+                    points[m_verticalCurveDragPoint].uCoord = std::clamp(uCoord, 0.0f, 1.0f);
+                }
+            }
+            return;
+        }
+
+        if (m_verticalCurveDragging && !lDown)
+        {
+            if (m_verticalCurveDragRoad >= 0 &&
+                m_verticalCurveDragRoad < static_cast<int>(m_network->roads.size()))
+            {
+                std::vector<VerticalCurvePoint>& points = m_network->roads[m_verticalCurveDragRoad].verticalCurve;
+                if (m_verticalCurveDragPoint >= 0 &&
+                    m_verticalCurveDragPoint < static_cast<int>(points.size()))
+                {
+                    const VerticalCurvePoint movedPoint = points[m_verticalCurveDragPoint];
+                    std::sort(
+                        points.begin(),
+                        points.end(),
+                        [](const VerticalCurvePoint& a, const VerticalCurvePoint& b)
+                        {
+                            return a.uCoord < b.uCoord;
+                        });
+
+                    int newIndex = -1;
+                    for (int i = 0; i < static_cast<int>(points.size()); ++i)
+                    {
+                        if (fabsf(points[i].uCoord - movedPoint.uCoord) <= 1e-5f &&
+                            fabsf(points[i].vcl - movedPoint.vcl) <= 1e-5f &&
+                            fabsf(points[i].offset - movedPoint.offset) <= 1e-5f)
+                        {
+                            newIndex = i;
+                            break;
+                        }
+                    }
+                    SelectSingleRoad(m_verticalCurveDragRoad);
+                    SelectSingleVerticalCurvePoint(m_verticalCurveDragRoad, newIndex);
+                }
+            }
+
+            m_verticalCurveDragging = false;
+            m_verticalCurveDragRoad = -1;
+            m_verticalCurveDragPoint = -1;
+            return;
+        }
+
+        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+            !m_selectedVerticalCurvePoints.empty())
+        {
+            PushUndoState();
+            std::vector<VerticalCurveRef> curvesToDelete = m_selectedVerticalCurvePoints;
+            std::sort(
+                curvesToDelete.begin(),
+                curvesToDelete.end(),
+                [](const VerticalCurveRef& a, const VerticalCurveRef& b)
+                {
+                    if (a.roadIndex != b.roadIndex)
+                        return a.roadIndex > b.roadIndex;
+                    return a.curveIndex > b.curveIndex;
+                });
+            curvesToDelete.erase(
+                std::unique(
+                    curvesToDelete.begin(),
+                    curvesToDelete.end(),
+                    [](const VerticalCurveRef& a, const VerticalCurveRef& b)
+                    {
+                        return a.roadIndex == b.roadIndex && a.curveIndex == b.curveIndex;
+                    }),
+                curvesToDelete.end());
+
+            for (const VerticalCurveRef& curveRef : curvesToDelete)
+            {
+                if (curveRef.roadIndex < 0 ||
+                    curveRef.roadIndex >= static_cast<int>(m_network->roads.size()))
+                {
+                    continue;
+                }
+
+                std::vector<VerticalCurvePoint>& points =
+                    m_network->roads[curveRef.roadIndex].verticalCurve;
+                if (curveRef.curveIndex < 0 ||
+                    curveRef.curveIndex >= static_cast<int>(points.size()))
+                {
+                    continue;
+                }
+
+                points.erase(points.begin() + curveRef.curveIndex);
+            }
+
+            ClearVerticalCurveSelection();
+            SanitizeSelection();
+            m_statusMessage = "Vertical curve point deleted";
+            return;
+        }
+
+        if (lClick)
+        {
+            int hitRoadIndex = -1;
+            int hitCurveIndex = -1;
+            float bestPointDistance = 14.0f;
+
+            for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+            {
+                const Road& road = m_network->roads[roadIndex];
+                if (!IsRoadVisible(road))
+                    continue;
+
+                const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
+                if (previewCurve.size() < 2)
+                    continue;
+
+                const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+                for (int curveIndex = 0; curveIndex < static_cast<int>(road.verticalCurve.size()); ++curveIndex)
+                {
+                    XMFLOAT3 curvePos = SamplePolylineAtNormalizedDistance(
+                        previewCurve,
+                        cumulativeLengths,
+                        road.verticalCurve[curveIndex].uCoord);
+                    curvePos.y += road.verticalCurve[curveIndex].offset;
+
+                    const XMFLOAT2 screenPos = WorldToScreen(curvePos, viewProj, vpW, vpH);
+                    if (screenPos.x < 0.0f)
+                        continue;
+
+                    const float d = Dist2D(mousePos, screenPos);
+                    if (d < bestPointDistance)
+                    {
+                        bestPointDistance = d;
+                        hitRoadIndex = roadIndex;
+                        hitCurveIndex = curveIndex;
+                    }
+                }
+            }
+
+            if (hitRoadIndex >= 0 && hitCurveIndex >= 0)
+            {
+                PushUndoState();
+                SelectSingleRoad(hitRoadIndex);
+                SelectSingleVerticalCurvePoint(hitRoadIndex, hitCurveIndex);
+                ClearPointSelection();
+                ClearIntersectionSelection();
+                m_verticalCurveDragging = true;
+                m_verticalCurveDragRoad = hitRoadIndex;
+                m_verticalCurveDragPoint = hitCurveIndex;
+                return;
+            }
+
+            int roadIndex = -1;
+            float uCoord = 0.0f;
+            XMFLOAT3 worldPos = { 0.0f, 0.0f, 0.0f };
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord, worldPos))
+            {
+                PushUndoState();
+                VerticalCurvePoint point;
+                point.uCoord = uCoord;
+                point.vcl = kVerticalCurveDefaultLength;
+                point.offset = 0.0f;
+
+                std::vector<VerticalCurvePoint>& points = m_network->roads[roadIndex].verticalCurve;
+                points.push_back(point);
+                std::sort(
+                    points.begin(),
+                    points.end(),
+                    [](const VerticalCurvePoint& a, const VerticalCurvePoint& b)
+                    {
+                        return a.uCoord < b.uCoord;
+                    });
+
+                int curveIndex = -1;
+                for (int i = 0; i < static_cast<int>(points.size()); ++i)
+                {
+                    if (fabsf(points[i].uCoord - point.uCoord) <= 1e-5f &&
+                        fabsf(points[i].vcl - point.vcl) <= 1e-5f &&
+                        fabsf(points[i].offset - point.offset) <= 1e-5f)
+                    {
+                        curveIndex = i;
+                        break;
+                    }
+                }
+
+                SelectSingleRoad(roadIndex);
+                SelectSingleVerticalCurvePoint(roadIndex, curveIndex);
+                ClearPointSelection();
+                ClearIntersectionSelection();
+                m_statusMessage = "Vertical curve point added";
+                return;
+            }
+        }
+
+        if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+        {
+            m_verticalCurveDragging = false;
+            m_verticalCurveDragRoad = -1;
+            m_verticalCurveDragPoint = -1;
+            SetMode(EditorMode::Navigate);
+        }
+
         return;
     }
 
@@ -3677,6 +4106,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const ImU32 colIsec     = colorFromFloat3(m_intersectionCircleColor, 255);
     const ImU32 colIsecSel  = IM_COL32(255, 120, 80, 255);
     const ImU32 colSnap     = IM_COL32(255, 240, 80, 255);
+    const ImU32 colVertical = IM_COL32(255, 190, 70, 245);
+    const ImU32 colVerticalSel = IM_COL32(255, 110, 40, 255);
 
     auto drawRoadOverlay = [&](const Road& road, ImU32 color, float thickness)
     {
@@ -3752,6 +4183,36 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             }
 
             dl->AddLine(a, b, segmentColor, kPreviewCurveThickness);
+        }
+
+        if (m_mode != EditorMode::VerticalCurveEdit || road.verticalCurve.empty())
+            continue;
+
+        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        for (int curveIndex = 0; curveIndex < static_cast<int>(road.verticalCurve.size()); ++curveIndex)
+        {
+            XMFLOAT3 curvePos = SamplePolylineAtNormalizedDistance(
+                previewCurve,
+                cumulativeLengths,
+                road.verticalCurve[curveIndex].uCoord);
+            curvePos.y += road.verticalCurve[curveIndex].offset;
+
+            ImVec2 screenPos;
+            if (!WorldToScreen(curvePos, viewProj, vpW, vpH, screenPos))
+                continue;
+
+            const bool selected = IsVerticalCurveSelected(ri, curveIndex);
+            dl->AddCircleFilled(
+                screenPos,
+                selected ? (kRadius + 3.0f) : (kRadius + 1.5f),
+                selected ? colVerticalSel : colVertical,
+                20);
+            dl->AddCircle(
+                screenPos,
+                selected ? (kRadius + 4.5f) : (kRadius + 2.5f),
+                IM_COL32(255, 245, 230, selected ? 255 : 190),
+                20,
+                1.2f);
         }
     }
 
@@ -4031,21 +4492,49 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         bool navActive  = (m_mode == EditorMode::Navigate);
         bool drawActive = (m_mode == EditorMode::PolylineDraw);
         bool editActive = (m_mode == EditorMode::PointEdit);
+        bool verticalActive = (m_mode == EditorMode::VerticalCurveEdit);
         bool isecDrawActive = (m_mode == EditorMode::IntersectionDraw);
         bool isecEditActive = (m_mode == EditorMode::IntersectionEdit);
         bool pathActive = (m_mode == EditorMode::Pathfinding);
 
-        if (navActive)  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button(u8"\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8")) SetMode(EditorMode::Navigate);
-        if (navActive)  ImGui::PopStyleColor();
+        const auto drawModeToggle = [](const char* label, bool active, const ImVec2& size = ImVec2(0.0f, 0.0f))
+        {
+            const ImVec4 activeColor = ImVec4(0.20f, 0.55f, 0.32f, 1.0f);
+            const ImVec4 idleColor = ImVec4(0.22f, 0.24f, 0.28f, 1.0f);
+            const ImVec4 hoverColor = active
+                ? ImVec4(0.24f, 0.62f, 0.37f, 1.0f)
+                : ImVec4(0.28f, 0.31f, 0.36f, 1.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 7.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, active ? 1.0f : 0.0f);
+            ImGui::PushStyleColor(ImGuiCol_Button, active ? activeColor : idleColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hoverColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, active ? activeColor : hoverColor);
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.42f, 0.78f, 0.56f, active ? 0.95f : 0.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, active ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f)
+                                                        : ImVec4(0.84f, 0.87f, 0.90f, 1.0f));
+            const bool pressed = ImGui::Button(label, size);
+            ImGui::PopStyleColor(5);
+            ImGui::PopStyleVar(2);
+            return pressed;
+        };
+
+        const float toggleSpacing = ImGui::GetStyle().ItemSpacing.x;
+        const float toggleWidth = (ImGui::GetContentRegionAvail().x - toggleSpacing * 2.0f) / 3.0f;
+
+        if (drawModeToggle(u8"\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8", navActive, ImVec2(toggleWidth, 0.0f)))
+            SetMode(EditorMode::Navigate);
 
         ImGui::SameLine();
 
         ImGui::BeginDisabled(!m_showRoadGuidelines);
-        if (editActive) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f,0.6f,0.2f,1));
-        if (ImGui::Button(u8"\u30DD\u30A4\u30F3\u30C8\u7DE8\u96C6")) SetMode(EditorMode::PointEdit);
-        if (editActive) ImGui::PopStyleColor();
+        if (drawModeToggle(u8"\u30DD\u30A4\u30F3\u30C8\u7DE8\u96C6", editActive, ImVec2(toggleWidth, 0.0f)))
+            SetMode(EditorMode::PointEdit);
         ImGui::EndDisabled();
+
+        ImGui::SameLine();
+
+        if (drawModeToggle(u8"\u7E26\u65AD\u66F2\u7DDA\u7DE8\u96C6", verticalActive, ImVec2(toggleWidth, 0.0f)))
+            SetMode(EditorMode::VerticalCurveEdit);
 
         ImGui::NewLine();
 
@@ -4116,6 +4605,13 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
         ImGui::TextDisabled(u8"R: XZ\u62E1\u5927\u30EA\u30F3\u30B0");
         ImGui::TextDisabled(u8"\u7AEF\u70B9\u304C\u4EA4\u5DEE\u70B9\u4ED8\u8FD1: \u30B9\u30CA\u30C3\u30D7/\u63A5\u7D9A");
         ImGui::TextDisabled(u8"Delete: \u30DD\u30A4\u30F3\u30C8\u524A\u9664");
+        break;
+    case EditorMode::VerticalCurveEdit:
+        ImGui::TextColored(ImVec4(0.95f,0.55f,0.25f,1), u8"\u7E26\u65AD\u66F2\u7DDA\u7DE8\u96C6");
+        ImGui::TextDisabled(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u30AB\u30FC\u30D6\u3092\u30AF\u30EA\u30C3\u30AF: \u7E26\u65AD\u66F2\u7DDA\u30DD\u30A4\u30F3\u30C8\u8FFD\u52A0");
+        ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E");
+        ImGui::TextDisabled(u8"Delete: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8\u524A\u9664");
+        ImGui::TextDisabled(u8"\u30D7\u30ED\u30D1\u30C6\u30A3\u3067 u_coord / vcl / offset \u3092\u7DE8\u96C6");
         break;
     case EditorMode::IntersectionDraw:
         ImGui::TextColored(ImVec4(0.2f,0.9f,1.0f,1), u8"\u4EA4\u5DEE\u70B9\u4F5C\u6210");
@@ -4474,7 +4970,97 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
             }
             ImGui::EndCombo();
         }
+
+        ImGui::Separator();
+        ImGui::Text(u8"\u7E26\u65AD\u66F2\u7DDA");
+        if (road.verticalCurve.empty())
+        {
+            ImGui::TextDisabled(u8"\u307E\u3060\u30DD\u30A4\u30F3\u30C8\u306F\u3042\u308A\u307E\u305B\u3093");
+        }
+        else
+        {
+            for (int curveIndex = 0; curveIndex < static_cast<int>(road.verticalCurve.size()); ++curveIndex)
+            {
+                VerticalCurvePoint& point = road.verticalCurve[curveIndex];
+                char label[96] = {};
+                sprintf_s(label, "U=%.3f / VCL=%.1f / dz=%.2f", point.uCoord, point.vcl, point.offset);
+                const bool selected = IsVerticalCurveSelected(m_activeRoad, curveIndex);
+                if (ImGui::Selectable(label, selected))
+                    SelectSingleVerticalCurvePoint(m_activeRoad, curveIndex);
+            }
+        }
+
         ImGui::EndDisabled();
+    }
+
+    VerticalCurveRef selectedVerticalCurve;
+    if (GetPrimarySelectedVerticalCurvePoint(selectedVerticalCurve) &&
+        selectedVerticalCurve.roadIndex >= 0 &&
+        selectedVerticalCurve.roadIndex < static_cast<int>(m_network->roads.size()))
+    {
+        Road& road = m_network->roads[selectedVerticalCurve.roadIndex];
+        if (selectedVerticalCurve.curveIndex >= 0 &&
+            selectedVerticalCurve.curveIndex < static_cast<int>(road.verticalCurve.size()))
+        {
+            ImGui::Separator();
+            ImGui::Text(u8"\u7E26\u65AD\u66F2\u7DDA\u30DD\u30A4\u30F3\u30C8 %d", selectedVerticalCurve.curveIndex);
+
+            VerticalCurvePoint currentPoint = road.verticalCurve[selectedVerticalCurve.curveIndex];
+            float uCoord = currentPoint.uCoord;
+            if (ImGui::SliderFloat(u8"u_coord", &uCoord, 0.0f, 1.0f, "%.6f"))
+            {
+                PushUndoState();
+                currentPoint.uCoord = std::clamp(uCoord, 0.0f, 1.0f);
+                road.verticalCurve[selectedVerticalCurve.curveIndex] = currentPoint;
+                std::sort(
+                    road.verticalCurve.begin(),
+                    road.verticalCurve.end(),
+                    [](const VerticalCurvePoint& a, const VerticalCurvePoint& b)
+                    {
+                        return a.uCoord < b.uCoord;
+                    });
+                int newIndex = -1;
+                for (int i = 0; i < static_cast<int>(road.verticalCurve.size()); ++i)
+                {
+                    if (fabsf(road.verticalCurve[i].uCoord - currentPoint.uCoord) <= 1e-5f &&
+                        fabsf(road.verticalCurve[i].vcl - currentPoint.vcl) <= 1e-5f &&
+                        fabsf(road.verticalCurve[i].offset - currentPoint.offset) <= 1e-5f)
+                    {
+                        newIndex = i;
+                        break;
+                    }
+                }
+                SelectSingleVerticalCurvePoint(selectedVerticalCurve.roadIndex, newIndex);
+                if (newIndex >= 0)
+                {
+                    selectedVerticalCurve.curveIndex = newIndex;
+                    currentPoint = road.verticalCurve[newIndex];
+                }
+            }
+
+            float vcl = currentPoint.vcl;
+            if (ImGui::InputFloat(u8"vcl", &vcl, 1.0f, 10.0f, "%.2f"))
+            {
+                PushUndoState();
+                road.verticalCurve[selectedVerticalCurve.curveIndex].vcl = (std::max)(0.0f, vcl);
+            }
+
+            float offset = currentPoint.offset;
+            if (ImGui::InputFloat(u8"offset", &offset, 0.1f, 1.0f, "%.2f"))
+            {
+                PushUndoState();
+                road.verticalCurve[selectedVerticalCurve.curveIndex].offset = offset;
+            }
+
+            if (ImGui::Button(u8"\u7E26\u65AD\u66F2\u7DDA\u30DD\u30A4\u30F3\u30C8\u3092\u524A\u9664"))
+            {
+                PushUndoState();
+                road.verticalCurve.erase(road.verticalCurve.begin() + selectedVerticalCurve.curveIndex);
+                ClearVerticalCurveSelection();
+                SanitizeSelection();
+                m_statusMessage = "Vertical curve point deleted";
+            }
+        }
     }
 
     // Selected point info

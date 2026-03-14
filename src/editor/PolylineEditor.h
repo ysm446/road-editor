@@ -21,6 +21,12 @@ public:
         int pointIndex = -1;
     };
 
+    struct VerticalCurveRef
+    {
+        int roadIndex = -1;
+        int curveIndex = -1;
+    };
+
     enum class GizmoAxis
     {
         None,
@@ -125,6 +131,12 @@ private:
     int FindNearestRoad(int vpW, int vpH,
                         DirectX::XMFLOAT2 px,
                         DirectX::XMMATRIX viewProj) const;
+    bool FindNearestPreviewCurveLocation(int vpW, int vpH,
+                                         DirectX::XMFLOAT2 px,
+                                         DirectX::XMMATRIX viewProj,
+                                         int& outRoadIndex,
+                                         float& outUCoord,
+                                         DirectX::XMFLOAT3& outWorldPos) const;
     int FindNearestIntersection(int vpW, int vpH,
                                 DirectX::XMFLOAT2 px,
                                 DirectX::XMMATRIX viewProj) const;
@@ -155,6 +167,8 @@ private:
     bool IsRoadSelected(int roadIndex) const;
     bool IsPointSelected(int roadIndex, int pointIndex) const;
     bool GetPrimarySelectedPoint(PointRef& outPoint) const;
+    bool IsVerticalCurveSelected(int roadIndex, int curveIndex) const;
+    bool GetPrimarySelectedVerticalCurvePoint(VerticalCurveRef& outPoint) const;
     bool IsIntersectionSelected(int intersectionIndex) const;
     void CollectSelectedRoadIndices(std::vector<int>& outRoadIndices) const;
     void CollectSelectedIntersectionIndices(std::vector<int>& outIntersectionIndices) const;
@@ -166,9 +180,11 @@ private:
     void SelectSingleRoad(int roadIndex);
     void ToggleRoadSelection(int roadIndex);
     void ClearPointSelection();
+    void ClearVerticalCurveSelection();
     void ClearIntersectionSelection();
     void SelectSinglePoint(int roadIndex, int pointIndex);
     void TogglePointSelection(int roadIndex, int pointIndex);
+    void SelectSingleVerticalCurvePoint(int roadIndex, int curveIndex);
     void SelectSingleIntersection(int intersectionIndex);
     void ToggleIntersectionSelection(int intersectionIndex);
     void ApplyMarqueeSelection(int vpW, int vpH, DirectX::XMMATRIX viewProj, bool addToSelection, bool removeFromSelection);
@@ -201,6 +217,7 @@ private:
         int activePoint = -1;
         std::vector<int> selectedRoads;
         std::vector<PointRef> selectedPoints;
+        std::vector<VerticalCurveRef> selectedVerticalCurvePoints;
         std::vector<int> selectedIntersections;
         int activeGroup = -1;
         int activeIntersection = -1;
@@ -230,7 +247,12 @@ private:
     int m_activePoint = -1;   // selected point in PointEdit mode
     std::vector<int> m_selectedRoads;
     std::vector<PointRef> m_selectedPoints;
+    std::vector<VerticalCurveRef> m_selectedVerticalCurvePoints;
     std::vector<int> m_selectedIntersections;
+    int m_activeVerticalCurvePoint = -1;
+    bool m_verticalCurveDragging = false;
+    int m_verticalCurveDragRoad = -1;
+    int m_verticalCurveDragPoint = -1;
     int m_activeGroup = -1;
     int m_activeIntersection = -1;
     int m_hoverSnapIntersection = -1;

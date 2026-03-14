@@ -265,13 +265,38 @@ static RoadPoint CurvePointFromJson(const nlohmann::json& j)
     return p;
 }
 
+static VerticalCurvePoint VerticalCurvePointFromJson(const nlohmann::json& j)
+{
+    VerticalCurvePoint point;
+    if (!j.is_object())
+        return point;
+
+    point.uCoord = JsonToFloat(j.value("u_coord", nlohmann::json()), 0.0f);
+    point.vcl = JsonToFloat(j.value("vcl", nlohmann::json()), 50.0f);
+    point.offset = JsonToFloat(j.value("offset", nlohmann::json()), 0.0f);
+    return point;
+}
+
+static nlohmann::json VerticalCurvePointToJson(const VerticalCurvePoint& point)
+{
+    return nlohmann::json::object(
+        {
+            { "u_coord", point.uCoord },
+            { "vcl", point.vcl },
+            { "offset", point.offset }
+        });
+}
+
 static nlohmann::json RoadToJson(const Road& r)
 {
     nlohmann::json roadJson =
         (r.legacyData.is_object() ? r.legacyData : nlohmann::json::object());
     nlohmann::json pts = nlohmann::json::array();
+    nlohmann::json verticalCurveJson = nlohmann::json::array();
     for (const auto& p : r.points)
         pts.push_back(CurvePointToJson(p));
+    for (const VerticalCurvePoint& point : r.verticalCurve)
+        verticalCurveJson.push_back(VerticalCurvePointToJson(point));
 
     roadJson["id"] = r.id;
     roadJson["name"] = r.name;
@@ -298,8 +323,7 @@ static nlohmann::json RoadToJson(const Road& r)
     if (!roadJson.contains("defaultWidthLaneRight1"))
         roadJson["defaultWidthLaneRight1"] = r.laneWidth;
     roadJson["point"] = pts;
-    if (!roadJson.contains("verticalCurve"))
-        roadJson["verticalCurve"] = nlohmann::json::array();
+    roadJson["verticalCurve"] = verticalCurveJson;
     if (!roadJson.contains("bankAngle"))
         roadJson["bankAngle"] = nlohmann::json::array();
     if (!roadJson.contains("laneSection"))
@@ -332,6 +356,11 @@ static Road RoadFromJson(const nlohmann::json& j)
     {
         for (const auto& p : j["points"])
             r.points.push_back(PointFromJson(p));
+    }
+    if (j.contains("verticalCurve") && j["verticalCurve"].is_array())
+    {
+        for (const auto& point : j["verticalCurve"])
+            r.verticalCurve.push_back(VerticalCurvePointFromJson(point));
     }
     EnsureRoadId(r);
     return r;

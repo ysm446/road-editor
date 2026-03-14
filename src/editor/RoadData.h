@@ -13,6 +13,13 @@ struct RoadPoint
     nlohmann::json    curveData = nlohmann::json::object();
 };
 
+struct VerticalCurvePoint
+{
+    float uCoord = 0.0f;
+    float vcl = 50.0f;
+    float offset = 0.0f;
+};
+
 // A single polyline road
 struct Road
 {
@@ -26,6 +33,7 @@ struct Road
     float                  laneWidth = 3.0f;
     int                    laneLeft = 1;
     int                    laneRight = 1;
+    std::vector<VerticalCurvePoint> verticalCurve;
     nlohmann::json         legacyData = nlohmann::json::object();
 
     // Convenience
