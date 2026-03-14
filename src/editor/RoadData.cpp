@@ -311,6 +311,46 @@ static nlohmann::json BankAnglePointToJson(const BankAnglePoint& point)
         });
 }
 
+static LaneSectionPoint LaneSectionPointFromJson(const nlohmann::json& j)
+{
+    LaneSectionPoint point;
+    if (!j.is_object())
+        return point;
+
+    point.uCoord = JsonToFloat(j.value("u_coord", nlohmann::json()), 0.0f);
+    point.useLaneLeft2 = j.value("useLaneLeft2", 0) != 0;
+    point.widthLaneLeft2 = JsonToFloat(j.value("widthLaneLeft2", nlohmann::json()), 3.0f);
+    point.useLaneLeft1 = j.value("useLaneLeft1", 1) != 0;
+    point.widthLaneLeft1 = JsonToFloat(j.value("widthLaneLeft1", nlohmann::json()), 3.0f);
+    point.useLaneCenter = j.value("useLaneCenter", 1) != 0;
+    point.widthLaneCenter = JsonToFloat(j.value("widthLaneCenter", nlohmann::json()), 0.0f);
+    point.useLaneRight1 = j.value("useLaneRight1", 1) != 0;
+    point.widthLaneRight1 = JsonToFloat(j.value("widthLaneRight1", nlohmann::json()), 3.0f);
+    point.useLaneRight2 = j.value("useLaneRight2", 0) != 0;
+    point.widthLaneRight2 = JsonToFloat(j.value("widthLaneRight2", nlohmann::json()), 3.0f);
+    point.offsetCenter = JsonToFloat(j.value("offsetCenter", nlohmann::json()), 0.0f);
+    return point;
+}
+
+static nlohmann::json LaneSectionPointToJson(const LaneSectionPoint& point)
+{
+    return nlohmann::json::object(
+        {
+            { "u_coord", point.uCoord },
+            { "useLaneLeft2", point.useLaneLeft2 ? 1 : 0 },
+            { "widthLaneLeft2", point.widthLaneLeft2 },
+            { "useLaneLeft1", point.useLaneLeft1 ? 1 : 0 },
+            { "widthLaneLeft1", point.widthLaneLeft1 },
+            { "useLaneCenter", point.useLaneCenter ? 1 : 0 },
+            { "widthLaneCenter", point.widthLaneCenter },
+            { "useLaneRight1", point.useLaneRight1 ? 1 : 0 },
+            { "widthLaneRight1", point.widthLaneRight1 },
+            { "useLaneRight2", point.useLaneRight2 ? 1 : 0 },
+            { "widthLaneRight2", point.widthLaneRight2 },
+            { "offsetCenter", point.offsetCenter }
+        });
+}
+
 static nlohmann::json RoadToJson(const Road& r)
 {
     nlohmann::json roadJson =
@@ -318,12 +358,15 @@ static nlohmann::json RoadToJson(const Road& r)
     nlohmann::json pts = nlohmann::json::array();
     nlohmann::json verticalCurveJson = nlohmann::json::array();
     nlohmann::json bankAngleJson = nlohmann::json::array();
+    nlohmann::json laneSectionsJson = nlohmann::json::array();
     for (const auto& p : r.points)
         pts.push_back(CurvePointToJson(p));
     for (const VerticalCurvePoint& point : r.verticalCurve)
         verticalCurveJson.push_back(VerticalCurvePointToJson(point));
     for (const BankAnglePoint& point : r.bankAngle)
         bankAngleJson.push_back(BankAnglePointToJson(point));
+    for (const LaneSectionPoint& point : r.laneSections)
+        laneSectionsJson.push_back(LaneSectionPointToJson(point));
 
     roadJson["id"] = r.id;
     roadJson["name"] = r.name;
@@ -332,26 +375,23 @@ static nlohmann::json RoadToJson(const Road& r)
     roadJson.erase("points");
     roadJson["startIntersectionId"] = r.startIntersectionId;
     roadJson["endIntersectionId"] = r.endIntersectionId;
-    roadJson["laneWidth"] = r.laneWidth;
-    roadJson["laneLeft"] = r.laneLeft;
-    roadJson["laneRight"] = r.laneRight;
     roadJson["defaultTargetSpeed"] = r.defaultTargetSpeed;
     roadJson["defaultFriction"] = r.defaultFriction;
     if (!roadJson.contains("roadType"))
         roadJson["roadType"] = kCurveRoadTypeDefault;
     if (!roadJson.contains("active"))
         roadJson["active"] = 1;
-    if (!roadJson.contains("defaultWidthLaneLeft1"))
-        roadJson["defaultWidthLaneLeft1"] = r.laneWidth;
-    if (!roadJson.contains("defaultWidthLaneCenter"))
-        roadJson["defaultWidthLaneCenter"] = 0.0f;
-    if (!roadJson.contains("defaultWidthLaneRight1"))
-        roadJson["defaultWidthLaneRight1"] = r.laneWidth;
+    roadJson["defaultWidthLaneLeft1"] = r.defaultWidthLaneLeft1;
+    roadJson["defaultWidthLaneCenter"] = r.defaultWidthLaneCenter;
+    roadJson["defaultWidthLaneRight1"] = r.defaultWidthLaneRight1;
     roadJson["point"] = pts;
     roadJson["verticalCurve"] = verticalCurveJson;
     roadJson["bankAngle"] = bankAngleJson;
-    if (!roadJson.contains("laneSection"))
-        roadJson["laneSection"] = nlohmann::json::array();
+    roadJson["laneSections"] = laneSectionsJson;
+    roadJson.erase("laneSection");
+    roadJson.erase("laneWidth");
+    roadJson.erase("laneLeft");
+    roadJson.erase("laneRight");
     return roadJson;
 }
 
@@ -366,11 +406,16 @@ static Road RoadFromJson(const nlohmann::json& j)
     r.closed = j.value("closed", false);
     r.startIntersectionId = j.value("startIntersectionId", std::string());
     r.endIntersectionId = j.value("endIntersectionId", std::string());
-    r.laneWidth = j.contains("laneWidth")
-        ? JsonToFloat(j["laneWidth"], 3.0f)
-        : JsonToFloat(j.value("defaultWidthLaneRight1", nlohmann::json()), 3.0f);
-    r.laneLeft = j.value("laneLeft", 1);
-    r.laneRight = j.value("laneRight", 1);
+    const float legacyLaneWidth = JsonToFloat(j.value("laneWidth", nlohmann::json()), 4.0f);
+    r.defaultWidthLaneLeft1 = JsonToFloat(
+        j.value("defaultWidthLaneLeft1", nlohmann::json()),
+        legacyLaneWidth);
+    r.defaultWidthLaneRight1 = JsonToFloat(
+        j.value("defaultWidthLaneRight1", nlohmann::json()),
+        legacyLaneWidth);
+    r.defaultWidthLaneCenter = JsonToFloat(
+        j.value("defaultWidthLaneCenter", nlohmann::json()),
+        0.0f);
     r.defaultTargetSpeed = JsonToFloat(
         j.value("defaultTargetSpeed", nlohmann::json()),
         kCurveDefaultTargetSpeed);
@@ -396,6 +441,16 @@ static Road RoadFromJson(const nlohmann::json& j)
     {
         for (const auto& point : j["bankAngle"])
             r.bankAngle.push_back(BankAnglePointFromJson(point));
+    }
+    if (j.contains("laneSections") && j["laneSections"].is_array())
+    {
+        for (const auto& point : j["laneSections"])
+            r.laneSections.push_back(LaneSectionPointFromJson(point));
+    }
+    else if (j.contains("laneSection") && j["laneSection"].is_array())
+    {
+        for (const auto& point : j["laneSection"])
+            r.laneSections.push_back(LaneSectionPointFromJson(point));
     }
     EnsureRoadId(r);
     return r;

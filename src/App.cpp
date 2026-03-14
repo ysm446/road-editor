@@ -505,7 +505,8 @@ static bool OpenFileDialog(HWND owner, char* buf, DWORD bufSize,
 }
 
 static bool SaveFileDialog(HWND owner, char* buf, DWORD bufSize,
-                           const char* filter, const char* title)
+                           const char* filter, const char* title,
+                           const char* defaultExtension)
 {
     char tmp[MAX_PATH] = {};
     strncpy_s(tmp, bufSize, buf, _TRUNCATE);
@@ -517,6 +518,7 @@ static bool SaveFileDialog(HWND owner, char* buf, DWORD bufSize,
     ofn.lpstrFile      = tmp;
     ofn.nMaxFile       = MAX_PATH;
     ofn.lpstrTitle     = title;
+    ofn.lpstrDefExt    = defaultExtension;
     ofn.Flags          = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
 
     if (GetSaveFileNameA(&ofn))
@@ -876,6 +878,7 @@ void App::NewProject()
     m_roadNetwork = RoadNetwork();
     m_editor.SetNetwork(&m_roadNetwork);
     m_editor.SetFilePath("data/roads.roadnet");
+    m_hasEstablishedRoadFilePath = false;
     m_editor.ResetState();
     m_camera->SetOrbitState({ 0.0f, 0.0f, 0.0f }, 20.0f, 0.785f, 0.4f);
     m_sunAzimuth = 0.98f;
@@ -894,7 +897,8 @@ bool App::SaveProjectAs()
     strncpy_s(projectPath, sizeof(projectPath), m_projectPath, _TRUNCATE);
     if (!SaveFileDialog(m_hwnd, projectPath, sizeof(projectPath),
                         "Project Files\0*.roadproj\0Legacy JSON\0*.json\0All Files\0*.*\0",
-                        "Save Project"))
+                        "Save Project",
+                        "roadproj"))
     {
         return true;
     }
@@ -922,6 +926,7 @@ bool App::SaveRoads(const char* path)
         return false;
     }
 
+    m_hasEstablishedRoadFilePath = true;
     SetStatusMessage(std::string("Roads saved: ") + path);
     return true;
 }
@@ -932,7 +937,8 @@ bool App::SaveRoadsAs()
     strncpy_s(roadPath, sizeof(roadPath), m_editor.GetFilePath(), _TRUNCATE);
     if (!SaveFileDialog(m_hwnd, roadPath, sizeof(roadPath),
                         "Road Files\0*.roadnet\0Legacy JSON\0*.json\0All Files\0*.*\0",
-                        "Save Roads"))
+                        "Save Roads",
+                        "roadnet"))
     {
         return false;
     }
@@ -952,6 +958,7 @@ bool App::LoadRoadsFromPath(const char* path)
         return false;
     }
 
+    m_hasEstablishedRoadFilePath = true;
     SetStatusMessage(std::string("Roads loaded: ") + path);
     return true;
 }
@@ -976,6 +983,34 @@ bool App::SaveProject(const char* path)
     {
         if (path == nullptr || path[0] == '\0')
             return SaveProjectAs();
+
+        const std::string currentRoadPath = m_editor.GetFilePath();
+        const bool roadNeedsFirstSavePrompt =
+            !m_hasEstablishedRoadFilePath && !m_roadNetwork.roads.empty();
+
+        if (roadNeedsFirstSavePrompt)
+        {
+            const fs::path projectPath(path);
+            fs::path suggestedRoadPath = projectPath;
+            std::string roadStem = projectPath.stem().string();
+            if (roadStem.size() >= 8 &&
+                roadStem.compare(roadStem.size() - 8, 8, "_project") == 0)
+            {
+                roadStem.replace(roadStem.size() - 8, 8, "_road");
+            }
+            else
+            {
+                roadStem += "_road";
+            }
+            suggestedRoadPath.replace_filename(roadStem + ".roadnet");
+            m_editor.SetFilePath(suggestedRoadPath.string().c_str());
+            if (!SaveRoadsAs())
+            {
+                if (!currentRoadPath.empty())
+                    m_editor.SetFilePath(currentRoadPath.c_str());
+                return false;
+            }
+        }
 
         strncpy_s(m_projectPath, sizeof(m_projectPath), path, _TRUNCATE);
         RefreshTerrainPathDisplayBuffers();
@@ -1602,7 +1637,7 @@ void App::Render()
                         const std::string& recentPath = m_recentProjectPaths[i];
                         const std::filesystem::path labelPath(recentPath);
                         const std::string label =
-                            std::to_string(i + 1) + ". " + labelPath.stem().string();
+                            std::to_string(i + 1) + ". " + labelPath.filename().string();
                         if (ImGui::MenuItem(label.c_str()))
                         {
                             strncpy_s(m_projectPath, sizeof(m_projectPath), recentPath.c_str(), _TRUNCATE);

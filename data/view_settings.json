@@ -5,11 +5,11 @@
     0.2664092779159546
   ],
   "contourColor": [
-    0.2509652376174927,
-    0.2509652376174927,
-    0.2509652376174927
+    0.7837837934494019,
+    0.7837837934494019,
+    0.7837837934494019
   ],
-  "contourInterval": 20.0,
+  "contourInterval": 2.0,
   "gridBaseScale": 100.0,
   "gridFadeDistance": 10000.0,
   "intersectionCircleColor": [
@@ -20,6 +20,8 @@
   "intersectionScreenGizmoRadius": 6.0,
   "previewCurveThickness": 2.0,
   "recentProjectPaths": [
+    "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj",
+    "D:\\GitHub\\road-editor\\data\\toscana\\toscana",
     "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj"
   ],
   "roadGradeRedThresholdPercent": 12.0,
@@ -37,16 +39,16 @@
   ],
   "selectedRoadLineThickness": 2.0,
   "showCameraWindow": true,
-  "showContours": false,
+  "showContours": true,
   "showDisplaySettingsWindow": true,
   "showFps": false,
   "showGrid": false,
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": false,
+  "showRoadGradeGradient": true,
   "showRoadGuidelines": true,
   "showRoadNames": true,
   "showRoadPreviewMetrics": false,
-  "showTerrainWindow": false
+  "showTerrainWindow": true
 }

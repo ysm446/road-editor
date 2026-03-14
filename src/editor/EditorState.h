@@ -7,6 +7,7 @@ enum class EditorMode
     PointEdit,         // Select / drag / delete existing road points
     VerticalCurveEdit, // Placeholder for vertical curve editing
     BankAngleEdit,     // Placeholder for bank angle editing
+    LaneEdit,          // Parametric lane section editing on preview curve
     IntersectionDraw,  // Click terrain to place intersections
     IntersectionEdit,  // Select / delete intersections
     Pathfinding,       // Terrain-based route preview / generation

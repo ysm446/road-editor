@@ -1,0 +1,314 @@
+{
+  "groups": [
+    {
+      "id": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "locked": false,
+      "name": "Default",
+      "visible": true
+    }
+  ],
+  "intersections": [
+    {
+      "entryDist": 8.0,
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "39d56a9d-0002-4c6c-9df4-68fbe08275c3",
+      "name": "Intersection 0",
+      "pos": [
+        15.714012145996094,
+        5.960784435272217,
+        66.923583984375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "70bbeeca-b402-4031-b07e-694092f07e6c",
+      "name": "Intersection 1",
+      "pos": [
+        217.52288818359375,
+        8.338661193847656,
+        -150.649169921875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "e8a20037-05dd-4c95-942b-0c297c3f7c21",
+      "name": "Intersection 2",
+      "pos": [
+        -252.91448974609375,
+        5.333333492279053,
+        114.75997924804688
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "fbee295d-7d69-4efb-ad9a-208d3573e98f",
+      "name": "Intersection 3",
+      "pos": [
+        -148.93209838867188,
+        14.437705993652344,
+        -43.45580291748047
+      ],
+      "type": "intersection"
+    }
+  ],
+  "roads": [
+    {
+      "active": 1,
+      "bankAngle": [],
+      "closed": false,
+      "defaultFriction": 0.15000000596046448,
+      "defaultTargetSpeed": 40.0,
+      "defaultWidthLaneCenter": 0.0,
+      "defaultWidthLaneLeft1": 4.0,
+      "defaultWidthLaneRight1": 4.0,
+      "endIntersectionId": "39d56a9d-0002-4c6c-9df4-68fbe08275c3",
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "6ededca1-0975-4efd-ab03-3e2cf50c1e02",
+      "laneSections": [],
+      "name": "Road 0",
+      "point": [
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -252.91448974609375,
+            5.333333492279053,
+            114.75997924804688
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -210.7987060546875,
+            6.039216041564941,
+            124.8464126586914
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -173.42263793945313,
+            7.058823585510254,
+            97.05064392089844
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -151.06167602539063,
+            6.9803924560546875,
+            100.8109130859375
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -117.50149536132813,
+            6.43137264251709,
+            97.81358337402344
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -73.6769790649414,
+            5.333333492279053,
+            120.96530151367188
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            15.714012145996094,
+            5.960784435272217,
+            66.923583984375
+          ],
+          "useCurvatureRadius": 0
+        }
+      ],
+      "roadType": 0,
+      "startIntersectionId": "e8a20037-05dd-4c95-942b-0c297c3f7c21",
+      "verticalCurve": []
+    },
+    {
+      "active": 1,
+      "bankAngle": [],
+      "closed": false,
+      "defaultFriction": 0.15000000596046448,
+      "defaultTargetSpeed": 40.0,
+      "defaultWidthLaneCenter": 0.0,
+      "defaultWidthLaneLeft1": 4.0,
+      "defaultWidthLaneRight1": 4.0,
+      "endIntersectionId": "70bbeeca-b402-4031-b07e-694092f07e6c",
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "f21c941b-3ef7-4fe3-abcf-fb144e24a1f7",
+      "laneSections": [],
+      "name": "Road 1",
+      "point": [
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            15.714012145996094,
+            5.960784435272217,
+            66.923583984375
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            101.37354278564453,
+            2.1072261333465576,
+            45.721038818359375
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            163.33279418945313,
+            2.5098040103912354,
+            -56.587249755859375
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            217.52288818359375,
+            8.338661193847656,
+            -150.649169921875
+          ],
+          "useCurvatureRadius": 0
+        }
+      ],
+      "roadType": 0,
+      "startIntersectionId": "39d56a9d-0002-4c6c-9df4-68fbe08275c3",
+      "verticalCurve": []
+    },
+    {
+      "active": 1,
+      "bankAngle": [],
+      "closed": false,
+      "defaultFriction": 0.15000000596046448,
+      "defaultTargetSpeed": 40.0,
+      "defaultWidthLaneCenter": 0.0,
+      "defaultWidthLaneLeft1": 4.0,
+      "defaultWidthLaneRight1": 4.0,
+      "endIntersectionId": "fbee295d-7d69-4efb-ad9a-208d3573e98f",
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "cc4c65ff-4ce5-463d-b85d-86be4decc900",
+      "laneSections": [],
+      "name": "Road 0 Copy A",
+      "point": [
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -206.46202087402344,
+            9.684148788452148,
+            6.0164642333984375
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -189.13095092773438,
+            10.021031379699707,
+            -7.979705810546875
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -166.32620239257813,
+            10.901961326599121,
+            -21.226455688476563
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -148.93209838867188,
+            14.437705993652344,
+            -43.45580291748047
+          ],
+          "useCurvatureRadius": 0
+        }
+      ],
+      "roadType": 0,
+      "startIntersectionId": "",
+      "verticalCurve": []
+    },
+    {
+      "active": 1,
+      "bankAngle": [],
+      "closed": false,
+      "defaultFriction": 0.15000000596046448,
+      "defaultTargetSpeed": 40.0,
+      "defaultWidthLaneCenter": 0.0,
+      "defaultWidthLaneLeft1": 4.0,
+      "defaultWidthLaneRight1": 4.0,
+      "endIntersectionId": "39d56a9d-0002-4c6c-9df4-68fbe08275c3",
+      "groupId": "bb60f17c-3c59-40cc-9a07-0b31694e3f5c",
+      "id": "c53f1c90-bf48-40ba-8163-86f1e7a24891",
+      "laneSections": [],
+      "name": "Road 0 Copy B",
+      "point": [
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -148.93209838867188,
+            14.437705993652344,
+            -43.45580291748047
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -119.08016967773438,
+            10.901961326599121,
+            -9.90447998046875
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            -28.248046875,
+            9.928858757019043,
+            22.47113037109375
+          ],
+          "useCurvatureRadius": 0
+        },
+        {
+          "curvatureRadius": 0.0,
+          "pos": [
+            15.714012145996094,
+            5.960784435272217,
+            66.923583984375
+          ],
+          "useCurvatureRadius": 0
+        }
+      ],
+      "roadType": 0,
+      "startIntersectionId": "fbee295d-7d69-4efb-ad9a-208d3573e98f",
+      "verticalCurve": []
+    }
+  ],
+  "version": 3
+}

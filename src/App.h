@@ -162,6 +162,7 @@ private:
     DirectX::XMFLOAT3 m_contourColor = { 0.18f, 0.18f, 0.18f };
     DirectX::XMFLOAT3 m_backgroundColor = { 0.12f, 0.12f, 0.14f };
     std::vector<std::string> m_recentProjectPaths;
+    bool              m_hasEstablishedRoadFilePath = false;
     EditorMode        m_prevEditorMode = EditorMode::Navigate;
     PathfindingState  m_pathfinding;
     std::vector<ContourSegment> m_contourSegments;

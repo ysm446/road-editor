@@ -1,0 +1,35 @@
+{
+  "camera": {
+    "azimuth": -1.1699981689453125,
+    "distance": 880.0,
+    "elevation": 0.5899999141693115,
+    "targetX": 158.87542724609375,
+    "targetY": -146.44277954101563,
+    "targetZ": 42.0814208984375
+  },
+  "roads": {
+    "path": "toscana_road.roadnet"
+  },
+  "terrain": {
+    "colorMode": 3,
+    "depthM": 1024.0,
+    "divisionsX": 255,
+    "divisionsY": 255,
+    "heightM": 20.0,
+    "lightingMode": 0,
+    "offsetX": 0.0,
+    "offsetY": 0.0,
+    "offsetZ": 0.0,
+    "opacity": 0.33000001311302185,
+    "path": "heightmap.png",
+    "shadowBias": 0.001500000013038516,
+    "shadowStrength": 0.7200000286102295,
+    "sunAzimuth": 0.9800000190734863,
+    "sunElevation": 0.7799999713897705,
+    "texturePath": "texture.png",
+    "visible": true,
+    "widthM": 1024.0,
+    "wireframe": false
+  },
+  "version": 1
+}

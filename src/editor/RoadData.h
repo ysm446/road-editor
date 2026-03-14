@@ -28,6 +28,22 @@ struct BankAnglePoint
     float bankAngle = 0.0f;
 };
 
+struct LaneSectionPoint
+{
+    float uCoord = 0.0f;
+    bool useLaneLeft2 = false;
+    float widthLaneLeft2 = 3.0f;
+    bool useLaneLeft1 = true;
+    float widthLaneLeft1 = 3.0f;
+    bool useLaneCenter = true;
+    float widthLaneCenter = 0.0f;
+    bool useLaneRight1 = true;
+    float widthLaneRight1 = 3.0f;
+    bool useLaneRight2 = false;
+    float widthLaneRight2 = 3.0f;
+    float offsetCenter = 0.0f;
+};
+
 // A single polyline road
 struct Road
 {
@@ -38,13 +54,14 @@ struct Road
     bool                   closed = false;  // Loop road?
     std::string            startIntersectionId;
     std::string            endIntersectionId;
-    float                  laneWidth = 3.0f;
-    int                    laneLeft = 1;
-    int                    laneRight = 1;
+    float                  defaultWidthLaneLeft1 = 4.0f;
+    float                  defaultWidthLaneRight1 = 4.0f;
+    float                  defaultWidthLaneCenter = 0.0f;
     float                  defaultFriction = 0.15f;
     float                  defaultTargetSpeed = 40.0f;
     std::vector<VerticalCurvePoint> verticalCurve;
     std::vector<BankAnglePoint> bankAngle;
+    std::vector<LaneSectionPoint> laneSections;
     nlohmann::json         legacyData = nlohmann::json::object();
 
     // Convenience

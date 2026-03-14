@@ -1,0 +1,35 @@
+{
+  "camera": {
+    "azimuth": -7.740128993988037,
+    "distance": 4086.74755859375,
+    "elevation": 0.8250006437301636,
+    "targetX": 360.8360290527344,
+    "targetY": 1189.5557861328125,
+    "targetZ": 3.7677314281463623
+  },
+  "roads": {
+    "path": "testtrack_road.roadnet"
+  },
+  "terrain": {
+    "colorMode": 3,
+    "depthM": 4000.0,
+    "divisionsX": 512,
+    "divisionsY": 512,
+    "heightM": 1198.0,
+    "lightingMode": 0,
+    "offsetX": 0.0,
+    "offsetY": 1346.0,
+    "offsetZ": 0.0,
+    "opacity": 0.49000000953674316,
+    "path": "testtrack_heightfield.png",
+    "shadowBias": 0.001500000013038516,
+    "shadowStrength": 0.7200000286102295,
+    "sunAzimuth": -0.05235987901687622,
+    "sunElevation": 0.6283185482025146,
+    "texturePath": "testtrack_demcolor_06.png",
+    "visible": false,
+    "widthM": 4000.0,
+    "wireframe": false
+  },
+  "version": 1
+}
