@@ -2027,6 +2027,14 @@ void App::Render()
                     SaveViewSettings();
                 }
 
+                float previewSampleInterval = m_previewSampleInterval;
+                if (ImGui::InputFloat(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u9593\u9694 (m)", &previewSampleInterval, 1.0f, 5.0f, "%.1f"))
+                {
+                    m_previewSampleInterval = (std::max)(1.0f, previewSampleInterval);
+                    m_editor.SetPreviewSampleInterval(m_previewSampleInterval);
+                    SaveViewSettings();
+                }
+
                 float selectedRoadLineThickness = m_selectedRoadLineThickness;
                 if (ImGui::SliderFloat(
                         u8"\u9078\u629E\u6642\u306E\u9053\u8DEF\u306E\u592A\u3055 (px)",
@@ -2200,14 +2208,6 @@ void App::Render()
                         m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
                         SaveViewSettings();
                     }
-                }
-                float previewSampleInterval = m_previewSampleInterval;
-                ImGui::InputFloat(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u9593\u9694 (m)", &previewSampleInterval, 1.0f, 5.0f, "%.1f");
-                if (ImGui::IsItemDeactivatedAfterEdit())
-                {
-                    m_previewSampleInterval = (std::max)(1.0f, previewSampleInterval);
-                    m_editor.SetPreviewSampleInterval(m_previewSampleInterval);
-                    SaveViewSettings();
                 }
                 float bankVectorInterval = m_bankVectorInterval;
                 ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u30D9\u30AF\u30C8\u30EB\u9593\u9694 (m)", &bankVectorInterval, 1.0f, 5.0f, "%.1f");
