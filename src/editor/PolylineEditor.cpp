@@ -23,6 +23,7 @@ std::vector<float> BuildPolylineArcLengths(const std::vector<XMFLOAT3>& points);
 XMFLOAT3 SamplePolylineAtDistance(const std::vector<XMFLOAT3>& points,
                                   const std::vector<float>& cumulativeLengths,
                                   float distance);
+bool IsParametricEditModeHelper(EditorMode mode);
 
 float Distance3(XMFLOAT3 a, XMFLOAT3 b)
 {
@@ -3177,7 +3178,7 @@ int PolylineEditor::FindNearestRoad(
     for (int r = 0; r < static_cast<int>(m_network->roads.size()); ++r)
     {
         const Road& road = m_network->roads[r];
-        if (!IsRoadGuidelineVisible(road))
+        if (!(IsParametricEditModeHelper(m_mode) ? IsRoadVisible(road) : IsRoadGuidelineVisible(road)))
             continue;
         for (int p = 0; p + 1 < static_cast<int>(road.points.size()); ++p)
         {
@@ -3320,6 +3321,16 @@ bool PolylineEditor::IsRoadGuidelineVisible(const Road& road) const
         m_mode == EditorMode::LaneEdit)
         return false;
     return m_showRoadGuidelines && IsRoadVisible(road);
+}
+
+namespace
+{
+bool IsParametricEditModeHelper(EditorMode mode)
+{
+    return mode == EditorMode::VerticalCurveEdit ||
+           mode == EditorMode::BankAngleEdit ||
+           mode == EditorMode::LaneEdit;
+}
 }
 
 bool PolylineEditor::IsIntersectionVisible(const Intersection& intersection) const
@@ -4794,6 +4805,25 @@ void PolylineEditor::SetMode(EditorMode mode)
     }
     if (mode != EditorMode::IntersectionEdit)
         m_activeIntersection = -1;
+
+    if (IsParametricEditModeHelper(mode))
+    {
+        const bool activeRoadValid =
+            m_activeRoad >= 0 &&
+            m_activeRoad < static_cast<int>(m_network->roads.size());
+        if (activeRoadValid)
+        {
+            SelectSingleRoad(m_activeRoad);
+        }
+        else if (m_selectedRoads.size() == 1)
+        {
+            SelectSingleRoad(m_selectedRoads.front());
+        }
+        else
+        {
+            ClearRoadSelection();
+        }
+    }
 }
 
 void PolylineEditor::StartNewRoad()
@@ -4951,6 +4981,26 @@ void PolylineEditor::Update(int vpW, int vpH,
     const bool copyShortcut = ctrlDown && cDown;
     const bool selectAllShortcut = ctrlDown && aDown;
     const bool pasteShortcut = ctrlDown && pasteVDown;
+    const auto hasActiveCurveEditRoad = [&]() -> bool
+    {
+        return m_activeRoad >= 0 &&
+               m_activeRoad < static_cast<int>(m_network->roads.size()) &&
+               IsParametricEditModeHelper(m_mode);
+    };
+    const auto selectCurveEditRoad = [&](int roadIndex)
+    {
+        SelectSingleRoad(roadIndex);
+        ClearPointSelection();
+        ClearIntersectionSelection();
+        if (m_mode == EditorMode::VerticalCurveEdit)
+            ClearVerticalCurveSelection();
+        else if (m_mode == EditorMode::BankAngleEdit)
+            ClearBankAngleSelection();
+        else if (m_mode == EditorMode::LaneEdit)
+            ClearLaneSectionSelection();
+        if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
+            m_statusMessage = "Editing road: " + m_network->roads[roadIndex].name;
+    };
     if (!ImGui::GetIO().WantTextInput)
     {
         if (undoShortcut && !m_prevUndoShortcut)
@@ -5206,11 +5256,28 @@ void PolylineEditor::Update(int vpW, int vpH,
 
         if (lClick)
         {
+            const int clickedRoad = FindNearestRoad(vpW, vpH, mousePos, viewProj);
+            if (!hasActiveCurveEditRoad())
+            {
+                if (clickedRoad >= 0)
+                {
+                    selectCurveEditRoad(clickedRoad);
+                    return;
+                }
+                m_statusMessage = "Click a road polyline to choose a road for vertical curve editing";
+                return;
+            }
+            if (clickedRoad >= 0 && clickedRoad != m_activeRoad)
+            {
+                selectCurveEditRoad(clickedRoad);
+                return;
+            }
+
             int hitRoadIndex = -1;
             int hitCurveIndex = -1;
             float bestPointDistance = 14.0f;
 
-            for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+            for (int roadIndex = m_activeRoad; roadIndex <= m_activeRoad; ++roadIndex)
             {
                 const Road& road = m_network->roads[roadIndex];
                 if (!IsRoadVisible(road))
@@ -5257,7 +5324,8 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             int roadIndex = -1;
             float uCoord = 0.0f;
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord))
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord) &&
+                roadIndex == m_activeRoad)
             {
                 PushUndoState();
                 VerticalCurvePoint point;
@@ -5425,11 +5493,28 @@ void PolylineEditor::Update(int vpW, int vpH,
 
         if (lClick)
         {
+            const int clickedRoad = FindNearestRoad(vpW, vpH, mousePos, viewProj);
+            if (!hasActiveCurveEditRoad())
+            {
+                if (clickedRoad >= 0)
+                {
+                    selectCurveEditRoad(clickedRoad);
+                    return;
+                }
+                m_statusMessage = "Click a road polyline to choose a road for bank angle editing";
+                return;
+            }
+            if (clickedRoad >= 0 && clickedRoad != m_activeRoad)
+            {
+                selectCurveEditRoad(clickedRoad);
+                return;
+            }
+
             int hitRoadIndex = -1;
             int hitPointIndex = -1;
             float bestPointDistance = 14.0f;
 
-            for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+            for (int roadIndex = m_activeRoad; roadIndex <= m_activeRoad; ++roadIndex)
             {
                 const Road& road = m_network->roads[roadIndex];
                 if (!IsRoadVisible(road))
@@ -5476,7 +5561,8 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             int roadIndex = -1;
             float uCoord = 0.0f;
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord))
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord) &&
+                roadIndex == m_activeRoad)
             {
                 PushUndoState();
                 BankAnglePoint point;
@@ -5654,11 +5740,28 @@ void PolylineEditor::Update(int vpW, int vpH,
 
         if (lClick)
         {
+            const int clickedRoad = FindNearestRoad(vpW, vpH, mousePos, viewProj);
+            if (!hasActiveCurveEditRoad())
+            {
+                if (clickedRoad >= 0)
+                {
+                    selectCurveEditRoad(clickedRoad);
+                    return;
+                }
+                m_statusMessage = "Click a road polyline to choose a road for lane editing";
+                return;
+            }
+            if (clickedRoad >= 0 && clickedRoad != m_activeRoad)
+            {
+                selectCurveEditRoad(clickedRoad);
+                return;
+            }
+
             int hitRoadIndex = -1;
             int hitPointIndex = -1;
             float bestPointDistance = 14.0f;
 
-            for (int roadIndex = 0; roadIndex < static_cast<int>(m_network->roads.size()); ++roadIndex)
+            for (int roadIndex = m_activeRoad; roadIndex <= m_activeRoad; ++roadIndex)
             {
                 const Road& road = m_network->roads[roadIndex];
                 if (!IsRoadVisible(road))
@@ -5705,7 +5808,8 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             int roadIndex = -1;
             float uCoord = 0.0f;
-            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord))
+            if (FindNearestPreviewCurveLocation(vpW, vpH, mousePos, viewProj, roadIndex, uCoord) &&
+                roadIndex == m_activeRoad)
             {
                 PushUndoState();
                 LaneSectionPoint point;
@@ -6909,6 +7013,24 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         }
     };
 
+    const bool showCurveEditSelectionGuides = IsParametricEditModeHelper(m_mode);
+    if (showCurveEditSelectionGuides)
+    {
+        const ImU32 colGuideInactive = IM_COL32(140, 140, 150, 120);
+        const ImU32 colGuideActive = IM_COL32(255, 220, 120, 235);
+        for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+        {
+            const Road& road = m_network->roads[ri];
+            if (!IsRoadVisible(road))
+                continue;
+            const bool active = (ri == m_activeRoad);
+            drawRoadOverlay(
+                road,
+                active ? colGuideActive : colGuideInactive,
+                active ? (kSelectedRoadThickness + 1.0f) : (kRoadThickness + 0.5f));
+        }
+    }
+
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
@@ -7622,13 +7744,23 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         break;
     case EditorMode::VerticalCurveEdit:
         ImGui::TextColored(ImVec4(0.95f,0.55f,0.25f,1), u8"\u7E26\u65AD\u66F2\u7DDA\u7DE8\u96C6");
+        if (m_activeRoad >= 0 && m_activeRoad < static_cast<int>(m_network->roads.size()))
+            ImGui::TextColored(ImVec4(1.0f,0.9f,0.55f,1), u8"\u7DE8\u96C6\u5BFE\u8C61: %s", m_network->roads[m_activeRoad].name.c_str());
+        else
+            ImGui::TextDisabled(u8"\u307E\u305A\u9053\u8DEF\u30DD\u30EA\u30E9\u30A4\u30F3\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u7DE8\u96C6\u5BFE\u8C61\u3092\u9078\u629E");
+        ImGui::TextDisabled(u8"\u5225\u306E\u9053\u8DEF\u30DD\u30EA\u30E9\u30A4\u30F3\u3092\u30AF\u30EA\u30C3\u30AF: \u7DE8\u96C6\u5BFE\u8C61\u3092\u5207\u308A\u66FF\u3048");
         ImGui::TextDisabled(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u30AB\u30FC\u30D6\u3092\u30AF\u30EA\u30C3\u30AF: \u7E26\u65AD\u66F2\u7DDA\u30DD\u30A4\u30F3\u30C8\u8FFD\u52A0");
-        ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E");
+        ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E/\u30C9\u30E9\u30C3\u30B0");
         ImGui::TextDisabled(u8"Delete: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8\u524A\u9664");
         ImGui::TextDisabled(u8"\u30D7\u30ED\u30D1\u30C6\u30A3\u3067 u_coord / vcl / offset \u3092\u7DE8\u96C6");
         break;
     case EditorMode::BankAngleEdit:
         ImGui::TextColored(ImVec4(0.35f,0.78f,1.0f,1), u8"\u30D0\u30F3\u30AF\u89D2\u7DE8\u96C6");
+        if (m_activeRoad >= 0 && m_activeRoad < static_cast<int>(m_network->roads.size()))
+            ImGui::TextColored(ImVec4(1.0f,0.9f,0.55f,1), u8"\u7DE8\u96C6\u5BFE\u8C61: %s", m_network->roads[m_activeRoad].name.c_str());
+        else
+            ImGui::TextDisabled(u8"\u307E\u305A\u9053\u8DEF\u30DD\u30EA\u30E9\u30A4\u30F3\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u7DE8\u96C6\u5BFE\u8C61\u3092\u9078\u629E");
+        ImGui::TextDisabled(u8"\u5225\u306E\u9053\u8DEF\u30DD\u30EA\u30E9\u30A4\u30F3\u3092\u30AF\u30EA\u30C3\u30AF: \u7DE8\u96C6\u5BFE\u8C61\u3092\u5207\u308A\u66FF\u3048");
         ImGui::TextDisabled(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u30AB\u30FC\u30D6\u3092\u30AF\u30EA\u30C3\u30AF: \u30D0\u30F3\u30AF\u89D2\u30DD\u30A4\u30F3\u30C8\u8FFD\u52A0");
         ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E/\u30C9\u30E9\u30C3\u30B0");
         ImGui::TextDisabled(u8"Delete: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8\u524A\u9664");
@@ -7636,6 +7768,11 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         break;
     case EditorMode::LaneEdit:
         ImGui::TextColored(ImVec4(0.48f,0.92f,0.38f,1), u8"\u8ECA\u7DDA\u7DE8\u96C6");
+        if (m_activeRoad >= 0 && m_activeRoad < static_cast<int>(m_network->roads.size()))
+            ImGui::TextColored(ImVec4(1.0f,0.9f,0.55f,1), u8"\u7DE8\u96C6\u5BFE\u8C61: %s", m_network->roads[m_activeRoad].name.c_str());
+        else
+            ImGui::TextDisabled(u8"\u307E\u305A\u9053\u8DEF\u30DD\u30EA\u30E9\u30A4\u30F3\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u7DE8\u96C6\u5BFE\u8C61\u3092\u9078\u629E");
+        ImGui::TextDisabled(u8"\u5225\u306E\u9053\u8DEF\u30DD\u30EA\u30E9\u30A4\u30F3\u3092\u30AF\u30EA\u30C3\u30AF: \u7DE8\u96C6\u5BFE\u8C61\u3092\u5207\u308A\u66FF\u3048");
         ImGui::TextDisabled(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u30AB\u30FC\u30D6\u3092\u30AF\u30EA\u30C3\u30AF: \u8ECA\u7DDA\u30BB\u30AF\u30B7\u30E7\u30F3\u30DD\u30A4\u30F3\u30C8\u8FFD\u52A0");
         ImGui::TextDisabled(u8"\u65E2\u5B58\u30DD\u30A4\u30F3\u30C8\u3092\u30AF\u30EA\u30C3\u30AF: \u9078\u629E/\u30C9\u30E9\u30C3\u30B0");
         ImGui::TextDisabled(u8"Delete: \u9078\u629E\u4E2D\u30DD\u30A4\u30F3\u30C8\u524A\u9664");

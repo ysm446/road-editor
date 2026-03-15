@@ -7,11 +7,11 @@
   "bankAngleColorMaxDegrees": 15.0,
   "bankVectorInterval": 5.0,
   "contourColor": [
-    0.6640926599502563,
-    0.6640926599502563,
-    0.6640926599502563
+    0.7837837934494019,
+    0.7837837934494019,
+    0.7837837934494019
   ],
-  "contourInterval": 20.0,
+  "contourInterval": 2.0,
   "gridBaseScale": 1000.0,
   "gridFadeDistance": 10000.0,
   "intersectionCircleColor": [
@@ -23,8 +23,8 @@
   "previewCurveThickness": 2.0,
   "previewSampleInterval": 2.0,
   "recentProjectPaths": [
-    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj",
-    "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj"
+    "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj",
+    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj"
   ],
   "roadGradeRedThresholdPercent": 12.0,
   "roadLineThickness": 1.0,
@@ -48,11 +48,11 @@
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": false,
+  "showRoadGradeGradient": true,
   "showRoadGuidelines": true,
   "showRoadNames": false,
   "showRoadPreviewMetrics": false,
-  "showRoadTerrainClearance": true,
+  "showRoadTerrainClearance": false,
   "showTerrainWindow": false,
   "windowLayouts": {
     "camera": {
