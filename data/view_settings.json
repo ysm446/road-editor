@@ -23,7 +23,7 @@
     "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj",
     "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj"
   ],
-  "roadGradeRedThresholdPercent": 12.0,
+  "roadGradeRedThresholdPercent": 10.0,
   "roadLineThickness": 1.0,
   "roadVertexColor": [
     0.6274510025978088,
@@ -38,15 +38,15 @@
   ],
   "selectedRoadLineThickness": 2.0,
   "showCameraWindow": false,
-  "showDisplaySettingsWindow": true,
-  "showFps": false,
+  "showDisplaySettingsWindow": false,
+  "showFps": true,
   "showGrid": false,
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": true,
+  "showRoadGradeGradient": false,
   "showRoadGuidelines": true,
-  "showRoadNames": true,
+  "showRoadNames": false,
   "showRoadPreviewMetrics": false,
   "showTerrainWindow": false,
   "windowLayouts": {
@@ -57,16 +57,16 @@
       "y": 0.0
     },
     "displaySettings": {
-      "height": 567.0,
+      "height": 614.0,
       "width": 380.0,
-      "x": 1087.0,
-      "y": 489.0
+      "x": 560.0,
+      "y": 245.0
     },
     "properties": {
       "height": 717.0,
       "width": 380.0,
-      "x": 1188.0,
-      "y": 64.0
+      "x": 1565.0,
+      "y": 87.0
     },
     "roadEditor": {
       "height": 478.0,

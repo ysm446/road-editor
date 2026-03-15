@@ -19,6 +19,21 @@ struct SavedImGuiWindowLayout
     float height = 0.0f;
 };
 
+enum class PreviewCurveSegmentKind
+{
+    Other,
+    Clothoid,
+    Arc,
+    VerticalCurveCrest,
+    VerticalCurveSag
+};
+
+struct PreviewCurvePoint
+{
+    DirectX::XMFLOAT3 pos = { 0.0f, 0.0f, 0.0f };
+    PreviewCurveSegmentKind kind = PreviewCurveSegmentKind::Other;
+};
+
 // Manages interactive polyline road editing.
 // Owned by App, updated every frame after camera input.
 class PolylineEditor
@@ -117,8 +132,8 @@ public:
     void SetShowRoadGuidelines(bool show);
     void SetShowIntersectionNames(bool show) { m_showIntersectionNames = show; }
     void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }
-    void SetShowRoadGradeGradient(bool show) { m_showRoadGradeGradient = show; }
-    void SetRoadGradeRedThresholdPercent(float value) { m_roadGradeRedThresholdPercent = value; }
+    void SetShowRoadGradeGradient(bool show);
+    void SetRoadGradeRedThresholdPercent(float value);
     void SetRoadLineThickness(float value) { m_roadLineThickness = value; }
     void SetPreviewCurveThickness(float value) { m_previewCurveThickness = value; }
     void SetSelectedRoadLineThickness(float value) { m_selectedRoadLineThickness = value; }
@@ -241,6 +256,17 @@ private:
     void Undo();
     void Redo();
     void ClearHistory();
+    void InvalidateAllPreviewCaches();
+    void InvalidateRoadPreviewCache(int roadIndex);
+    void InvalidateAllGradeColorCaches();
+    void InvalidateRoadGradeColorCache(int roadIndex);
+    void EnsureRoadPreviewCacheSize() const;
+    const std::vector<PreviewCurvePoint>& GetRoadPreviewCurveDetailedCached(int roadIndex) const;
+    const std::vector<DirectX::XMFLOAT3>& GetRoadPreviewCurveCached(int roadIndex) const;
+    const std::vector<PreviewCurvePoint>& GetRoadVerticalPreviewCurveDetailedCached(int roadIndex) const;
+    const std::vector<DirectX::XMFLOAT3>& GetRoadVerticalPreviewCurveCached(int roadIndex) const;
+    const std::vector<DirectX::XMFLOAT3>& GetRoadParametricPreviewCurveCached(int roadIndex) const;
+    const std::vector<unsigned int>& GetRoadVerticalGradeColorsCached(int roadIndex) const;
     void QueuePropertyRevealForRoad(int roadIndex);
     void QueuePropertyRevealForIntersection(int intersectionIndex);
     void ClearPropertyReveal();
@@ -271,6 +297,19 @@ private:
         std::vector<Road> roads;
         std::vector<Intersection> intersections;
         DirectX::XMFLOAT3 anchor = { 0.0f, 0.0f, 0.0f };
+    };
+    struct RoadPreviewCache
+    {
+        bool previewDetailedValid = false;
+        bool previewPositionsValid = false;
+        bool verticalDetailedValid = false;
+        bool verticalPositionsValid = false;
+        bool verticalGradeColorsValid = false;
+        std::vector<PreviewCurvePoint> previewDetailed;
+        std::vector<DirectX::XMFLOAT3> previewPositions;
+        std::vector<PreviewCurvePoint> verticalDetailed;
+        std::vector<DirectX::XMFLOAT3> verticalPositions;
+        std::vector<unsigned int> verticalGradeColors;
     };
     EditorSnapshot CaptureSnapshot() const;
     void RestoreSnapshot(const EditorSnapshot& snapshot);
@@ -357,6 +396,7 @@ private:
     DirectX::XMFLOAT3 m_intersectionCircleColor = { 80.0f / 255.0f, 240.0f / 255.0f, 1.0f };
     std::vector<EditorSnapshot> m_undoStack;
     std::vector<EditorSnapshot> m_redoStack;
+    mutable std::vector<RoadPreviewCache> m_roadPreviewCaches;
     bool m_prevUndoShortcut = false;
     bool m_prevRedoShortcut = false;
     bool m_prevCopyShortcut = false;
