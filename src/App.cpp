@@ -1609,9 +1609,10 @@ int App::Run()
         lastTime    = now;
         m_time     += dt;
 
+        const bool appActive = (GetForegroundWindow() == m_hwnd);
         bool wantMouse = ImGui::GetIO().WantCaptureMouse;
-        m_camera->HandleInput(wantMouse);
-        UpdateSunInput(wantMouse);
+        m_camera->HandleInput(wantMouse || !appActive);
+        UpdateSunInput(wantMouse || !appActive);
 
         const bool focusKeyDown = (GetAsyncKeyState('F') & 0x8000) != 0;
         const bool focusPressed = focusKeyDown && !m_prevFocusKey;
@@ -1640,13 +1641,13 @@ int App::Run()
                                                 static_cast<float>(vpW) /
                                                 static_cast<float>(vpH)));
             XMMATRIX invVP = XMMatrixInverse(nullptr, vp);
-            const bool blockSceneMouse = wantMouse || m_sunDragActive;
+            const bool blockSceneMouse = wantMouse || m_sunDragActive || !appActive;
             m_editor.Update(vpW, vpH,
                             { static_cast<float>(cursor.x),
                               static_cast<float>(cursor.y) },
                             invVP, blockSceneMouse);
 
-            if (focusPressed && !ImGui::GetIO().WantTextInput)
+            if (appActive && focusPressed && !ImGui::GetIO().WantTextInput)
             {
                 XMFLOAT3 focusTarget;
                 if (m_editor.GetFocusTarget(focusTarget))

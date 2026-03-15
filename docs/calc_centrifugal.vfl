@@ -1,0 +1,55 @@
+//
+// 遠心力を計算し、
+// ハーフベクトルの長さに掛ける
+// RunOver: Points
+//
+// 概要:
+// - 曲率半径 R、想定速度、摩擦係数から必要なバンク角 theta を求める
+// - theta を進行方向ローカル空間での左右ベクトルとして表現し、道路断面の傾きを作る
+// - ハーフベクトル __h を使って、左右どちらへ傾けるべきかを決める
+// - 直線区間や向きが決めにくい点では既存の up を維持する
+//
+
+float eps = 1e-6;
+
+float speed = f@__targetSpeed;  // 想定速度(km/h)
+float f = f@__friction; // 摩擦係数（デフォルトは 0.15）
+
+// 時速を秒速へ（例：90kmh -> 25m/s）
+float v = speed * 1000 / 60/60;
+  
+float g = 9.8;  // 重力(m/s^2)
+float R = f@__radius;   // 曲率半径
+
+// 曲率がある場合（＝直線でない）
+if(R > 0)
+{
+    // 遠心力＝速度の二乗÷曲率半径
+    float a = v * v / R;
+    
+    // 力のつり合いから必要なバンク角を求める。
+    // 摩擦係数 f を含めて、遠心加速度を打ち消す断面角を計算している。
+    float theta = atan((a-g*f)/(g+a*f));
+    
+    if(theta < 0) theta = 0;
+    //f@__theta = degrees(theta);
+    
+    // 進行方向ローカル空間。@N を前方、@up を上方向として扱う。
+    matrix world = maketransform(@N, @up);
+    matrix inverse = invert(world);
+    
+    // ハーフベクトルをローカル空間へ移し、左右どちらに傾けるかの判定に使う。
+    vector localH = v@__h * inverse;
+    if(length(localH) < eps)
+    {
+        return;
+    }
+
+    // ローカル空間での左向きベクトル。x が左右、y が上方向の持ち上がり量。
+    vector localLeft = set(cos(theta), sin(theta), 0);
+    if(localH.x < 0) localLeft.y *= -1;
+    
+    vector left = localLeft * world;
+    // 前方 N と左方向から、新しい up を直交ベクトルとして作り直す。
+    @up = normalize(cross(@N, left));
+}

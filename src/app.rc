@@ -1,3 +1,3 @@
 #include "resource.h"
 
-IDI_APP_ICON ICON "../data/icon/road_editor_icon.ico"
+IDI_APP_ICON ICON "../assets/icons/road_editor_icon.ico"

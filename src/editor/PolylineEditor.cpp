@@ -18,6 +18,14 @@ constexpr float kLaneSectionDefaultWidth = 3.0f;
 constexpr float kPreviewCurveSampleLength = 2.0f;
 constexpr float kPreviewClothoidAngleRatio = 0.2f;
 constexpr float kMinIntersectionSpacingMeters = 10.0f;
+constexpr float kBankVectorSpacingMeters = 5.0f;
+constexpr float kBankCurvatureStepMeters = 10.0f;
+constexpr float kBankVectorDisplayLength = 2.5f;
+
+std::vector<float> BuildPolylineArcLengths(const std::vector<XMFLOAT3>& points);
+XMFLOAT3 SamplePolylineAtDistance(const std::vector<XMFLOAT3>& points,
+                                  const std::vector<float>& cumulativeLengths,
+                                  float distance);
 
 float Distance3(XMFLOAT3 a, XMFLOAT3 b)
 {
@@ -107,6 +115,11 @@ float Dot2(XMFLOAT2 a, XMFLOAT2 b)
     return a.x * b.x + a.y * b.y;
 }
 
+float DotXZ(XMFLOAT3 a, XMFLOAT3 b)
+{
+    return a.x * b.x + a.z * b.z;
+}
+
 XMFLOAT3 Add3(XMFLOAT3 a, XMFLOAT3 b)
 {
     return { a.x + b.x, a.y + b.y, a.z + b.z };
@@ -184,6 +197,148 @@ XMFLOAT2 Normalize2(XMFLOAT2 v)
     return Scale2(v, 1.0f / len);
 }
 
+float ComputeCurvatureRadiusXZ(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+{
+    constexpr float eps = 1e-6f;
+    p0.y = 0.0f;
+    p1.y = 0.0f;
+    p2.y = 0.0f;
+
+    const float chordLength = Distance3(p2, p0);
+    if (chordLength < eps)
+        return 0.0f;
+
+    const XMFLOAT3 chordDir = Normalize3(Sub3(p2, p0));
+    const XMFLOAT3 projected = Add3(p0, Scale3(chordDir, Dot3(Sub3(p1, p0), chordDir)));
+    const float h = Distance3(projected, p1);
+    if (h < 1e-4f)
+        return 0.0f;
+
+    const float radius = (chordLength * chordLength * 0.25f + h * h) / (2.0f * h);
+    return radius > eps ? radius : 0.0f;
+}
+
+XMFLOAT3 ComputeHalfVectorXZ(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+{
+    constexpr float eps = 1e-6f;
+    p0.y = 0.0f;
+    p1.y = 0.0f;
+    p2.y = 0.0f;
+
+    const XMFLOAT3 e0 = Sub3(p1, p0);
+    const XMFLOAT3 e1 = Sub3(p1, p2);
+    const float len0 = Length3(e0);
+    const float len1 = Length3(e1);
+    if (len0 < eps || len1 < eps)
+        return { 0.0f, 0.0f, 0.0f };
+
+    const XMFLOAT3 v0 = Scale3(e0, 1.0f / len0);
+    const XMFLOAT3 v1 = Scale3(e1, 1.0f / len1);
+    const XMFLOAT3 sum = Add3(v0, v1);
+    if (Length3(sum) < eps)
+        return { 0.0f, 0.0f, 0.0f };
+
+    return Normalize3(sum);
+}
+
+float ComputeBankAngleRadians(float radius, float targetSpeedKmh, float friction)
+{
+    constexpr float eps = 1e-6f;
+    constexpr float g = 9.8f;
+    if (radius <= eps)
+        return 0.0f;
+
+    const float speedMps = targetSpeedKmh * (1000.0f / 3600.0f);
+    const float a = speedMps * speedMps / radius;
+    float theta = atan2f(a - g * friction, g + a * friction);
+    if (theta < 0.0f)
+        theta = 0.0f;
+    return theta;
+}
+
+float EvaluateInterpolatedBankAngleRadians(const Road& road,
+                                           const std::vector<XMFLOAT3>& curve,
+                                           const std::vector<float>& arcLengths,
+                                           float distance)
+{
+    constexpr float eps = 1e-5f;
+    if (curve.size() < 2 || arcLengths.empty())
+        return 0.0f;
+
+    const float totalLength = arcLengths.back();
+    const XMFLOAT3 autoP0 = SamplePolylineAtDistance(
+        curve,
+        arcLengths,
+        (std::max)(0.0f, distance - kBankCurvatureStepMeters));
+    const XMFLOAT3 autoP1 = SamplePolylineAtDistance(curve, arcLengths, distance);
+    const XMFLOAT3 autoP2 = SamplePolylineAtDistance(
+        curve,
+        arcLengths,
+        (std::min)(totalLength, distance + kBankCurvatureStepMeters));
+    const float autoRadius = ComputeCurvatureRadiusXZ(autoP0, autoP1, autoP2);
+    const float defaultAutoAngleRadians = ComputeBankAngleRadians(
+        autoRadius,
+        (std::max)(0.0f, road.defaultTargetSpeed),
+        (std::max)(0.0f, road.defaultFriction));
+
+    if (road.bankAngle.empty())
+        return defaultAutoAngleRadians;
+
+    struct ResolvedBankPoint
+    {
+        float distance = 0.0f;
+        float angleRadians = 0.0f;
+    };
+
+    std::vector<ResolvedBankPoint> resolvedPoints;
+    resolvedPoints.reserve(road.bankAngle.size());
+    for (const BankAnglePoint& point : road.bankAngle)
+    {
+        const float pointDistance = std::clamp(point.uCoord, 0.0f, 1.0f) * totalLength;
+        const XMFLOAT3 p0 = SamplePolylineAtDistance(curve, arcLengths, (std::max)(0.0f, pointDistance - kBankCurvatureStepMeters));
+        const XMFLOAT3 p1 = SamplePolylineAtDistance(curve, arcLengths, pointDistance);
+        const XMFLOAT3 p2 = SamplePolylineAtDistance(curve, arcLengths, (std::min)(totalLength, pointDistance + kBankCurvatureStepMeters));
+        const float radius = ComputeCurvatureRadiusXZ(p0, p1, p2);
+        const float autoAngleRadians = ComputeBankAngleRadians(
+            radius,
+            (std::max)(0.0f, point.targetSpeed),
+            (std::max)(0.0f, road.defaultFriction));
+        resolvedPoints.push_back(
+            {
+                pointDistance,
+                point.overrideBank ? XMConvertToRadians(std::clamp(point.bankAngle, 0.0f, 90.0f)) : autoAngleRadians
+            });
+    }
+
+    std::sort(
+        resolvedPoints.begin(),
+        resolvedPoints.end(),
+        [](const ResolvedBankPoint& a, const ResolvedBankPoint& b)
+        {
+            return a.distance < b.distance;
+        });
+
+    if (distance <= resolvedPoints.front().distance + eps)
+        return resolvedPoints.front().angleRadians;
+    if (distance >= resolvedPoints.back().distance - eps)
+        return resolvedPoints.back().angleRadians;
+
+    for (size_t i = 1; i < resolvedPoints.size(); ++i)
+    {
+        if (distance > resolvedPoints[i].distance)
+            continue;
+
+        const float span = resolvedPoints[i].distance - resolvedPoints[i - 1].distance;
+        if (span <= eps)
+            return resolvedPoints[i].angleRadians;
+        const float t = (distance - resolvedPoints[i - 1].distance) / span;
+        return resolvedPoints[i - 1].angleRadians +
+            (resolvedPoints[i].angleRadians - resolvedPoints[i - 1].angleRadians) * t;
+    }
+
+    return resolvedPoints.back().angleRadians;
+}
+
 bool NearlyEqual3(XMFLOAT3 a, XMFLOAT3 b, float epsilon = 1e-3f)
 {
     return Distance3(a, b) <= epsilon;
@@ -244,6 +399,10 @@ std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(const Road&
 std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(
     const Road& road,
     const std::vector<XMFLOAT3>& baseCurve);
+std::vector<float> BuildPolylineArcLengths(const std::vector<XMFLOAT3>& points);
+XMFLOAT3 SamplePolylineAtDistance(const std::vector<XMFLOAT3>& points,
+                                  const std::vector<float>& cumulativeLengths,
+                                  float distance);
 
 struct VerticalPreviewSegment
 {
@@ -1248,6 +1407,7 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadVerticalPreviewCurv
         cache.verticalDetailedValid = true;
         cache.verticalPositionsValid = false;
         cache.verticalArcLengthsValid = false;
+        cache.bankFrameSamplesValid = false;
         cache.verticalGradeColorsValid = false;
         cache.metricsValid = false;
     }
@@ -1299,6 +1459,75 @@ const std::vector<float>& PolylineEditor::GetRoadParametricPreviewCurveArcLength
     if (m_mode == EditorMode::BankAngleEdit || m_mode == EditorMode::LaneEdit)
         return GetRoadVerticalPreviewCurveArcLengthsCached(roadIndex);
     return GetRoadPreviewCurveArcLengthsCached(roadIndex);
+}
+
+const std::vector<BankFrameSample>& PolylineEditor::GetRoadBankFrameSamplesCached(int roadIndex) const
+{
+    static const std::vector<BankFrameSample> kEmpty;
+    if (!m_network || roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return kEmpty;
+
+    EnsureRoadPreviewCacheSize();
+    RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
+    if (!cache.bankFrameSamplesValid)
+    {
+        cache.bankFrameSamples.clear();
+        const Road& road = m_network->roads[roadIndex];
+        const std::vector<XMFLOAT3>& curve = GetRoadVerticalPreviewCurveCached(roadIndex);
+        const std::vector<float>& arcLengths = GetRoadVerticalPreviewCurveArcLengthsCached(roadIndex);
+        if (curve.size() >= 2 && !arcLengths.empty())
+        {
+            const float totalLength = arcLengths.back();
+            const auto appendSample = [&](float distance)
+            {
+                const float clampedDistance = std::clamp(distance, 0.0f, totalLength);
+                const float prevDistance = (std::max)(0.0f, clampedDistance - kBankCurvatureStepMeters);
+                const float nextDistance = (std::min)(totalLength, clampedDistance + kBankCurvatureStepMeters);
+                const XMFLOAT3 p0 = SamplePolylineAtDistance(curve, arcLengths, prevDistance);
+                const XMFLOAT3 p1 = SamplePolylineAtDistance(curve, arcLengths, clampedDistance);
+                const XMFLOAT3 p2 = SamplePolylineAtDistance(curve, arcLengths, nextDistance);
+
+                XMFLOAT3 tangent = Normalize3(Sub3(p2, p0));
+                if (Length3(tangent) <= 1e-5f)
+                    tangent = Normalize3(Sub3(p2, p1));
+                if (Length3(tangent) <= 1e-5f)
+                    tangent = Normalize3(Sub3(p1, p0));
+                if (Length3(tangent) <= 1e-5f)
+                    tangent = { 0.0f, 0.0f, 1.0f };
+
+                const XMFLOAT3 halfVector = ComputeHalfVectorXZ(p0, p1, p2);
+                XMFLOAT3 baseLeft = Normalize3(Cross3({ 0.0f, 1.0f, 0.0f }, tangent));
+                if (Length3(baseLeft) <= 1e-5f)
+                    baseLeft = { 1.0f, 0.0f, 0.0f };
+                XMFLOAT3 baseUp = Normalize3(Cross3(tangent, baseLeft));
+                if (Length3(baseUp) <= 1e-5f)
+                    baseUp = { 0.0f, 1.0f, 0.0f };
+
+                const float localHalfX = DotXZ(halfVector, baseLeft);
+                const float sign = localHalfX < 0.0f ? -1.0f : 1.0f;
+                const float angleRadians = EvaluateInterpolatedBankAngleRadians(road, curve, arcLengths, clampedDistance);
+                XMFLOAT3 bankLeft = Normalize3(Add3(
+                    Scale3(baseLeft, cosf(angleRadians)),
+                    Scale3(baseUp, sign * sinf(angleRadians))));
+                XMFLOAT3 bankUp = Normalize3(Cross3(tangent, bankLeft));
+                if (Length3(bankUp) <= 1e-5f)
+                    bankUp = baseUp;
+
+                cache.bankFrameSamples.push_back({ p1, bankLeft, bankUp, angleRadians });
+            };
+
+            for (float distance = 0.0f; distance <= totalLength + 1e-4f; distance += kBankVectorSpacingMeters)
+                appendSample(distance);
+
+            if (cache.bankFrameSamples.empty() ||
+                Distance3(cache.bankFrameSamples.back().pos, curve.back()) > 1e-3f)
+            {
+                appendSample(totalLength);
+            }
+        }
+        cache.bankFrameSamplesValid = true;
+    }
+    return cache.bankFrameSamples;
 }
 
 const std::vector<unsigned int>& PolylineEditor::GetRoadVerticalGradeColorsCached(int roadIndex) const
@@ -6173,6 +6402,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const ImU32 colVerticalSel = IM_COL32(255, 110, 40, 255);
     const ImU32 colBank = IM_COL32(110, 210, 255, 245);
     const ImU32 colBankSel = IM_COL32(40, 140, 255, 255);
+    const ImU32 colBankUp = IM_COL32(120, 255, 120, 220);
+    const ImU32 colBankLeft = IM_COL32(120, 210, 255, 220);
     const ImU32 colLane = IM_COL32(150, 255, 120, 245);
     const ImU32 colLaneSel = IM_COL32(70, 210, 60, 255);
     bool showClothoidPreview = true;
@@ -6355,8 +6586,25 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road) || m_mode != EditorMode::BankAngleEdit || road.bankAngle.empty())
+        if (!IsRoadVisible(road) || m_mode != EditorMode::BankAngleEdit)
             continue;
+
+        const std::vector<BankFrameSample>& bankFrameSamples = GetRoadBankFrameSamplesCached(ri);
+        for (const BankFrameSample& sample : bankFrameSamples)
+        {
+            ImVec2 origin;
+            ImVec2 upEnd;
+            ImVec2 leftEnd;
+            if (!WorldToScreen(sample.pos, viewProj, vpW, vpH, origin) ||
+                !WorldToScreen(Add3(sample.pos, Scale3(sample.up, kBankVectorDisplayLength)), viewProj, vpW, vpH, upEnd) ||
+                !WorldToScreen(Add3(sample.pos, Scale3(sample.left, kBankVectorDisplayLength)), viewProj, vpW, vpH, leftEnd))
+            {
+                continue;
+            }
+
+            dl->AddLine(origin, upEnd, colBankUp, 1.5f);
+            dl->AddLine(origin, leftEnd, colBankLeft, 1.5f);
+        }
 
         const std::vector<XMFLOAT3>& previewCurve = GetRoadParametricPreviewCurveCached(ri);
         if (previewCurve.size() < 2)
@@ -7277,6 +7525,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         {
             PushUndoState();
             road.defaultFriction = (std::max)(0.0f, defaultFriction);
+            InvalidateRoadPreviewCache(m_activeRoad);
         }
 
         float defaultTargetSpeed = road.defaultTargetSpeed;
@@ -7284,6 +7533,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         {
             PushUndoState();
             road.defaultTargetSpeed = (std::max)(0.0f, defaultTargetSpeed);
+            InvalidateRoadPreviewCache(m_activeRoad);
         }
 
         const RoadGroup* currentGroup = m_network->FindGroupById(road.groupId);

@@ -25,6 +25,7 @@
   ],
   "roadGradeRedThresholdPercent": 12.0,
   "roadLineThickness": 1.0,
+  "roadTerrainClearanceInterval": 5.0,
   "roadVertexColor": [
     0.6274510025978088,
     0.6274510025978088,
@@ -44,10 +45,11 @@
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": false,
+  "showRoadGradeGradient": true,
   "showRoadGuidelines": true,
   "showRoadNames": false,
   "showRoadPreviewMetrics": false,
+  "showRoadTerrainClearance": false,
   "showTerrainWindow": false,
   "windowLayouts": {
     "camera": {
@@ -59,20 +61,20 @@
     "displaySettings": {
       "height": 614.0,
       "width": 380.0,
-      "x": 951.0,
-      "y": 206.0
+      "x": 1381.0,
+      "y": 29.0
     },
     "properties": {
       "height": 717.0,
       "width": 380.0,
-      "x": 1195.0,
-      "y": 34.0
+      "x": 980.0,
+      "y": 73.0
     },
     "roadEditor": {
       "height": 478.0,
       "width": 523.0,
-      "x": 16.0,
-      "y": 64.0
+      "x": 14.0,
+      "y": 36.0
     },
     "terrain": {
       "height": 330.0,

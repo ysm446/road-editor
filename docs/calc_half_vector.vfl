@@ -1,0 +1,61 @@
+//
+// ハーフベクトルを計算する（外側のベクトル）
+// Run Over: Primitives
+//
+// 概要:
+// - 各中間点 p1 について、前後の線分 p0-p1, p1-p2 の外角二等分線を求める
+// - ベクトルは p1 から p0 側・p2 側へ向かう単位ベクトルを足し、その正規化で作る
+// - 端点や退化ケースでは安定した二等分線を定義しにくいので、ゼロベクトルを入れる
+// - 結果は point 属性 __h に保存する
+//
+
+float eps = 1e-6;
+
+int pts[] = primpoints(0, @primnum);
+if(len(pts) < 3)
+{
+    return;
+}
+
+// 端点は前後2方向を持たないため、基準値としてゼロを入れておく。
+setpointattrib(0, "__h", pts[0], {0, 0, 0});
+setpointattrib(0, "__h", pts[-1], {0, 0, 0});
+
+for(int i = 1; i < len(pts)-1; i++)
+{
+    int next = i + 1;
+    int prev = i - 1;
+    
+    //
+    // p0------p1------p2
+    //
+    vector p0 = point(0, "P", pts[prev]);
+    vector p1 = point(0, "P", pts[i]);
+    vector p2 = point(0, "P", pts[next]);
+
+    // p1 から見た前後方向ベクトル。外角側の二等分線を作るため、どちらも p1 から外向き。
+    vector e0 = p1 - p0;
+    vector e1 = p1 - p2;
+    float len0 = length(e0);
+    float len1 = length(e1);
+    if(len0 < eps || len1 < eps)
+    {
+        // 重複点があると方向が定義できないので 0 に落とす。
+        setpointattrib(0, "__h", pts[i], {0, 0, 0});
+        continue;
+    }
+
+    vector v0 = e0 / len0;
+    vector v1 = e1 / len1;
+
+    // 単位ベクトルの和が外角二等分線になる。一直線に近い場合は和が 0 に近づく。
+    vector sum = v0 + v1;
+    float sumLen = length(sum);
+    vector h = {0, 0, 0};
+    if(sumLen >= eps)
+    {
+        h = sum / sumLen;
+    }
+    
+    setpointattrib(0, "__h", pts[i], h);
+}

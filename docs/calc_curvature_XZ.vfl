@@ -1,0 +1,101 @@
+//
+// ポリラインの各ポイントXZ平面の曲率を計算する
+// Run Over: Primitives
+//
+// 概要:
+// - 各ポイントの前後 dist だけ離れた位置を同一プリミティブ上でサンプリングする
+// - 3点 p0, p1, p2 を XZ 平面へ投影し、円弧近似から曲率半径を求める
+// - chord 長 c と矢高 h から半径 radius = (c^2 / 4 + h^2) / (2h) を計算する
+// - 曲率は 1 / radius として各ポイントへ保存し、直線や退化ケースでは 0 を入れる
+//
+float dist = `chs("../curvatureStep")`;   // 曲率を計算する幅(デフォルトは10m程度)
+float eps = 1e-6;
+
+int pts[] = primpoints(0, @primnum);
+
+float curveLength = primintrinsic(0, "measuredperimeter", @primnum);
+if(curveLength < eps)
+{
+    // 長さ 0 のプリミティブでは前後サンプリングできない。
+    return;
+}
+
+// 将来的な閉曲線対応のための確認値。現状のロジックでは未使用。
+int npt = neighbourcount(0, pts[0]);
+
+for(int i = 0; i < len(pts); i++)
+{
+    vector pos = point(0, "P", pts[i]);
+    int index;
+    vector uv;
+    xyzdist(0, pos, index, uv);
+    
+    // サンプリング幅 dist を、プリミティブ全長に対する正規化位置へ変換する。
+    float x0 = clamp(uv.x - (dist / curveLength), 0, 1);
+    float x2 = clamp(uv.x + (dist / curveLength), 0, 1);
+    
+    vector p0 = primuv(0, "P", index, set(x0, 0));
+    vector p1 = point(0, "P", pts[i]);
+    vector p2 = primuv(0, "P", index, set(x2, 0));
+    
+    // 平面線形の曲率を見たいので、XZ 平面へ投影して Y 成分を無視する。
+    p0.y = 0;
+    p1.y = 0;
+    p2.y = 0;
+    
+    // 円弧近似に使う chord 長。p0-p2 が極端に短い場合は曲率を定義しない。
+    float c = length(p2 - p0);
+    if(c < eps)
+    {
+        setpointattrib(0, "__radius", pts[i], 0.0);
+        setpointattrib(0, "__theta", pts[i], PI);
+        setpointattrib(0, "__curvature", pts[i], 0.0);
+        continue;
+    }
+
+    // p1 から chord p0-p2 へ下ろした垂線の足を求める。
+    // この chord からの離れ量を矢高 h として円弧半径を復元する。
+    vector dir = normalize(p2 - p0);
+    vector p = p0 + dot((p1 - p0), dir) * dir;
+    // 矢高。直線に近いほど 0 に近づく。
+    float h = length(p - p1);
+    
+    if(h < 0.0001)
+    {
+        // ほぼ直線なので半径無限大 ≒ 曲率 0 とみなす。
+        setpointattrib(0, "__radius", pts[i], 0.0);
+        setpointattrib(0, "__theta", pts[i], PI);
+        setpointattrib(0, "__curvature", pts[i], 0.0);
+    }
+    else
+    {
+        // chord 長 c と矢高 h から円弧半径を復元する式。
+        float radius = (c * c / 4 + h * h) / (2 * h);
+        if(radius < eps)
+        {
+            setpointattrib(0, "__radius", pts[i], 0.0);
+            setpointattrib(0, "__theta", pts[i], PI);
+            setpointattrib(0, "__curvature", pts[i], 0.0);
+            continue;
+        }
+
+        // 浮動小数誤差で asin の定義域を少しはみ出すことがあるので clamp する。
+        float asinArg = clamp(c / (2 * radius), -1.0, 1.0);
+        float theta = 2 * asin(asinArg);
+        
+        if(theta > radians(0.0))
+        {
+            setpointattrib(0, "__radius", pts[i], radius);
+            setpointattrib(0, "__theta", pts[i], theta);
+            setpointattrib(0, "__curvature", pts[i], 1.0/radius);
+        }
+        // 直線の場合
+        else
+        {
+            // 数値誤差などで極小角になった場合も曲率 0 として扱う。
+            setpointattrib(0, "__radius", pts[i], 0.0);
+            setpointattrib(0, "__theta", pts[i], PI);
+            setpointattrib(0, "__curvature", pts[i], 0.0);
+        }
+    }
+}
