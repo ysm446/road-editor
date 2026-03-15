@@ -626,6 +626,8 @@ void App::LoadViewSettings()
     m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
     m_roadTerrainClearanceInterval = 10.0f;
+    m_bankVectorInterval = 5.0f;
+    m_bankAngleColorMaxDegrees = 15.0f;
     m_showContours = false;
     m_contourInterval = 5.0f;
     m_showDisplaySettingsWindow = false;
@@ -664,6 +666,8 @@ void App::LoadViewSettings()
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
             m_roadTerrainClearanceInterval = root.value("roadTerrainClearanceInterval", 10.0f);
+            m_bankVectorInterval = root.value("bankVectorInterval", 5.0f);
+            m_bankAngleColorMaxDegrees = root.value("bankAngleColorMaxDegrees", 15.0f);
             m_contourInterval = root.value("contourInterval", 5.0f);
             m_showDisplaySettingsWindow = root.value("showDisplaySettingsWindow", false);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
@@ -739,6 +743,8 @@ void App::LoadViewSettings()
     m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
     m_editor.SetShowRoadTerrainClearance(m_showRoadTerrainClearance);
     m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
+    m_editor.SetBankVectorInterval(m_bankVectorInterval);
+    m_editor.SetBankAngleColorMaxDegrees(m_bankAngleColorMaxDegrees);
     m_editor.SetRoadLineThickness(m_roadLineThickness);
     m_editor.SetPreviewCurveThickness(m_previewCurveThickness);
     m_editor.SetSelectedRoadLineThickness(m_selectedRoadLineThickness);
@@ -779,6 +785,8 @@ void App::SaveViewSettings() const
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
             { "roadTerrainClearanceInterval", m_roadTerrainClearanceInterval },
+            { "bankVectorInterval", m_bankVectorInterval },
+            { "bankAngleColorMaxDegrees", m_bankAngleColorMaxDegrees },
             { "contourInterval", m_contourInterval },
             { "showDisplaySettingsWindow", m_showDisplaySettingsWindow },
             { "gridBaseScale", m_gridBaseScale },
@@ -2188,6 +2196,20 @@ void App::Render()
                         m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
                         SaveViewSettings();
                     }
+                }
+                float bankVectorInterval = m_bankVectorInterval;
+                if (ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u30D9\u30AF\u30C8\u30EB\u9593\u9694 (m)", &bankVectorInterval, 1.0f, 5.0f, "%.1f"))
+                {
+                    m_bankVectorInterval = (std::max)(0.5f, bankVectorInterval);
+                    m_editor.SetBankVectorInterval(m_bankVectorInterval);
+                    SaveViewSettings();
+                }
+                float bankAngleMaxDegrees = m_bankAngleColorMaxDegrees;
+                if (ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u89D2\u4E0A\u9650 (deg)", &bankAngleMaxDegrees, 1.0f, 5.0f, "%.1f"))
+                {
+                    m_bankAngleColorMaxDegrees = (std::max)(0.1f, bankAngleMaxDegrees);
+                    m_editor.SetBankAngleColorMaxDegrees(m_bankAngleColorMaxDegrees);
+                    SaveViewSettings();
                 }
             }
 

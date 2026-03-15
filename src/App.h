@@ -143,6 +143,8 @@ private:
     bool              m_showFps = true;
     float             m_roadGradeRedThresholdPercent = 12.0f;
     float             m_roadTerrainClearanceInterval = 10.0f;
+    float             m_bankVectorInterval = 5.0f;
+    float             m_bankAngleColorMaxDegrees = 15.0f;
     bool              m_prevPathPickLButton = false;
     bool              m_sunDragActive = false;
     POINT             m_lastSunMouse = { 0, 0 };

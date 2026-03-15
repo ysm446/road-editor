@@ -19047,7 +19047,7 @@
       "bankAngle": [],
       "closed": false,
       "defaultFriction": 0.15000000596046448,
-      "defaultTargetSpeed": 30.0,
+      "defaultTargetSpeed": 60.0,
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,

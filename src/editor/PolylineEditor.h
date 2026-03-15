@@ -160,6 +160,8 @@ public:
     void SetRoadGradeRedThresholdPercent(float value);
     void SetShowRoadTerrainClearance(bool show);
     void SetRoadTerrainClearanceInterval(float value);
+    void SetBankVectorInterval(float value);
+    void SetBankAngleColorMaxDegrees(float value);
     void SetRoadLineThickness(float value) { m_roadLineThickness = value; }
     void SetPreviewCurveThickness(float value) { m_previewCurveThickness = value; }
     void SetSelectedRoadLineThickness(float value) { m_selectedRoadLineThickness = value; }
@@ -287,6 +289,7 @@ private:
     void InvalidateAllGradeColorCaches();
     void InvalidateRoadGradeColorCache(int roadIndex);
     void InvalidateAllTerrainClearanceCaches();
+    void InvalidateAllBankCaches();
     void EnsureRoadPreviewCacheSize() const;
     const std::vector<PreviewCurvePoint>& GetRoadPreviewCurveDetailedCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadPreviewCurveCached(int roadIndex) const;
@@ -297,6 +300,7 @@ private:
     const std::vector<DirectX::XMFLOAT3>& GetRoadParametricPreviewCurveCached(int roadIndex) const;
     const std::vector<float>& GetRoadParametricPreviewCurveArcLengthsCached(int roadIndex) const;
     const std::vector<BankFrameSample>& GetRoadBankFrameSamplesCached(int roadIndex) const;
+    const std::vector<unsigned int>& GetRoadBankPreviewColorsCached(int roadIndex) const;
     const std::vector<unsigned int>& GetRoadVerticalGradeColorsCached(int roadIndex) const;
     const std::vector<TerrainClearanceSample>& GetRoadTerrainClearanceSamplesCached(int roadIndex) const;
     const RoadPreviewMetrics& GetRoadPreviewMetricsCached(int roadIndex) const;
@@ -340,6 +344,7 @@ private:
         bool verticalPositionsValid = false;
         bool verticalArcLengthsValid = false;
         bool bankFrameSamplesValid = false;
+        bool bankPreviewColorsValid = false;
         bool verticalGradeColorsValid = false;
         bool terrainClearanceValid = false;
         bool metricsValid = false;
@@ -350,6 +355,7 @@ private:
         std::vector<DirectX::XMFLOAT3> verticalPositions;
         std::vector<float> verticalArcLengths;
         std::vector<BankFrameSample> bankFrameSamples;
+        std::vector<unsigned int> bankPreviewColors;
         std::vector<unsigned int> verticalGradeColors;
         std::vector<TerrainClearanceSample> terrainClearanceSamples;
         RoadPreviewMetrics metrics;
@@ -436,6 +442,8 @@ private:
     bool m_scaleXZMode = false;
     float m_roadGradeRedThresholdPercent = 12.0f;
     float m_roadTerrainClearanceInterval = 10.0f;
+    float m_bankVectorInterval = 5.0f;
+    float m_bankAngleColorMaxDegrees = 15.0f;
     float m_roadLineThickness = 2.0f;
     float m_previewCurveThickness = 2.0f;
     float m_selectedRoadLineThickness = 3.0f;
