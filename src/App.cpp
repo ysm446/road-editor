@@ -2158,7 +2158,7 @@ void App::Render()
                 if (m_showRoadGradeGradient)
                 {
                     float threshold = m_roadGradeRedThresholdPercent;
-                    if (ImGui::InputFloat(u8"\u8D64\u95BE\u5024 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
+                    if (ImGui::InputFloat(u8"\u52FE\u914D\u4E0A\u9650 (%)", &threshold, 0.5f, 1.0f, "%.1f"))
                     {
                         m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
                         m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);

@@ -57,6 +57,32 @@ XMFLOAT4 Lerp4(XMFLOAT4 a, XMFLOAT4 b, float t)
     };
 }
 
+XMFLOAT3 HsvToRgb(float hue, float saturation, float value)
+{
+    const float wrappedHue = hue - floorf(hue);
+    const float clampedSaturation = std::clamp(saturation, 0.0f, 1.0f);
+    const float clampedValue = std::clamp(value, 0.0f, 1.0f);
+    if (clampedSaturation <= 1e-6f)
+        return { clampedValue, clampedValue, clampedValue };
+
+    const float h = wrappedHue * 6.0f;
+    const int sector = static_cast<int>(floorf(h));
+    const float f = h - static_cast<float>(sector);
+    const float p = clampedValue * (1.0f - clampedSaturation);
+    const float q = clampedValue * (1.0f - clampedSaturation * f);
+    const float t = clampedValue * (1.0f - clampedSaturation * (1.0f - f));
+
+    switch (sector % 6)
+    {
+    case 0: return { clampedValue, t, p };
+    case 1: return { q, clampedValue, p };
+    case 2: return { p, clampedValue, t };
+    case 3: return { p, q, clampedValue };
+    case 4: return { t, p, clampedValue };
+    default: return { clampedValue, p, q };
+    }
+}
+
 float DistanceXZ3(XMFLOAT3 a, XMFLOAT3 b)
 {
     const float dx = a.x - b.x;
@@ -172,14 +198,18 @@ void AppendUniquePoint(std::vector<XMFLOAT3>& samples, XMFLOAT3 point)
 
 XMFLOAT4 PreviewGradeColor(float gradePercent, float redThresholdPercent)
 {
-    const XMFLOAT4 colorLow = { 0.45f, 0.95f, 0.95f, 0.9f };
-    const XMFLOAT4 colorMid = { 1.0f, 0.88f, 0.20f, 0.95f };
-    const XMFLOAT4 colorHigh = { 1.0f, 0.24f, 0.18f, 1.0f };
     const float safeThreshold = (std::max)(0.1f, redThresholdPercent);
-    const float t = std::clamp(gradePercent / safeThreshold, 0.0f, 1.0f);
-    if (t < 0.5f)
-        return Lerp4(colorLow, colorMid, t * 2.0f);
-    return Lerp4(colorMid, colorHigh, (t - 0.5f) * 2.0f);
+    const float ratio = gradePercent / safeThreshold;
+    if (ratio > 1.0f)
+    {
+        const XMFLOAT3 warningColor = HsvToRgb(0.9f, 1.0f, 0.8f);
+        return { warningColor.x, warningColor.y, warningColor.z, 1.0f };
+    }
+
+    const float clampedRatio = std::clamp(ratio, 0.0f, 1.0f);
+    const float hue = 0.5f - clampedRatio * 0.45f;
+    const XMFLOAT3 color = HsvToRgb(hue, clampedRatio, 0.8f);
+    return { color.x, color.y, color.z, 1.0f };
 }
 
 XMFLOAT3 QuadraticBezier(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, float t)

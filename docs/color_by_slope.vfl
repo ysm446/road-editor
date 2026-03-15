@@ -1,0 +1,60 @@
+//
+// 縦断方向の勾配を計算し、色をつける
+// 閾値を超えると急に色が飛んで分かりやすくするようにしている。
+// Run Over: Primitives
+//
+// 概要:
+// - 各プリミティブの隣接2点から、XZ 平面上の水平距離に対する Y の変化量を求める
+// - 勾配 = 高低差 / 水平距離 * 100 として％勾配を計算し、各終点に __slope を保存する
+// - 勾配の絶対値を使って色を決め、緩い区間から急な区間まで見分けやすくする
+// - maxSlope を超えた区間は警告色に飛ばして、基準超過を目視しやすくする
+//
+float maxValue = `chs("../maxSlope")`;    // 上限の勾配（％）（赤く表示される値）
+float eps = 1e-6;
+
+int pts[] = primpoints(0, @primnum);
+
+for(int i = 1; i < len(pts); i++)
+{
+    vector p0 = point(0, "P", pts[i-1]);
+    vector p1 = point(0, "P", pts[i]);
+    
+    vector diff = p1 - p0;
+    
+    float h = diff.y;
+    // 水平距離は XZ 平面上の長さとして測る。
+    // Y は高低差として別で使うので、ここでは除外する。
+    float bottom = length(set(diff.x, 0, diff.z));
+
+    if(bottom < eps)
+    {
+        // 水平距離がほぼ 0 の区間は縦断勾配を定義できないので 0 扱いにする。
+        setpointattrib(0, "__slope", pts[i], 0.0);
+        continue;
+    }
+    
+    // 勾配の計算（傾き、100倍して％の単位に合わせる）
+    float slope = h / bottom * 100;
+    setpointattrib(0, "__slope", pts[i], slope);
+
+    // 上り下りではなく勾配のきつさを見たいので絶対値で色分けする。
+    float value = abs(slope);
+    float ratio = value/maxValue;
+    if(ratio > 1.0)
+    {
+        // 閾値超過は通常グラデーションから外し、目立つ警告色にする。
+        float hue = 0.9;
+        vector color =  hsvtorgb(hue, 1.0, 0.8);
+        setpointattrib(0, "Cd", pts[i], color);
+    }
+    else
+    {
+        ratio = clamp(ratio, 0, 1.0);
+        // 緩勾配では寒色寄り、急勾配に近づくほど暖色寄りへ寄せる。
+        float hue = ratio * (0.45 * -1) + 0.5;
+        vector color =  hsvtorgb(hue, ratio, 0.8);
+        setpointattrib(0, "Cd", pts[i], color);
+    }
+    //float hue = ratio * 0.5 * -1 + 0.5;
+    //vector color =  hsvtorgb(hue, ratio, 0.8);
+}
