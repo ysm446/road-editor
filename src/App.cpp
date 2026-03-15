@@ -1732,6 +1732,8 @@ void App::Render()
             ImGui::Separator();
             if (ImGui::MenuItem(u8"\u4EA4\u5DEE\u70B9\u3092\u81EA\u52D5\u4F5C\u6210"))
                 m_editor.AutoCreateIntersections();
+            if (ImGui::MenuItem(u8"\u9078\u629E\u3057\u305F\u4EA4\u5DEE\u70B9\u3092\u9053\u8DEF\u3067\u63A5\u7D9A"))
+                m_editor.ConnectSelectedIntersectionsWithRoad();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(u8"\u8868\u793A"))

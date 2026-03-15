@@ -15,6 +15,7 @@ constexpr int kPreviewCurveSubdivisions = 12;
 constexpr float kVerticalCurveDefaultLength = 50.0f;
 constexpr float kBankAngleDefaultTargetSpeed = 40.0f;
 constexpr float kLaneSectionDefaultWidth = 3.0f;
+constexpr float kMinIntersectionSpacingMeters = 10.0f;
 
 float Distance3(XMFLOAT3 a, XMFLOAT3 b)
 {
@@ -1395,6 +1396,22 @@ int PolylineEditor::FindNearestIntersection(
     return best;
 }
 
+int PolylineEditor::FindIntersectionWithinDistance(XMFLOAT3 pos,
+                                                   float maxDistance) const
+{
+    if (!m_network)
+        return -1;
+
+    const float safeMaxDistance = (std::max)(0.0f, maxDistance);
+    for (int i = 0; i < static_cast<int>(m_network->intersections.size()); ++i)
+    {
+        if (DistanceXZ3(m_network->intersections[i].pos, pos) < safeMaxDistance)
+            return i;
+    }
+
+    return -1;
+}
+
 int PolylineEditor::FindGroupIndexById(const std::string& id) const
 {
     return m_network ? m_network->FindGroupIndexById(id) : -1;
@@ -1721,6 +1738,77 @@ bool PolylineEditor::AutoCreateIntersectionsFromEndpoints()
     m_statusMessage = createdCount == 1
         ? "1 intersection created"
         : std::to_string(createdCount) + " intersections created";
+    return true;
+}
+
+bool PolylineEditor::ConnectSelectedIntersectionsWithRoad()
+{
+    if (!m_network)
+        return false;
+
+    std::vector<int> intersectionIndices;
+    CollectSelectedIntersectionIndices(intersectionIndices);
+    if (intersectionIndices.size() != 2)
+    {
+        m_statusMessage = "Select exactly 2 intersections";
+        return false;
+    }
+
+    const int firstIndex = intersectionIndices[0];
+    const int secondIndex = intersectionIndices[1];
+    if (firstIndex < 0 ||
+        firstIndex >= static_cast<int>(m_network->intersections.size()) ||
+        secondIndex < 0 ||
+        secondIndex >= static_cast<int>(m_network->intersections.size()) ||
+        firstIndex == secondIndex)
+    {
+        m_statusMessage = "Select exactly 2 intersections";
+        return false;
+    }
+
+    const Intersection& firstIntersection = m_network->intersections[firstIndex];
+    const Intersection& secondIntersection = m_network->intersections[secondIndex];
+    if (Distance3(firstIntersection.pos, secondIntersection.pos) <= 1e-4f)
+    {
+        m_statusMessage = "Selected intersections are too close to connect";
+        return false;
+    }
+
+    PushUndoState();
+    m_network->EnsureDefaultGroup();
+
+    const int newRoadIndex = m_network->AddRoad(
+        "Road " + std::to_string(m_network->roads.size()));
+    if (newRoadIndex < 0 || newRoadIndex >= static_cast<int>(m_network->roads.size()))
+    {
+        m_statusMessage = "Road creation failed";
+        return false;
+    }
+
+    Road& newRoad = m_network->roads[newRoadIndex];
+    newRoad.groupId = !firstIntersection.groupId.empty()
+        ? firstIntersection.groupId
+        : newRoad.groupId;
+    newRoad.startIntersectionId = firstIntersection.id;
+    newRoad.endIntersectionId = secondIntersection.id;
+
+    RoadPoint startPoint;
+    startPoint.pos = firstIntersection.pos;
+    startPoint.width = m_defaultWidth;
+    RoadPoint endPoint;
+    endPoint.pos = secondIntersection.pos;
+    endPoint.width = m_defaultWidth;
+    newRoad.points.push_back(startPoint);
+    newRoad.points.push_back(endPoint);
+
+    SelectSingleRoad(newRoadIndex);
+    ClearPointSelection();
+    ClearIntersectionSelection();
+    m_activeIntersection = -1;
+    m_activeGizmoAxis = GizmoAxis::None;
+    m_hoverSnapIntersection = -1;
+    m_dragging = false;
+    m_statusMessage = "Road created between intersections";
     return true;
 }
 
@@ -3839,6 +3927,12 @@ void PolylineEditor::Update(int vpW, int vpH,
     {
         if (lClick && hasHit)
         {
+            if (FindIntersectionWithinDistance(hitPos, kMinIntersectionSpacingMeters) >= 0)
+            {
+                m_statusMessage = "Cannot place an intersection within 10m of another intersection";
+                return;
+            }
+
             m_network->EnsureDefaultGroup();
             PushUndoState();
             m_activeIntersection = m_network->AddIntersection(hitPos);

@@ -1,11 +1,11 @@
 {
   "camera": {
-    "azimuth": -1.1699981689453125,
-    "distance": 880.0,
-    "elevation": 0.5899999141693115,
-    "targetX": 158.87542724609375,
-    "targetY": -146.44277954101563,
-    "targetZ": 42.0814208984375
+    "azimuth": -1.9049975872039795,
+    "distance": 879.9998779296875,
+    "elevation": 0.8250007033348083,
+    "targetX": -72.18550872802734,
+    "targetY": -153.57598876953125,
+    "targetZ": 23.888019561767578
   },
   "contours": {
     "color": [
@@ -29,7 +29,7 @@
     "offsetX": 0.0,
     "offsetY": 0.0,
     "offsetZ": 0.0,
-    "opacity": 0.33000001311302185,
+    "opacity": 0.3700000047683716,
     "path": "heightmap.png",
     "shadowBias": 0.001500000013038516,
     "shadowStrength": 0.7200000286102295,

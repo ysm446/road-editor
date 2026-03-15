@@ -117,6 +117,7 @@ public:
     void PerformUndo() { Undo(); }
     void PerformRedo() { Redo(); }
     bool AutoCreateIntersections();
+    bool ConnectSelectedIntersectionsWithRoad();
 
 private:
     // Unproject a screen pixel to a world-space ray
@@ -151,6 +152,8 @@ private:
     int FindNearestIntersection(int vpW, int vpH,
                                 DirectX::XMFLOAT2 px,
                                 DirectX::XMMATRIX viewProj) const;
+    int FindIntersectionWithinDistance(DirectX::XMFLOAT3 pos,
+                                       float maxDistance) const;
     int FindGroupIndexById(const std::string& id) const;
     bool IsRoadVisible(const Road& road) const;
     bool IsRoadGuidelineVisible(const Road& road) const;
