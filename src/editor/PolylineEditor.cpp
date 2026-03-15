@@ -1195,6 +1195,7 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadPreviewCurveDetaile
         cache.previewDetailed = BuildRoadPreviewCurveDetailed(m_network->roads[roadIndex]);
         cache.previewDetailedValid = true;
         cache.previewPositionsValid = false;
+        cache.previewArcLengthsValid = false;
         cache.metricsValid = false;
     }
     return cache.previewDetailed;
@@ -1216,6 +1217,22 @@ const std::vector<XMFLOAT3>& PolylineEditor::GetRoadPreviewCurveCached(int roadI
     return cache.previewPositions;
 }
 
+const std::vector<float>& PolylineEditor::GetRoadPreviewCurveArcLengthsCached(int roadIndex) const
+{
+    static const std::vector<float> kEmpty;
+    if (!m_network || roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return kEmpty;
+
+    EnsureRoadPreviewCacheSize();
+    RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
+    if (!cache.previewArcLengthsValid)
+    {
+        cache.previewArcLengths = BuildPolylineArcLengths(GetRoadPreviewCurveCached(roadIndex));
+        cache.previewArcLengthsValid = true;
+    }
+    return cache.previewArcLengths;
+}
+
 const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadVerticalPreviewCurveDetailedCached(int roadIndex) const
 {
     static const std::vector<PreviewCurvePoint> kEmpty;
@@ -1230,6 +1247,7 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadVerticalPreviewCurv
             BuildRoadVerticalPreviewCurveDetailed(m_network->roads[roadIndex], GetRoadPreviewCurveCached(roadIndex));
         cache.verticalDetailedValid = true;
         cache.verticalPositionsValid = false;
+        cache.verticalArcLengthsValid = false;
         cache.verticalGradeColorsValid = false;
         cache.metricsValid = false;
     }
@@ -1253,11 +1271,34 @@ const std::vector<XMFLOAT3>& PolylineEditor::GetRoadVerticalPreviewCurveCached(i
     return cache.verticalPositions;
 }
 
+const std::vector<float>& PolylineEditor::GetRoadVerticalPreviewCurveArcLengthsCached(int roadIndex) const
+{
+    static const std::vector<float> kEmpty;
+    if (!m_network || roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return kEmpty;
+
+    EnsureRoadPreviewCacheSize();
+    RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
+    if (!cache.verticalArcLengthsValid)
+    {
+        cache.verticalArcLengths = BuildPolylineArcLengths(GetRoadVerticalPreviewCurveCached(roadIndex));
+        cache.verticalArcLengthsValid = true;
+    }
+    return cache.verticalArcLengths;
+}
+
 const std::vector<XMFLOAT3>& PolylineEditor::GetRoadParametricPreviewCurveCached(int roadIndex) const
 {
     if (m_mode == EditorMode::BankAngleEdit || m_mode == EditorMode::LaneEdit)
         return GetRoadVerticalPreviewCurveCached(roadIndex);
     return GetRoadPreviewCurveCached(roadIndex);
+}
+
+const std::vector<float>& PolylineEditor::GetRoadParametricPreviewCurveArcLengthsCached(int roadIndex) const
+{
+    if (m_mode == EditorMode::BankAngleEdit || m_mode == EditorMode::LaneEdit)
+        return GetRoadVerticalPreviewCurveArcLengthsCached(roadIndex);
+    return GetRoadPreviewCurveArcLengthsCached(roadIndex);
 }
 
 const std::vector<unsigned int>& PolylineEditor::GetRoadVerticalGradeColorsCached(int roadIndex) const
@@ -2499,7 +2540,7 @@ bool PolylineEditor::FindNearestPreviewCurveLocation(
         if (previewCurve.size() < 2)
             continue;
 
-        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        const std::vector<float>& cumulativeLengths = GetRoadParametricPreviewCurveArcLengthsCached(roadIndex);
         const float totalLength = cumulativeLengths.empty() ? 0.0f : cumulativeLengths.back();
         if (totalLength <= 1e-5f)
             continue;
@@ -4452,7 +4493,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 if (previewCurve.size() < 2)
                     continue;
 
-                const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+                const std::vector<float>& cumulativeLengths = GetRoadPreviewCurveArcLengthsCached(roadIndex);
                 for (int curveIndex = 0; curveIndex < static_cast<int>(road.verticalCurve.size()); ++curveIndex)
                 {
                     XMFLOAT3 curvePos = SamplePolylineAtNormalizedDistance(
@@ -4671,7 +4712,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 if (previewCurve.size() < 2)
                     continue;
 
-                const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+                const std::vector<float>& cumulativeLengths = GetRoadParametricPreviewCurveArcLengthsCached(roadIndex);
                 for (int pointIndex = 0; pointIndex < static_cast<int>(road.bankAngle.size()); ++pointIndex)
                 {
                     XMFLOAT3 bankPos = SamplePolylineAtNormalizedDistance(
@@ -4900,7 +4941,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 if (previewCurve.size() < 2)
                     continue;
 
-                const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+                const std::vector<float>& cumulativeLengths = GetRoadParametricPreviewCurveArcLengthsCached(roadIndex);
                 for (int pointIndex = 0; pointIndex < static_cast<int>(road.laneSections.size()); ++pointIndex)
                 {
                     XMFLOAT3 lanePos = SamplePolylineAtNormalizedDistance(
@@ -6235,7 +6276,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             continue;
 
         const std::vector<XMFLOAT3>& previewCurve = GetRoadPreviewCurveCached(ri);
-        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        const std::vector<float>& cumulativeLengths = GetRoadPreviewCurveArcLengthsCached(ri);
         for (int curveIndex = 0; curveIndex < static_cast<int>(road.verticalCurve.size()); ++curveIndex)
         {
             XMFLOAT3 curvePos = SamplePolylineAtNormalizedDistance(
@@ -6271,7 +6312,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         const std::vector<XMFLOAT3>& previewCurve = GetRoadParametricPreviewCurveCached(ri);
         if (previewCurve.size() < 2)
             continue;
-        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        const std::vector<float>& cumulativeLengths = GetRoadParametricPreviewCurveArcLengthsCached(ri);
         for (int pointIndex = 0; pointIndex < static_cast<int>(road.bankAngle.size()); ++pointIndex)
         {
             XMFLOAT3 bankPos = SamplePolylineAtNormalizedDistance(
@@ -6308,7 +6349,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         const std::vector<XMFLOAT3>& previewCurve = GetRoadParametricPreviewCurveCached(ri);
         if (previewCurve.size() < 2)
             continue;
-        const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
+        const std::vector<float>& cumulativeLengths = GetRoadParametricPreviewCurveArcLengthsCached(ri);
         for (int pointIndex = 0; pointIndex < static_cast<int>(road.laneSections.size()); ++pointIndex)
         {
             XMFLOAT3 lanePos = SamplePolylineAtNormalizedDistance(

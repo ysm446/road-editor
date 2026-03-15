@@ -282,9 +282,12 @@ private:
     void EnsureRoadPreviewCacheSize() const;
     const std::vector<PreviewCurvePoint>& GetRoadPreviewCurveDetailedCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadPreviewCurveCached(int roadIndex) const;
+    const std::vector<float>& GetRoadPreviewCurveArcLengthsCached(int roadIndex) const;
     const std::vector<PreviewCurvePoint>& GetRoadVerticalPreviewCurveDetailedCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadVerticalPreviewCurveCached(int roadIndex) const;
+    const std::vector<float>& GetRoadVerticalPreviewCurveArcLengthsCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadParametricPreviewCurveCached(int roadIndex) const;
+    const std::vector<float>& GetRoadParametricPreviewCurveArcLengthsCached(int roadIndex) const;
     const std::vector<unsigned int>& GetRoadVerticalGradeColorsCached(int roadIndex) const;
     const std::vector<TerrainClearanceSample>& GetRoadTerrainClearanceSamplesCached(int roadIndex) const;
     const RoadPreviewMetrics& GetRoadPreviewMetricsCached(int roadIndex) const;
@@ -323,15 +326,19 @@ private:
     {
         bool previewDetailedValid = false;
         bool previewPositionsValid = false;
+        bool previewArcLengthsValid = false;
         bool verticalDetailedValid = false;
         bool verticalPositionsValid = false;
+        bool verticalArcLengthsValid = false;
         bool verticalGradeColorsValid = false;
         bool terrainClearanceValid = false;
         bool metricsValid = false;
         std::vector<PreviewCurvePoint> previewDetailed;
         std::vector<DirectX::XMFLOAT3> previewPositions;
+        std::vector<float> previewArcLengths;
         std::vector<PreviewCurvePoint> verticalDetailed;
         std::vector<DirectX::XMFLOAT3> verticalPositions;
+        std::vector<float> verticalArcLengths;
         std::vector<unsigned int> verticalGradeColors;
         std::vector<TerrainClearanceSample> terrainClearanceSamples;
         RoadPreviewMetrics metrics;
