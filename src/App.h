@@ -139,8 +139,10 @@ private:
     bool              m_showIntersectionNames = true;
     bool              m_showRoadPreviewMetrics = false;
     bool              m_showRoadGradeGradient = false;
+    bool              m_showRoadTerrainClearance = false;
     bool              m_showFps = true;
     float             m_roadGradeRedThresholdPercent = 12.0f;
+    float             m_roadTerrainClearanceInterval = 10.0f;
     bool              m_prevPathPickLButton = false;
     bool              m_sunDragActive = false;
     POINT             m_lastSunMouse = { 0, 0 };

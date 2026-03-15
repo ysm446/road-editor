@@ -617,6 +617,7 @@ void App::LoadViewSettings()
     m_showIntersectionNames = true;
     m_showRoadPreviewMetrics = false;
     m_showRoadGradeGradient = false;
+    m_showRoadTerrainClearance = false;
     m_showGrid = true;
     m_showCameraWindow = false;
     m_showTerrainWindow = false;
@@ -624,6 +625,7 @@ void App::LoadViewSettings()
     m_showPropertiesWindow = true;
     m_showFps = true;
     m_roadGradeRedThresholdPercent = 12.0f;
+    m_roadTerrainClearanceInterval = 10.0f;
     m_showContours = false;
     m_contourInterval = 5.0f;
     m_showDisplaySettingsWindow = false;
@@ -653,6 +655,7 @@ void App::LoadViewSettings()
             m_showIntersectionNames = root.value("showIntersectionNames", true);
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
+            m_showRoadTerrainClearance = root.value("showRoadTerrainClearance", false);
             m_showGrid = root.value("showGrid", true);
             m_showCameraWindow = root.value("showCameraWindow", false);
             m_showTerrainWindow = root.value("showTerrainWindow", false);
@@ -660,6 +663,7 @@ void App::LoadViewSettings()
             m_showPropertiesWindow = root.value("showPropertiesWindow", true);
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
+            m_roadTerrainClearanceInterval = root.value("roadTerrainClearanceInterval", 10.0f);
             m_contourInterval = root.value("contourInterval", 5.0f);
             m_showDisplaySettingsWindow = root.value("showDisplaySettingsWindow", false);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
@@ -733,6 +737,8 @@ void App::LoadViewSettings()
     m_editor.SetShowRoadPreviewMetrics(m_showRoadPreviewMetrics);
     m_editor.SetShowRoadGradeGradient(m_showRoadGradeGradient);
     m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
+    m_editor.SetShowRoadTerrainClearance(m_showRoadTerrainClearance);
+    m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
     m_editor.SetRoadLineThickness(m_roadLineThickness);
     m_editor.SetPreviewCurveThickness(m_previewCurveThickness);
     m_editor.SetSelectedRoadLineThickness(m_selectedRoadLineThickness);
@@ -764,6 +770,7 @@ void App::SaveViewSettings() const
             { "showIntersectionNames", m_showIntersectionNames },
             { "showRoadPreviewMetrics", m_showRoadPreviewMetrics },
             { "showRoadGradeGradient", m_showRoadGradeGradient },
+            { "showRoadTerrainClearance", m_showRoadTerrainClearance },
             { "showGrid", m_showGrid },
             { "showCameraWindow", m_showCameraWindow },
             { "showTerrainWindow", m_showTerrainWindow },
@@ -771,6 +778,7 @@ void App::SaveViewSettings() const
             { "showPropertiesWindow", m_showPropertiesWindow },
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
+            { "roadTerrainClearanceInterval", m_roadTerrainClearanceInterval },
             { "contourInterval", m_contourInterval },
             { "showDisplaySettingsWindow", m_showDisplaySettingsWindow },
             { "gridBaseScale", m_gridBaseScale },
@@ -2162,6 +2170,21 @@ void App::Render()
                     {
                         m_roadGradeRedThresholdPercent = (std::max)(0.1f, threshold);
                         m_editor.SetRoadGradeRedThresholdPercent(m_roadGradeRedThresholdPercent);
+                        SaveViewSettings();
+                    }
+                }
+                if (ImGui::Checkbox(u8"\u5730\u9762\u3068\u306E\u9AD8\u4F4E\u5DEE\u3092\u8868\u793A", &m_showRoadTerrainClearance))
+                {
+                    m_editor.SetShowRoadTerrainClearance(m_showRoadTerrainClearance);
+                    SaveViewSettings();
+                }
+                if (m_showRoadTerrainClearance)
+                {
+                    float interval = m_roadTerrainClearanceInterval;
+                    if (ImGui::InputFloat(u8"\u9AD8\u4F4E\u5DEE\u9593\u9694 (m)", &interval, 1.0f, 5.0f, "%.1f"))
+                    {
+                        m_roadTerrainClearanceInterval = (std::max)(0.5f, interval);
+                        m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
                         SaveViewSettings();
                     }
                 }

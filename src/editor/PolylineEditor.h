@@ -43,6 +43,13 @@ struct RoadPreviewMetrics
     float maxGradePercent = 0.0f;
 };
 
+struct TerrainClearanceSample
+{
+    DirectX::XMFLOAT3 curvePos = { 0.0f, 0.0f, 0.0f };
+    DirectX::XMFLOAT3 terrainPos = { 0.0f, 0.0f, 0.0f };
+    unsigned int color = 0;
+};
+
 // Manages interactive polyline road editing.
 // Owned by App, updated every frame after camera input.
 class PolylineEditor
@@ -143,6 +150,8 @@ public:
     void SetShowRoadPreviewMetrics(bool show) { m_showRoadPreviewMetrics = show; }
     void SetShowRoadGradeGradient(bool show);
     void SetRoadGradeRedThresholdPercent(float value);
+    void SetShowRoadTerrainClearance(bool show);
+    void SetRoadTerrainClearanceInterval(float value);
     void SetRoadLineThickness(float value) { m_roadLineThickness = value; }
     void SetPreviewCurveThickness(float value) { m_previewCurveThickness = value; }
     void SetSelectedRoadLineThickness(float value) { m_selectedRoadLineThickness = value; }
@@ -269,6 +278,7 @@ private:
     void InvalidateRoadPreviewCache(int roadIndex);
     void InvalidateAllGradeColorCaches();
     void InvalidateRoadGradeColorCache(int roadIndex);
+    void InvalidateAllTerrainClearanceCaches();
     void EnsureRoadPreviewCacheSize() const;
     const std::vector<PreviewCurvePoint>& GetRoadPreviewCurveDetailedCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadPreviewCurveCached(int roadIndex) const;
@@ -276,6 +286,7 @@ private:
     const std::vector<DirectX::XMFLOAT3>& GetRoadVerticalPreviewCurveCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadParametricPreviewCurveCached(int roadIndex) const;
     const std::vector<unsigned int>& GetRoadVerticalGradeColorsCached(int roadIndex) const;
+    const std::vector<TerrainClearanceSample>& GetRoadTerrainClearanceSamplesCached(int roadIndex) const;
     const RoadPreviewMetrics& GetRoadPreviewMetricsCached(int roadIndex) const;
     void QueuePropertyRevealForRoad(int roadIndex);
     void QueuePropertyRevealForIntersection(int intersectionIndex);
@@ -315,12 +326,14 @@ private:
         bool verticalDetailedValid = false;
         bool verticalPositionsValid = false;
         bool verticalGradeColorsValid = false;
+        bool terrainClearanceValid = false;
         bool metricsValid = false;
         std::vector<PreviewCurvePoint> previewDetailed;
         std::vector<DirectX::XMFLOAT3> previewPositions;
         std::vector<PreviewCurvePoint> verticalDetailed;
         std::vector<DirectX::XMFLOAT3> verticalPositions;
         std::vector<unsigned int> verticalGradeColors;
+        std::vector<TerrainClearanceSample> terrainClearanceSamples;
         RoadPreviewMetrics metrics;
     };
     EditorSnapshot CaptureSnapshot() const;
@@ -395,9 +408,11 @@ private:
     bool m_showIntersectionNames = true;
     bool m_showRoadPreviewMetrics = false;
     bool m_showRoadGradeGradient = false;
+    bool m_showRoadTerrainClearance = false;
     bool m_rotateYMode = false;
     bool m_scaleXZMode = false;
     float m_roadGradeRedThresholdPercent = 12.0f;
+    float m_roadTerrainClearanceInterval = 10.0f;
     float m_roadLineThickness = 2.0f;
     float m_previewCurveThickness = 2.0f;
     float m_selectedRoadLineThickness = 3.0f;

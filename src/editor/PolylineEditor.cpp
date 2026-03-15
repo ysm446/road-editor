@@ -1161,6 +1161,16 @@ void PolylineEditor::InvalidateRoadGradeColorCache(int roadIndex)
     cache.verticalGradeColors.clear();
 }
 
+void PolylineEditor::InvalidateAllTerrainClearanceCaches()
+{
+    EnsureRoadPreviewCacheSize();
+    for (RoadPreviewCache& cache : m_roadPreviewCaches)
+    {
+        cache.terrainClearanceValid = false;
+        cache.terrainClearanceSamples.clear();
+    }
+}
+
 void PolylineEditor::EnsureRoadPreviewCacheSize() const
 {
     if (!m_network)
@@ -1291,6 +1301,55 @@ const std::vector<unsigned int>& PolylineEditor::GetRoadVerticalGradeColorsCache
     return cache.verticalGradeColors;
 }
 
+const std::vector<TerrainClearanceSample>& PolylineEditor::GetRoadTerrainClearanceSamplesCached(int roadIndex) const
+{
+    static const std::vector<TerrainClearanceSample> kEmpty;
+    if (!m_network || roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return kEmpty;
+    if (m_terrain == nullptr || !m_terrain->IsReady())
+        return kEmpty;
+
+    EnsureRoadPreviewCacheSize();
+    RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
+    if (!cache.terrainClearanceValid)
+    {
+        cache.terrainClearanceSamples.clear();
+        const std::vector<XMFLOAT3>& verticalPreviewCurve = GetRoadVerticalPreviewCurveCached(roadIndex);
+        if (verticalPreviewCurve.size() >= 2 && m_roadTerrainClearanceInterval > 1e-4f)
+        {
+            const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(verticalPreviewCurve);
+            const float totalLength = cumulativeLengths.empty() ? 0.0f : cumulativeLengths.back();
+            if (totalLength > 1e-4f)
+            {
+                const float spacing = (std::max)(0.5f, m_roadTerrainClearanceInterval);
+                const auto appendSample = [&](float distance)
+                {
+                    TerrainClearanceSample sample;
+                    sample.curvePos = SamplePolylineAtDistance(
+                        verticalPreviewCurve,
+                        cumulativeLengths,
+                        distance);
+                    sample.terrainPos = sample.curvePos;
+                    sample.terrainPos.y = m_terrain->GetHeightAt(sample.curvePos.x, sample.curvePos.z);
+                    sample.color = (sample.terrainPos.y > sample.curvePos.y)
+                        ? IM_COL32(90, 170, 255, 215)
+                        : IM_COL32(255, 160, 60, 215);
+                    cache.terrainClearanceSamples.push_back(sample);
+                };
+
+                for (float distance = 0.0f; distance <= totalLength + 1e-4f; distance += spacing)
+                    appendSample(distance);
+
+                const float remainder = fmodf(totalLength, spacing);
+                if (remainder > 1e-3f && totalLength > spacing)
+                    appendSample(totalLength);
+            }
+        }
+        cache.terrainClearanceValid = true;
+    }
+    return cache.terrainClearanceSamples;
+}
+
 void PolylineEditor::SetShowRoadGradeGradient(bool show)
 {
     if (m_showRoadGradeGradient == show)
@@ -1306,6 +1365,24 @@ void PolylineEditor::SetRoadGradeRedThresholdPercent(float value)
         return;
     m_roadGradeRedThresholdPercent = value;
     InvalidateAllGradeColorCaches();
+}
+
+void PolylineEditor::SetShowRoadTerrainClearance(bool show)
+{
+    if (m_showRoadTerrainClearance == show)
+        return;
+    m_showRoadTerrainClearance = show;
+    if (show)
+        InvalidateAllTerrainClearanceCaches();
+}
+
+void PolylineEditor::SetRoadTerrainClearanceInterval(float value)
+{
+    const float clampedValue = (std::max)(0.5f, value);
+    if (fabsf(m_roadTerrainClearanceInterval - clampedValue) <= 1e-5f)
+        return;
+    m_roadTerrainClearanceInterval = clampedValue;
+    InvalidateAllTerrainClearanceCaches();
 }
 
 const RoadPreviewMetrics& PolylineEditor::GetRoadPreviewMetricsCached(int roadIndex) const
@@ -6133,6 +6210,24 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
                 }
 
                 dl->AddLine(a, b, segmentColor, kPreviewCurveThickness + 1.0f);
+            }
+
+            if (m_showRoadTerrainClearance &&
+                m_terrain != nullptr &&
+                m_terrain->IsReady())
+            {
+                const std::vector<TerrainClearanceSample>& clearanceSamples =
+                    GetRoadTerrainClearanceSamplesCached(ri);
+                for (const TerrainClearanceSample& sample : clearanceSamples)
+                {
+                    ImVec2 a;
+                    ImVec2 b;
+                    if (!WorldToScreen(sample.curvePos, viewProj, vpW, vpH, a) ||
+                        !WorldToScreen(sample.terrainPos, viewProj, vpW, vpH, b))
+                        continue;
+
+                    dl->AddLine(a, b, sample.color, (std::max)(1.0f, kPreviewCurveThickness));
+                }
             }
         }
 
