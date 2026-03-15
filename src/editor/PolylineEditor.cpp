@@ -5481,12 +5481,12 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Arc ||
                 previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Arc)
             {
-                segmentColor = IM_COL32(110, 220, 120, 230);
+                segmentColor = IM_COL32(128, 255, 0, 230);
             }
             else if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Clothoid ||
                      previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Clothoid)
             {
-                segmentColor = IM_COL32(255, 165, 70, 230);
+                segmentColor = IM_COL32(255, 128, 0, 230);
             }
             if (m_showRoadGradeGradient)
             {
@@ -5882,16 +5882,62 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 // ---------------------------------------------------------------------------
 // DrawUI
 // ---------------------------------------------------------------------------
-void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow, bool* showPropertiesWindow)
+void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
+                            bool* showRoadEditorWindow,
+                            bool* showPropertiesWindow,
+                            SavedImGuiWindowLayout* roadEditorLayout,
+                            SavedImGuiWindowLayout* propertiesLayout,
+                            bool applyManagedLayouts)
 {
     m_network->EnsureDefaultGroup();
     SanitizeSelection();
 
     if (showRoadEditorWindow != nullptr && *showRoadEditorWindow)
     {
-        ImGui::SetNextWindowPos(ImVec2(10, 360), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(320, 420), ImGuiCond_FirstUseEver);
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        const ImVec2 workPos = mainViewport->WorkPos;
+        const ImVec2 workSize = mainViewport->WorkSize;
+        const ImVec2 defaultPos(workPos.x + 16.0f, workPos.y + 40.0f);
+        const ImVec2 defaultSize(360.0f, (std::max)(360.0f, workSize.y - 120.0f));
+        if (roadEditorLayout != nullptr)
+        {
+            if (applyManagedLayouts)
+            {
+                const ImVec2 pos = roadEditorLayout->valid
+                    ? ImVec2(roadEditorLayout->x, roadEditorLayout->y)
+                    : defaultPos;
+                const ImVec2 size = roadEditorLayout->valid
+                    ? ImVec2(roadEditorLayout->width, roadEditorLayout->height)
+                    : defaultSize;
+                ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+                ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+            }
+            else if (roadEditorLayout->valid)
+            {
+                ImGui::SetNextWindowPos(
+                    ImVec2(roadEditorLayout->x, roadEditorLayout->y),
+                    ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(
+                    ImVec2(roadEditorLayout->width, roadEditorLayout->height),
+                    ImGuiCond_FirstUseEver);
+            }
+            else
+            {
+                ImGui::SetNextWindowPos(defaultPos, ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(defaultSize, ImGuiCond_FirstUseEver);
+            }
+        }
         ImGui::Begin(u8"\u9053\u8DEF\u30A8\u30C7\u30A3\u30BF", showRoadEditorWindow);
+        if (roadEditorLayout != nullptr)
+        {
+            const ImVec2 pos = ImGui::GetWindowPos();
+            const ImVec2 size = ImGui::GetWindowSize();
+            roadEditorLayout->valid = true;
+            roadEditorLayout->x = pos.x;
+            roadEditorLayout->y = pos.y;
+            roadEditorLayout->width = size.x;
+            roadEditorLayout->height = size.y;
+        }
 
         // Mode toolbar
         {
@@ -6116,9 +6162,52 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/, bool* showRoadEditorWindow
 
     if (showPropertiesWindow != nullptr && *showPropertiesWindow)
     {
-        ImGui::SetNextWindowPos(ImVec2(10, 790), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(320, 520), ImGuiCond_FirstUseEver);
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        const ImVec2 workPos = mainViewport->WorkPos;
+        const ImVec2 workSize = mainViewport->WorkSize;
+        const ImVec2 defaultPos(
+            workPos.x + workSize.x - 396.0f,
+            workPos.y + 40.0f);
+        const ImVec2 defaultSize(380.0f, (std::max)(420.0f, workSize.y - 120.0f));
+        if (propertiesLayout != nullptr)
+        {
+            if (applyManagedLayouts)
+            {
+                const ImVec2 pos = propertiesLayout->valid
+                    ? ImVec2(propertiesLayout->x, propertiesLayout->y)
+                    : defaultPos;
+                const ImVec2 size = propertiesLayout->valid
+                    ? ImVec2(propertiesLayout->width, propertiesLayout->height)
+                    : defaultSize;
+                ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+                ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+            }
+            else if (propertiesLayout->valid)
+            {
+                ImGui::SetNextWindowPos(
+                    ImVec2(propertiesLayout->x, propertiesLayout->y),
+                    ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(
+                    ImVec2(propertiesLayout->width, propertiesLayout->height),
+                    ImGuiCond_FirstUseEver);
+            }
+            else
+            {
+                ImGui::SetNextWindowPos(defaultPos, ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(defaultSize, ImGuiCond_FirstUseEver);
+            }
+        }
         ImGui::Begin(u8"\u30D7\u30ED\u30D1\u30C6\u30A3", showPropertiesWindow);
+        if (propertiesLayout != nullptr)
+        {
+            const ImVec2 pos = ImGui::GetWindowPos();
+            const ImVec2 size = ImGui::GetWindowSize();
+            propertiesLayout->valid = true;
+            propertiesLayout->x = pos.x;
+            propertiesLayout->y = pos.y;
+            propertiesLayout->width = size.x;
+            propertiesLayout->height = size.y;
+        }
 
         const bool hasPendingPropertyReveal =
             m_propertyRevealGroup >= 0 ||

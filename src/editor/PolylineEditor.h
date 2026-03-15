@@ -10,6 +10,15 @@
 #include "scene/Terrain.h"
 #include "renderer/DebugDraw.h"
 
+struct SavedImGuiWindowLayout
+{
+    bool  valid = false;
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
 // Manages interactive polyline road editing.
 // Owned by App, updated every frame after camera input.
 class PolylineEditor
@@ -82,7 +91,12 @@ public:
     void DrawOverlay(DirectX::XMMATRIX viewProj, int vpW, int vpH) const;
 
     // UI panels (called inside ImGui frame)
-    void DrawUI(ID3D11Device* device, bool* showRoadEditorWindow, bool* showPropertiesWindow);
+    void DrawUI(ID3D11Device* device,
+                bool* showRoadEditorWindow,
+                bool* showPropertiesWindow,
+                SavedImGuiWindowLayout* roadEditorLayout,
+                SavedImGuiWindowLayout* propertiesLayout,
+                bool applyManagedLayouts);
 
     // Mode switching (also called from toolbar in App)
     void SetMode(EditorMode mode);

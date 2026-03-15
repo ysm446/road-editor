@@ -57,6 +57,7 @@ private:
     void    LoadViewSettings();
     void    SaveViewSettings() const;
     void    SetStatusMessage(const std::string& message);
+    void    ResetManagedWindowLayouts();
     void    ResetPathfindingState();
     bool    SyncPathfindingEndpointsFromSelectedRoad();
     void    RebuildContourCache();
@@ -129,8 +130,8 @@ private:
     std::string       m_statusMessage  = "Ready";
     bool              m_prevFocusKey   = false;
     bool              m_showGrid = true;
-    bool              m_showCameraWindow = true;
-    bool              m_showTerrainWindow = true;
+    bool              m_showCameraWindow = false;
+    bool              m_showTerrainWindow = false;
     bool              m_showRoadEditorWindow = true;
     bool              m_showPropertiesWindow = true;
     bool              m_showRoadGuidelines = true;
@@ -163,6 +164,12 @@ private:
     DirectX::XMFLOAT3 m_contourColor = { 0.18f, 0.18f, 0.18f };
     DirectX::XMFLOAT3 m_backgroundColor = { 0.12f, 0.12f, 0.14f };
     std::vector<std::string> m_recentProjectPaths;
+    SavedImGuiWindowLayout m_cameraWindowLayout;
+    SavedImGuiWindowLayout m_terrainWindowLayout;
+    SavedImGuiWindowLayout m_roadEditorWindowLayout;
+    SavedImGuiWindowLayout m_propertiesWindowLayout;
+    SavedImGuiWindowLayout m_displaySettingsWindowLayout;
+    bool              m_applyManagedWindowLayouts = true;
     bool              m_hasEstablishedRoadFilePath = false;
     EditorMode        m_prevEditorMode = EditorMode::Navigate;
     PathfindingState  m_pathfinding;

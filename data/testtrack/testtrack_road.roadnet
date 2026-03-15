@@ -458,6 +458,1254 @@
       ],
       "roadCount": 1,
       "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "582950e9-cefc-42c1-8509-3ae534adb2fe",
+      "name": "Intersection 17",
+      "pos": [
+        298.49029541015625,
+        1433.798828125,
+        -1326.719970703125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "daf84eee-7ada-43fe-8bb6-51bcc7bd4e60",
+      "name": "Intersection 18",
+      "pos": [
+        -17.674365997314453,
+        1433.0452880859375,
+        -175.31121826171875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "bee1a16b-6597-43a5-b177-4848ab9d79a2",
+      "name": "Intersection 19",
+      "pos": [
+        112.24263763427734,
+        1432.7274169921875,
+        -461.09539794921875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "b5bf9030-56f1-4ce4-b6b6-d67c047ef6b7",
+      "name": "Intersection 20",
+      "pos": [
+        278.15313720703125,
+        1437.5560302734375,
+        -917.1041259765625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "66fef63c-5fa0-48ee-8200-e632b5dd62e5",
+      "name": "Intersection 21",
+      "pos": [
+        229.86134338378906,
+        1438.0330810546875,
+        -764.2921752929688
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "63237863-5c74-4897-a4f8-7b0366c116c5",
+      "name": "Intersection 22",
+      "pos": [
+        292.2034606933594,
+        1436.0384521484375,
+        -169.72824096679688
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "91c85217-c97f-4d69-8b20-5e6cac2a23fd",
+      "name": "Intersection 23",
+      "pos": [
+        -7.416887283325195,
+        1433.828857421875,
+        -18.6802978515625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "6e7a0ef7-7447-4249-9f56-bda4e53ec3c7",
+      "name": "Intersection 24",
+      "pos": [
+        633.4624633789063,
+        1441.6357421875,
+        -405.2497863769531
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "42fe2399-0cb8-4ba5-84d2-c8cc42774257",
+      "name": "Intersection 25",
+      "pos": [
+        413.9539794921875,
+        1430.9241943359375,
+        -1047.84716796875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "d9ded75f-0afd-4d81-9050-6c3f2d6bb22f",
+      "name": "Intersection 26",
+      "pos": [
+        519.3639526367188,
+        1435.362060546875,
+        -786.2750854492188
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "63695111-3131-4596-8b7b-a71ce5d81da3",
+      "name": "Intersection 27",
+      "pos": [
+        548.6500244140625,
+        1436.343505859375,
+        -684.1324462890625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "5770ab10-877d-46f2-b33a-869655ab2cdc",
+      "name": "Intersection 28",
+      "pos": [
+        491.0716247558594,
+        1433.821044921875,
+        -907.6488037109375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "2e29ce14-c55c-485c-ad23-1b51f78b9239",
+      "name": "Intersection 29",
+      "pos": [
+        191.0376434326172,
+        1430.51611328125,
+        -1222.0482177734375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "589fad97-e91b-4b41-81ad-21f65262aa36",
+      "name": "Intersection 30",
+      "pos": [
+        18.79506492614746,
+        1432.83984375,
+        -901.8629760742188
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "be92fc31-03e4-47da-a6a0-d067c252711c",
+      "name": "Intersection 31",
+      "pos": [
+        349.37030029296875,
+        1432.0609130859375,
+        -854.9676513671875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "7b2523c5-e6dc-4f4d-9576-1e1752350784",
+      "name": "Intersection 32",
+      "pos": [
+        234.22848510742188,
+        1432.7628173828125,
+        -746.13427734375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "c9f4d0fd-6607-409d-bcb3-f6dc7fc4d370",
+      "name": "Intersection 33",
+      "pos": [
+        255.5670166015625,
+        1435.9312744140625,
+        -666.7884521484375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "55180575-fb6d-4a1d-b085-89ccc6fba574",
+      "name": "Intersection 34",
+      "pos": [
+        309.48712158203125,
+        1434.418701171875,
+        -1153.5147705078125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "14bd26c3-7cca-4e43-a79b-d1c689eee413",
+      "name": "Intersection 35",
+      "pos": [
+        494.76544189453125,
+        1434.067138671875,
+        -1088.970703125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "648e4428-82d1-4b54-9ac3-78b0caa9b3b3",
+      "name": "Intersection 36",
+      "pos": [
+        -138.0476837158203,
+        1431.9005126953125,
+        -928.5411376953125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "cebb3043-689c-48c5-9100-2fa0912b2a46",
+      "name": "Intersection 37",
+      "pos": [
+        -122.81875610351563,
+        1432.8568115234375,
+        -923.8323974609375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "d03eff30-f817-4be9-825c-7bcf6a5809c1",
+      "name": "Intersection 38",
+      "pos": [
+        -115.16182708740234,
+        1432.2117919921875,
+        -990.4638061523438
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "5fbcd269-566c-42b0-ac76-b45d8397b2ce",
+      "name": "Intersection 39",
+      "pos": [
+        -185.55874633789063,
+        1432.478759765625,
+        -701.7621459960938
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "50f3540b-a3ac-4008-ba81-742ecc2adf96",
+      "name": "Intersection 40",
+      "pos": [
+        -121.05354309082031,
+        1437.2529296875,
+        -118.48880004882813
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "93e06d71-a4fe-4bd5-af05-18e571b7a7f4",
+      "name": "Intersection 41",
+      "pos": [
+        -1671.8377685546875,
+        1498.3275146484375,
+        1414.3436279296875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "5ce688fb-2845-479a-83c5-52e293c83e66",
+      "name": "Intersection 42",
+      "pos": [
+        -1427.35986328125,
+        1478.71484375,
+        1342.803466796875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "60adb095-b65a-494c-912c-3c4eea9e0e91",
+      "name": "Intersection 43",
+      "pos": [
+        -1757.507568359375,
+        1504.2816162109375,
+        1494.96337890625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "09dee9ba-4ad1-4dcd-b62f-4f3380c332a4",
+      "name": "Intersection 44",
+      "pos": [
+        868.9080200195313,
+        1478.0853271484375,
+        -319.6600036621094
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "f6c09741-ee79-4100-a383-f3936243725d",
+      "name": "Intersection 45",
+      "pos": [
+        400.00823974609375,
+        1447.6688232421875,
+        -131.88897705078125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "5c71ebae-197a-4338-9387-c2dd6ea5d1e7",
+      "name": "Intersection 46",
+      "pos": [
+        909.7979125976563,
+        1475.103515625,
+        -345.8069763183594
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "18ff7615-f3a8-49c6-9ead-a1c8bbf829ff",
+      "name": "Intersection 47",
+      "pos": [
+        -171.44412231445313,
+        1434.01171875,
+        -699.1170654296875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "53a3b1c8-c96a-4ad9-99c9-2e6d57628ad1",
+      "name": "Intersection 48",
+      "pos": [
+        652.88427734375,
+        1446.0462646484375,
+        -241.73544311523438
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "fe66277a-f085-4e5a-852a-225e8ea88b24",
+      "name": "Intersection 49",
+      "pos": [
+        590.8455810546875,
+        1442.4140625,
+        -342.7078552246094
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "3b61d8a0-d33a-49d4-b20a-c39ecbfc04c6",
+      "name": "Intersection 50",
+      "pos": [
+        434.31573486328125,
+        1439.4287109375,
+        -176.248779296875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "6a002188-e040-4194-b1bb-32c5fdc43597",
+      "name": "Intersection 51",
+      "pos": [
+        -253.49755859375,
+        1436.9931640625,
+        68.98406982421875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "c0443d6f-fa90-4dfb-85e2-b8ef76610a2f",
+      "name": "Intersection 52",
+      "pos": [
+        -591.33251953125,
+        1434.549072265625,
+        178.84878540039063
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "42e6b21b-d995-4564-9158-6e3c5beff5eb",
+      "name": "Intersection 53",
+      "pos": [
+        -322.1138610839844,
+        1433.00439453125,
+        -9.767252922058105
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "10672ed9-ccb5-497c-9202-d8b2c841ba39",
+      "name": "Intersection 54",
+      "pos": [
+        -510.93853759765625,
+        1437.4237060546875,
+        453.2169189453125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "4bd54c33-e8e2-49db-833b-02615fe41ce9",
+      "name": "Intersection 55",
+      "pos": [
+        -651.9224853515625,
+        1434.539306640625,
+        161.79641723632813
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "45b6e502-278e-46d3-aa04-dd2f9d7c86e1",
+      "name": "Intersection 56",
+      "pos": [
+        -263.87762451171875,
+        1432.58056640625,
+        -55.177833557128906
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "2ab8ab79-4eb9-4b90-8dfb-943318b7acd0",
+      "name": "Intersection 57",
+      "pos": [
+        -400.07122802734375,
+        1431.9769287109375,
+        -313.37310791015625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "0769c035-2bd4-4795-88fb-1f2d124064b2",
+      "name": "Intersection 58",
+      "pos": [
+        -58.27462387084961,
+        1433.5316162109375,
+        -35.643333435058594
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "88831439-e45f-4183-a50b-062a70083040",
+      "name": "Intersection 59",
+      "pos": [
+        -68.77758026123047,
+        1433.7811279296875,
+        -1.2763646841049194
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "a3ce6bb2-d82b-46ee-a54f-e546eed15da2",
+      "name": "Intersection 60",
+      "pos": [
+        -792.6766967773438,
+        1437.5936279296875,
+        396.2646179199219
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "744e6632-c06b-44c2-b8a8-ed863ab1d009",
+      "name": "Intersection 61",
+      "pos": [
+        -720.1725463867188,
+        1436.9091796875,
+        278.65203857421875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "392cd9f2-2542-485d-abe8-9b0fde01828c",
+      "name": "Intersection 62",
+      "pos": [
+        409.44171142578125,
+        1438.5013427734375,
+        -232.25213623046875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "e86125a9-6e5c-4572-88e6-c98e2d2f3c4f",
+      "name": "Intersection 63",
+      "pos": [
+        848.2489624023438,
+        1469.7122802734375,
+        -488.11181640625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "4e827d21-62f7-4205-9dde-c65aac752038",
+      "name": "Intersection 64",
+      "pos": [
+        887.9603271484375,
+        1475.6849365234375,
+        -547.6842041015625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "6f1eff15-1919-415a-b2a2-e5f446acfb91",
+      "name": "Intersection 65",
+      "pos": [
+        138.81842041015625,
+        1434.0726318359375,
+        -533.1185913085938
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "e22f36b3-efba-4203-8271-9d4c3247df33",
+      "name": "Intersection 66",
+      "pos": [
+        286.8321228027344,
+        1429.7166748046875,
+        -1324.591796875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "258bfc91-ff11-4250-8846-0d16cf390bb0",
+      "name": "Intersection 67",
+      "pos": [
+        437.68389892578125,
+        1435.26171875,
+        -758.57373046875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "fca0fb6e-07ac-4894-9bb8-e417ec6aada4",
+      "name": "Intersection 68",
+      "pos": [
+        661.0941162109375,
+        1444.2357177734375,
+        -897.7072143554688
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "a042454d-7607-4000-b131-26336e09dcce",
+      "name": "Intersection 69",
+      "pos": [
+        -1139.00048828125,
+        1450.2333984375,
+        945.0975341796875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "24c5ebfa-295e-4c89-8595-70e806a021ad",
+      "name": "Intersection 70",
+      "pos": [
+        1913.8704833984375,
+        1821.8125,
+        -1290.1126708984375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "aa235167-a20b-4cec-807e-59dc907d01c5",
+      "name": "Intersection 71",
+      "pos": [
+        1717.8197021484375,
+        1758.2490234375,
+        -1090.2684326171875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "1536a8f5-9469-4fd5-a1cf-b71df356952b",
+      "name": "Intersection 72",
+      "pos": [
+        911.0138549804688,
+        1519.287353515625,
+        -793.0814208984375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "10cdb77c-2a81-49d5-82c3-28c3b3d4e933",
+      "name": "Intersection 73",
+      "pos": [
+        180.1772918701172,
+        1425.616455078125,
+        -1676.9337158203125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "d5916e1f-aca2-4526-8cac-fa0b959401ae",
+      "name": "Intersection 74",
+      "pos": [
+        175.6042022705078,
+        1426.3939208984375,
+        -1665.621337890625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "0e6124c1-f38d-4412-9c7f-525406285bf2",
+      "name": "Intersection 75",
+      "pos": [
+        1000.5733032226563,
+        1608.644287109375,
+        -1024.787353515625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "96e1a991-98df-4647-91c7-71aea0ea7fe3",
+      "name": "Intersection 76",
+      "pos": [
+        -743.9730224609375,
+        1435.0869140625,
+        -180.01458740234375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "6d7914b2-33c0-4f5d-a4e4-8429f3a71dd6",
+      "name": "Intersection 77",
+      "pos": [
+        -1033.33251953125,
+        1440.248046875,
+        106.18583679199219
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "94505ad0-885f-4be0-a460-9711b2d5cbae",
+      "name": "Intersection 78",
+      "pos": [
+        -918.494140625,
+        1433.5693359375,
+        80.25022888183594
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "a9b82b71-c73e-4d3a-a469-a22fa39ed9d7",
+      "name": "Intersection 79",
+      "pos": [
+        -1197.0169677734375,
+        1476.89453125,
+        344.0898132324219
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "85bbd689-3de4-4621-9a65-9e91a69161d1",
+      "name": "Intersection 80",
+      "pos": [
+        -1396.2747802734375,
+        1482.8212890625,
+        644.5130615234375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "0b4b868e-7839-4e16-95d9-ab83b67dc3a5",
+      "name": "Intersection 81",
+      "pos": [
+        -1090.752685546875,
+        1457.72265625,
+        584.7340698242188
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "246d55f2-ab60-47ae-bd8f-ee21c9fb313b",
+      "name": "Intersection 82",
+      "pos": [
+        -926.6317749023438,
+        1446.416015625,
+        475.1927185058594
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "aca346f0-0085-4080-ba43-4e516a3d9fc3",
+      "name": "Intersection 83",
+      "pos": [
+        -989.4877319335938,
+        1440.33984375,
+        442.1243591308594
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "6f203472-465a-4c80-9710-1d4c5fa26bb5",
+      "name": "Intersection 84",
+      "pos": [
+        -549.2013549804688,
+        1432.892578125,
+        -463.4598083496094
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "ac8569d6-0745-4b19-80a0-5ff16d875bab",
+      "name": "Intersection 85",
+      "pos": [
+        -230.9251251220703,
+        1437.669921875,
+        94.79545593261719
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "43ca8bcc-fbfe-4aa5-99bf-bea99d292c78",
+      "name": "Intersection 86",
+      "pos": [
+        -1092.016845703125,
+        1449.96875,
+        322.7294616699219
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "a504e900-b4bc-4912-ae99-9cdb962746c1",
+      "name": "Intersection 87",
+      "pos": [
+        -1252.6546630859375,
+        1467.654296875,
+        792.074951171875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "4451f1c5-f861-45ec-be66-40f1df8acb5d",
+      "name": "Intersection 88",
+      "pos": [
+        -1318.796630859375,
+        1450.486328125,
+        1040.2576904296875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "8cba7f69-a9ff-462c-a7ca-bb88df40242b",
+      "name": "Intersection 89",
+      "pos": [
+        -1321.5997314453125,
+        1449.7552490234375,
+        1006.3524169921875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "0379a9c4-cbd8-4bab-9213-77bd5e2b5223",
+      "name": "Intersection 90",
+      "pos": [
+        -1179.8338623046875,
+        1450.219482421875,
+        958.4952392578125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "df52ebc5-b478-4f1a-918e-4f3fd699eff3",
+      "name": "Intersection 91",
+      "pos": [
+        -1393.303955078125,
+        1467.3662109375,
+        924.0474243164063
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "12cabc68-ee0f-4cf8-b7b2-ca5ebdbd93e5",
+      "name": "Intersection 92",
+      "pos": [
+        1533.961669921875,
+        1824.9404296875,
+        -1359.4208984375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "165a3790-3295-47ed-b6a0-f3eb296fe21e",
+      "name": "Intersection 93",
+      "pos": [
+        1728.1859130859375,
+        1845.4716796875,
+        -1393.9124755859375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "e0d1ef74-8886-495f-a47e-cb2795df9190",
+      "name": "Intersection 94",
+      "pos": [
+        -1543.4984130859375,
+        1541.1796875,
+        1551.942626953125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "1a227f8f-4a8e-4331-8339-c9cb9877bd55",
+      "name": "Intersection 95",
+      "pos": [
+        -1443.2220458984375,
+        1549.775390625,
+        1541.8662109375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "8d1f3572-20a7-4e75-9ad8-1ddb5997713c",
+      "name": "Intersection 96",
+      "pos": [
+        -1368.427001953125,
+        1556.799560546875,
+        1585.3062744140625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "addec0f5-1b39-4c4f-b0af-a3d72b9b64f2",
+      "name": "Intersection 97",
+      "pos": [
+        -600.2527465820313,
+        1439.27880859375,
+        346.7480773925781
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "546bbdd8-ca18-4326-b847-747cf7a8f9de",
+      "name": "Intersection 98",
+      "pos": [
+        1497.90234375,
+        1553.93994140625,
+        -611.6676635742188
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "a380e103-6f92-489d-8f54-db0c96e65e6e",
+      "name": "Intersection 99",
+      "pos": [
+        1111.166015625,
+        1504.394287109375,
+        -623.2716674804688
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "a7db5ac2-ea0a-4db6-be09-22f6cf65bb7d",
+      "name": "Intersection 100",
+      "pos": [
+        1312.732421875,
+        1563.306640625,
+        -669.3508911132813
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "02d5cb84-d0e5-4e3a-a6ed-6934df899c7b",
+      "name": "Intersection 101",
+      "pos": [
+        979.4891357421875,
+        1610.4970703125,
+        -1067.9439697265625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "2f736193-76c8-4ff3-8275-b9d2c3aa0461",
+      "name": "Intersection 102",
+      "pos": [
+        1167.3951416015625,
+        1642.232666015625,
+        -908.9588623046875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "dcdd9d19-3cca-408a-a8e6-715615b9ff44",
+      "name": "Intersection 103",
+      "pos": [
+        1898.8848876953125,
+        1729.2080078125,
+        -1023.630859375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "ac76fee6-8192-4ff2-bd62-63b17abee428",
+      "name": "Intersection 104",
+      "pos": [
+        1563.46240234375,
+        1687.9461669921875,
+        -913.131591796875
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "6d151ef5-8e1f-4d9b-a1a8-85e581009ede",
+      "name": "Intersection 105",
+      "pos": [
+        1502.2872314453125,
+        1681.8905029296875,
+        -909.6431884765625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "47cd2327-f2ef-4a37-98a8-5befef1d3eea",
+      "name": "Intersection 106",
+      "pos": [
+        1099.1029052734375,
+        1618.8065185546875,
+        -915.1491088867188
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "d115c404-9b05-44a2-8735-5b0c8c8fda1f",
+      "name": "Intersection 107",
+      "pos": [
+        1092.748779296875,
+        1503.1234130859375,
+        -622.023193359375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "ecff961e-6163-43b8-8665-58b4e34e5781",
+      "name": "Intersection 108",
+      "pos": [
+        896.2420043945313,
+        1477.3397216796875,
+        -324.3267517089844
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "ff8bcae5-a8fc-4f0a-af10-b15d634c68d7",
+      "name": "Intersection 109",
+      "pos": [
+        -88.19221496582031,
+        1433.3857421875,
+        -913.1799926757813
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "fcb7c881-5a52-47bf-a30b-7efb3c1ce8f7",
+      "name": "Intersection 110",
+      "pos": [
+        -143.83351135253906,
+        1434.19921875,
+        -693.7384033203125
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "b343e198-da55-4afd-a3d9-a0b310aa06e9",
+      "name": "Intersection 111",
+      "pos": [
+        291.4856262207031,
+        1436.7569580078125,
+        -978.1415405273438
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "36cbbc3d-d95f-440d-a80f-937dc9453803",
+      "name": "Intersection 112",
+      "pos": [
+        222.0939178466797,
+        1437.98388671875,
+        -742.439697265625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "c0b004a0-5edf-4d61-8ba3-a7142bb45855",
+      "name": "Intersection 113",
+      "pos": [
+        206.79429626464844,
+        1437.04736328125,
+        -704.08837890625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "7b5010d5-f9da-433e-b5f8-4fa5f655f92d",
+      "name": "Intersection 114",
+      "pos": [
+        188.5173797607422,
+        1436.499755859375,
+        -659.8014526367188
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "0e0aecd4-badd-42df-b676-fcef3baf38aa",
+      "name": "Intersection 115",
+      "pos": [
+        233.4435272216797,
+        1435.9996337890625,
+        -647.499755859375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "3851f1fa-bc9f-471f-b299-532ddf6e48e5",
+      "name": "Intersection 116",
+      "pos": [
+        625.1238403320313,
+        1441.991943359375,
+        -388.31390380859375
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "1f1d5ab0-bc88-462a-bf98-7176c1bf4c45",
+      "name": "Intersection 117",
+      "pos": [
+        -248.46685791015625,
+        1436.828125,
+        74.67095184326172
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "091d152a-f68c-49a4-ad42-2dd7950738c5",
+      "name": "Intersection 118",
+      "pos": [
+        -1324.4029541015625,
+        1451.0693359375,
+        974.1825561523438
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "7d4af2bc-4df4-48ad-8279-d71b282003b8",
+      "name": "Intersection 119",
+      "pos": [
+        -1351.4456787109375,
+        1473.2265625,
+        1276.5396728515625
+      ],
+      "type": "intersection"
+    },
+    {
+      "entryDist": 8.0,
+      "groupId": "legacy-import-group",
+      "id": "1e26734f-4d3b-4991-9477-41f4db638671",
+      "name": "Intersection 120",
+      "pos": [
+        -1401.1751708984375,
+        1554.813720703125,
+        1558.9344482421875
+      ],
+      "type": "intersection"
     }
   ],
   "roads": [
@@ -470,7 +1718,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "582950e9-cefc-42c1-8509-3ae534adb2fe",
       "groupId": "legacy-import-group",
       "id": "92055f18-a0d8-4f3a-b4a5-25b2147ff0f4",
       "laneSections": [],
@@ -541,7 +1789,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "bee1a16b-6597-43a5-b177-4848ab9d79a2",
       "groupId": "legacy-import-group",
       "id": "4f891e61-661b-498f-9936-5c844d5905b4",
       "laneSections": [],
@@ -550,7 +1798,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -17.67436408996582,
+            -17.674365997314453,
             1433.0452880859375,
             -175.31121826171875
           ],
@@ -597,13 +1845,13 @@
           "pos": [
             112.24263763427734,
             1432.7274169921875,
-            -461.0953674316406
+            -461.09539794921875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "daf84eee-7ada-43fe-8bb6-51bcc7bd4e60",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -636,7 +1884,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "66fef63c-5fa0-48ee-8200-e632b5dd62e5",
       "groupId": "legacy-import-group",
       "id": "4b26bc87-061a-4495-ac6e-1969dc9f8f70",
       "laneSections": [],
@@ -645,9 +1893,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            278.1531066894531,
+            278.15313720703125,
             1437.5560302734375,
-            -917.1040649414063
+            -917.1041259765625
           ],
           "useCurvatureRadius": 0
         },
@@ -680,7 +1928,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "b5bf9030-56f1-4ce4-b6b6-d67c047ef6b7",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -705,7 +1953,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "91c85217-c97f-4d69-8b20-5e6cac2a23fd",
       "groupId": "legacy-import-group",
       "id": "1f9db6a6-67f2-4481-95b9-a98f144d72ae",
       "laneSections": [
@@ -745,7 +1993,7 @@
           "pos": [
             292.2034606933594,
             1436.0384521484375,
-            -169.7282257080078
+            -169.72824096679688
           ],
           "useCurvatureRadius": 0
         },
@@ -805,7 +2053,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "63237863-5c74-4897-a4f8-7b0366c116c5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -838,7 +2086,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "6e7a0ef7-7447-4249-9f56-bda4e53ec3c7",
       "groupId": "legacy-import-group",
       "id": "5730adef-869c-4ced-a680-d026b107e0b6",
       "laneSections": [],
@@ -965,7 +2213,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "42fe2399-0cb8-4ba5-84d2-c8cc42774257",
       "groupId": "legacy-import-group",
       "id": "ab9ef212-5f26-4db2-9586-227e912d2a7d",
       "laneSections": [],
@@ -1068,7 +2316,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "63695111-3131-4596-8b7b-a71ce5d81da3",
       "groupId": "legacy-import-group",
       "id": "bc6aca21-0820-47b6-92ff-ec8a77eaee0f",
       "laneSections": [],
@@ -1104,15 +2352,15 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            548.6499633789063,
+            548.6500244140625,
             1436.343505859375,
-            -684.1323852539063
+            -684.1324462890625
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "d9ded75f-0afd-4d81-9050-6c3f2d6bb22f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1130,7 +2378,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "5770ab10-877d-46f2-b33a-869655ab2cdc",
       "groupId": "legacy-import-group",
       "id": "2fd95c3a-04ff-417e-8ec4-0ad1e89005bf",
       "laneSections": [],
@@ -1174,7 +2422,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "42fe2399-0cb8-4ba5-84d2-c8cc42774257",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1277,7 +2525,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "2e29ce14-c55c-485c-ad23-1b51f78b9239",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1295,7 +2543,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "589fad97-e91b-4b41-81ad-21f65262aa36",
       "groupId": "legacy-import-group",
       "id": "a9e65a1f-8e5a-4a18-993f-7a8589396eb8",
       "laneSections": [],
@@ -1369,7 +2617,7 @@
           "pos": [
             18.79506492614746,
             1432.83984375,
-            -901.8629150390625
+            -901.8629760742188
           ],
           "useCurvatureRadius": 0
         }
@@ -1398,7 +2646,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "2e29ce14-c55c-485c-ad23-1b51f78b9239",
       "groupId": "legacy-import-group",
       "id": "2445fdab-f379-4c2d-a720-70b851f92cf1",
       "laneSections": [],
@@ -1409,7 +2657,7 @@
           "pos": [
             18.79506492614746,
             1432.83984375,
-            -901.8629150390625
+            -901.8629760742188
           ],
           "useCurvatureRadius": 0
         },
@@ -1541,7 +2789,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "589fad97-e91b-4b41-81ad-21f65262aa36",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1579,7 +2827,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "be92fc31-03e4-47da-a6a0-d067c252711c",
       "groupId": "legacy-import-group",
       "id": "16d0b918-21c7-4091-9626-61902f4a49f9",
       "laneSections": [],
@@ -1633,9 +2881,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            349.3702697753906,
+            349.37030029296875,
             1432.0609130859375,
-            -854.9675903320313
+            -854.9676513671875
           ],
           "useCurvatureRadius": 0
         }
@@ -1659,7 +2907,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "7b2523c5-e6dc-4f4d-9576-1e1752350784",
       "groupId": "legacy-import-group",
       "id": "bd119d00-033f-479d-975c-cf32ec6634bb",
       "laneSections": [],
@@ -1668,9 +2916,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            349.3702697753906,
+            349.37030029296875,
             1432.0609130859375,
-            -854.9675903320313
+            -854.9676513671875
           ],
           "useCurvatureRadius": 0
         },
@@ -1730,7 +2978,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "be92fc31-03e4-47da-a6a0-d067c252711c",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1753,7 +3001,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "be92fc31-03e4-47da-a6a0-d067c252711c",
       "groupId": "legacy-import-group",
       "id": "344492ea-0835-42a0-8e77-5fbf5d3753ad",
       "laneSections": [],
@@ -1807,15 +3055,15 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            349.3702697753906,
+            349.37030029296875,
             1432.0609130859375,
-            -854.9675903320313
+            -854.9676513671875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "5770ab10-877d-46f2-b33a-869655ab2cdc",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1833,7 +3081,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "c9f4d0fd-6607-409d-bcb3-f6dc7fc4d370",
       "groupId": "legacy-import-group",
       "id": "659d7575-4fc6-47f8-b82f-8cb5daf815f8",
       "laneSections": [],
@@ -1913,7 +3161,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "d9ded75f-0afd-4d81-9050-6c3f2d6bb22f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -1955,9 +3203,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            278.1531066894531,
+            278.15313720703125,
             1437.5560302734375,
-            -917.1040649414063
+            -917.1041259765625
           ],
           "useCurvatureRadius": 0
         },
@@ -2026,7 +3274,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "b5bf9030-56f1-4ce4-b6b6-d67c047ef6b7",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -2044,7 +3292,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "55180575-fb6d-4a1d-b085-89ccc6fba574",
       "groupId": "legacy-import-group",
       "id": "7aa2082b-379e-40c3-b3cb-cb9cd12a51c6",
       "laneSections": [],
@@ -2091,7 +3339,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "14bd26c3-7cca-4e43-a79b-d1c689eee413",
       "groupId": "legacy-import-group",
       "id": "351d0ef4-467d-4cfb-af5b-8a0f1ae0582e",
       "laneSections": [],
@@ -2217,7 +3465,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            494.7654113769531,
+            494.76544189453125,
             1434.067138671875,
             -1088.970703125
           ],
@@ -2225,7 +3473,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "d9ded75f-0afd-4d81-9050-6c3f2d6bb22f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -2258,7 +3506,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "7b2523c5-e6dc-4f4d-9576-1e1752350784",
       "groupId": "legacy-import-group",
       "id": "d841e9a6-b35e-4e7e-9d66-ff68eccf3552",
       "laneSections": [],
@@ -2343,7 +3591,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "cebb3043-689c-48c5-9100-2fa0912b2a46",
       "groupId": "legacy-import-group",
       "id": "64806503-b249-4de0-9c52-0e84a5d7a809",
       "laneSections": [],
@@ -2369,7 +3617,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "648e4428-82d1-4b54-9ac3-78b0caa9b3b3",
       "verticalCurve": []
     },
     {
@@ -2381,7 +3629,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "d03eff30-f817-4be9-825c-7bcf6a5809c1",
       "groupId": "legacy-import-group",
       "id": "103cc8f9-fa38-49eb-a665-1dd8b274c1f5",
       "laneSections": [],
@@ -2507,7 +3755,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "5fbcd269-566c-42b0-ac76-b45d8397b2ce",
       "groupId": "legacy-import-group",
       "id": "20dbeaa6-239f-4afb-9ab3-b35fca21b8c7",
       "laneSections": [],
@@ -2678,8 +3926,8 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -185.55873107910156,
-            1432.4786376953125,
+            -185.55874633789063,
+            1432.478759765625,
             -701.7621459960938
           ],
           "useCurvatureRadius": 0
@@ -2739,7 +3987,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "648e4428-82d1-4b54-9ac3-78b0caa9b3b3",
       "groupId": "legacy-import-group",
       "id": "b098cff9-6718-4b8d-9a78-7ca097419db2",
       "laneSections": [],
@@ -2748,8 +3996,8 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -185.55873107910156,
-            1432.4786376953125,
+            -185.55874633789063,
+            1432.478759765625,
             -701.7621459960938
           ],
           "useCurvatureRadius": 0
@@ -2810,7 +4058,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "5fbcd269-566c-42b0-ac76-b45d8397b2ce",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -2838,7 +4086,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "648e4428-82d1-4b54-9ac3-78b0caa9b3b3",
       "groupId": "legacy-import-group",
       "id": "f3b4da4a-83f2-4aaa-b5f3-de15cb247afc",
       "laneSections": [
@@ -2897,7 +4145,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "d03eff30-f817-4be9-825c-7bcf6a5809c1",
       "verticalCurve": []
     },
     {
@@ -2909,7 +4157,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "50f3540b-a3ac-4008-ba81-742ecc2adf96",
       "groupId": "legacy-import-group",
       "id": "40d78f18-bee3-4fbc-9936-e4709b5b825a",
       "laneSections": [],
@@ -2947,7 +4195,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "5ce688fb-2845-479a-83c5-52e293c83e66",
       "groupId": "legacy-import-group",
       "id": "9b02aef1-1a47-4e73-810b-d21a4ab5db03",
       "laneSections": [],
@@ -2957,7 +4205,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             -1671.8377685546875,
-            1498.327392578125,
+            1498.3275146484375,
             1414.3436279296875
           ],
           "useCurvatureRadius": 0
@@ -3009,7 +4257,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "93e06d71-a4fe-4bd5-af05-18e571b7a7f4",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -3037,7 +4285,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "93e06d71-a4fe-4bd5-af05-18e571b7a7f4",
       "groupId": "legacy-import-group",
       "id": "54052b30-5fe9-4852-ab67-869dfaaaa673",
       "laneSections": [],
@@ -3119,7 +4367,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             -1671.8377685546875,
-            1498.327392578125,
+            1498.3275146484375,
             1414.3436279296875
           ],
           "useCurvatureRadius": 0
@@ -3159,7 +4407,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "93e06d71-a4fe-4bd5-af05-18e571b7a7f4",
       "groupId": "legacy-import-group",
       "id": "d091258f-b755-47dc-ada5-3c6076aff35b",
       "laneSections": [],
@@ -3168,8 +4416,8 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1757.5074462890625,
-            1504.281494140625,
+            -1757.507568359375,
+            1504.2816162109375,
             1494.96337890625
           ],
           "useCurvatureRadius": 0
@@ -3214,14 +4462,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             -1671.8377685546875,
-            1498.327392578125,
+            1498.3275146484375,
             1414.3436279296875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "60adb095-b65a-494c-912c-3c4eea9e0e91",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -3239,7 +4487,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "f6c09741-ee79-4100-a383-f3936243725d",
       "groupId": "legacy-import-group",
       "id": "08e3d179-ad92-46e7-a2c4-8e0113dbe519",
       "laneSections": [],
@@ -3410,7 +4658,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            400.0082092285156,
+            400.00823974609375,
             1447.6688232421875,
             -131.88897705078125
           ],
@@ -3418,7 +4666,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "09dee9ba-4ad1-4dcd-b62f-4f3380c332a4",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -3461,7 +4709,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "5c71ebae-197a-4338-9387-c2dd6ea5d1e7",
       "groupId": "legacy-import-group",
       "id": "8bb5a1ae-04af-466a-9cab-b9602248b385",
       "laneSections": [],
@@ -3568,7 +4816,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "18ff7615-f3a8-49c6-9ead-a1c8bbf829ff",
       "groupId": "legacy-import-group",
       "id": "00d90e34-402d-413b-a19b-c2a6346660f6",
       "laneSections": [],
@@ -3577,8 +4825,8 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -185.55873107910156,
-            1432.4786376953125,
+            -185.55874633789063,
+            1432.478759765625,
             -701.7621459960938
           ],
           "useCurvatureRadius": 0
@@ -3594,7 +4842,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "5fbcd269-566c-42b0-ac76-b45d8397b2ce",
       "verticalCurve": []
     },
     {
@@ -3606,7 +4854,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "fe66277a-f085-4e5a-852a-225e8ea88b24",
       "groupId": "legacy-import-group",
       "id": "939b8205-f219-4b02-9d64-e45eec7bef71",
       "laneSections": [],
@@ -3616,7 +4864,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             652.88427734375,
-            1446.046142578125,
+            1446.0462646484375,
             -241.73544311523438
           ],
           "useCurvatureRadius": 0
@@ -3671,13 +4919,13 @@
           "pos": [
             590.8455810546875,
             1442.4140625,
-            -342.70782470703125
+            -342.7078552246094
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "53a3b1c8-c96a-4ad9-99c9-2e6d57628ad1",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -3695,7 +4943,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "3b61d8a0-d33a-49d4-b20a-c39ecbfc04c6",
       "groupId": "legacy-import-group",
       "id": "5440fa35-c174-4756-b67c-a69d5bc91152",
       "laneSections": [],
@@ -3705,7 +4953,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             652.88427734375,
-            1446.046142578125,
+            1446.0462646484375,
             -241.73544311523438
           ],
           "useCurvatureRadius": 0
@@ -3794,7 +5042,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            434.3157043457031,
+            434.31573486328125,
             1439.4287109375,
             -176.248779296875
           ],
@@ -3802,7 +5050,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "53a3b1c8-c96a-4ad9-99c9-2e6d57628ad1",
       "verticalCurve": []
     },
     {
@@ -3814,7 +5062,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "53a3b1c8-c96a-4ad9-99c9-2e6d57628ad1",
       "groupId": "legacy-import-group",
       "id": "14e6c960-d9b6-4887-b8f7-c04aeab1225d",
       "laneSections": [],
@@ -3923,14 +5171,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             652.88427734375,
-            1446.046142578125,
+            1446.0462646484375,
             -241.73544311523438
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "09dee9ba-4ad1-4dcd-b62f-4f3380c332a4",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -3953,7 +5201,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "09dee9ba-4ad1-4dcd-b62f-4f3380c332a4",
       "groupId": "legacy-import-group",
       "id": "842fd063-918c-4129-81e9-c6a70051f075",
       "laneSections": [],
@@ -4476,7 +5724,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "6a002188-e040-4194-b1bb-32c5fdc43597",
       "groupId": "legacy-import-group",
       "id": "25e6bece-6595-40c8-9040-8fa5e7ac51f1",
       "laneSections": [],
@@ -4631,7 +5879,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "42e6b21b-d995-4564-9158-6e3c5beff5eb",
       "groupId": "legacy-import-group",
       "id": "5494268d-c643-4d17-9814-82043ffa2258",
       "laneSections": [],
@@ -4641,8 +5889,8 @@
           "curvatureRadius": 0.0,
           "pos": [
             -591.33251953125,
-            1434.5489501953125,
-            178.84877014160156
+            1434.549072265625,
+            178.84878540039063
           ],
           "useCurvatureRadius": 0
         },
@@ -4756,7 +6004,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "c0443d6f-fa90-4dfb-85e2-b8ef76610a2f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -4789,7 +6037,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "10672ed9-ccb5-497c-9202-d8b2c841ba39",
       "groupId": "legacy-import-group",
       "id": "f4a5b363-867d-429a-b182-62bc15afdbb5",
       "laneSections": [],
@@ -4917,8 +6165,8 @@
           "curvatureRadius": 0.0,
           "pos": [
             -591.33251953125,
-            1434.5489501953125,
-            178.84877014160156
+            1434.549072265625,
+            178.84878540039063
           ],
           "useCurvatureRadius": 0
         },
@@ -4951,7 +6199,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "c0443d6f-fa90-4dfb-85e2-b8ef76610a2f",
       "verticalCurve": []
     },
     {
@@ -4963,7 +6211,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "c0443d6f-fa90-4dfb-85e2-b8ef76610a2f",
       "groupId": "legacy-import-group",
       "id": "13a02101-1243-4b41-8744-ad835c8be4db",
       "laneSections": [],
@@ -4972,9 +6220,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -651.9224243164063,
-            1434.5391845703125,
-            161.79640197753906
+            -651.9224853515625,
+            1434.539306640625,
+            161.79641723632813
           ],
           "useCurvatureRadius": 0
         },
@@ -5018,14 +6266,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             -591.33251953125,
-            1434.5489501953125,
-            178.84877014160156
+            1434.549072265625,
+            178.84878540039063
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "4bd54c33-e8e2-49db-833b-02615fe41ce9",
       "verticalCurve": []
     },
     {
@@ -5037,7 +6285,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "4bd54c33-e8e2-49db-833b-02615fe41ce9",
       "groupId": "legacy-import-group",
       "id": "53ded13a-8059-4870-b4da-f3446f49b8d8",
       "laneSections": [],
@@ -5172,9 +6420,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -651.9224243164063,
-            1434.5391845703125,
-            161.79640197753906
+            -651.9224853515625,
+            1434.539306640625,
+            161.79641723632813
           ],
           "useCurvatureRadius": 0
         }
@@ -5375,7 +6623,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "45b6e502-278e-46d3-aa04-dd2f9d7c86e1",
       "groupId": "legacy-import-group",
       "id": "b7e7c5e7-7e44-429b-a6af-a5ca97982b53",
       "laneSections": [],
@@ -5413,13 +6661,13 @@
           "pos": [
             -263.87762451171875,
             1432.58056640625,
-            -55.17782974243164
+            -55.177833557128906
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "42e6b21b-d995-4564-9158-6e3c5beff5eb",
       "verticalCurve": []
     },
     {
@@ -5431,7 +6679,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "42e6b21b-d995-4564-9158-6e3c5beff5eb",
       "groupId": "legacy-import-group",
       "id": "e6479610-b2a3-4b91-a6aa-240fdc2b038f",
       "laneSections": [],
@@ -5595,7 +6843,7 @@
           "pos": [
             -263.87762451171875,
             1432.58056640625,
-            -55.17782974243164
+            -55.177833557128906
           ],
           "useCurvatureRadius": 0
         },
@@ -5655,7 +6903,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "45b6e502-278e-46d3-aa04-dd2f9d7c86e1",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -5673,7 +6921,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "45b6e502-278e-46d3-aa04-dd2f9d7c86e1",
       "groupId": "legacy-import-group",
       "id": "8a2ab201-0168-442f-9a26-4302ea7c6292",
       "laneSections": [],
@@ -5682,9 +6930,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -400.0711975097656,
-            1431.976806640625,
-            -313.3730773925781
+            -400.07122802734375,
+            1431.9769287109375,
+            -313.37310791015625
           ],
           "useCurvatureRadius": 0
         },
@@ -5801,13 +7049,13 @@
           "pos": [
             -263.87762451171875,
             1432.58056640625,
-            -55.17782974243164
+            -55.177833557128906
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "2ab8ab79-4eb9-4b90-8dfb-943318b7acd0",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -5849,9 +7097,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -400.0711975097656,
-            1431.976806640625,
-            -313.3730773925781
+            -400.07122802734375,
+            1431.9769287109375,
+            -313.37310791015625
           ],
           "useCurvatureRadius": 0
         },
@@ -5947,7 +7195,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "2ab8ab79-4eb9-4b90-8dfb-943318b7acd0",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -5975,7 +7223,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "2ab8ab79-4eb9-4b90-8dfb-943318b7acd0",
       "groupId": "legacy-import-group",
       "id": "7f3a889e-f85d-463d-a60e-685d74a4598d",
       "laneSections": [],
@@ -6047,9 +7295,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -400.0711975097656,
-            1431.976806640625,
-            -313.3730773925781
+            -400.07122802734375,
+            1431.9769287109375,
+            -313.37310791015625
           ],
           "useCurvatureRadius": 0
         }
@@ -6073,7 +7321,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "daf84eee-7ada-43fe-8bb6-51bcc7bd4e60",
       "groupId": "legacy-import-group",
       "id": "37b0dd08-9ab5-41c8-8472-d36e6c0ec1d0",
       "laneSections": [],
@@ -6083,7 +7331,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             -58.27462387084961,
-            1433.531494140625,
+            1433.5316162109375,
             -35.643333435058594
           ],
           "useCurvatureRadius": 0
@@ -6118,7 +7366,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -17.67436408996582,
+            -17.674365997314453,
             1433.0452880859375,
             -175.31121826171875
           ],
@@ -6126,7 +7374,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "0769c035-2bd4-4795-88fb-1f2d124064b2",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -6144,7 +7392,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "0769c035-2bd4-4795-88fb-1f2d124064b2",
       "groupId": "legacy-import-group",
       "id": "7eefe2d8-66b6-44dc-a768-fec12b244b4e",
       "laneSections": [],
@@ -6181,14 +7429,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             -58.27462387084961,
-            1433.531494140625,
+            1433.5316162109375,
             -35.643333435058594
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "91c85217-c97f-4d69-8b20-5e6cac2a23fd",
       "verticalCurve": []
     },
     {
@@ -6200,7 +7448,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "88831439-e45f-4183-a50b-062a70083040",
       "groupId": "legacy-import-group",
       "id": "32dfcfa9-8cb6-40f3-a79c-83f7ca7f37c6",
       "laneSections": [],
@@ -6235,7 +7483,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "91c85217-c97f-4d69-8b20-5e6cac2a23fd",
       "verticalCurve": []
     },
     {
@@ -6256,9 +7504,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            548.6499633789063,
+            548.6500244140625,
             1436.343505859375,
-            -684.1323852539063
+            -684.1324462890625
           ],
           "useCurvatureRadius": 0
         },
@@ -6336,7 +7584,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "63695111-3131-4596-8b7b-a71ce5d81da3",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -6359,7 +7607,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "63695111-3131-4596-8b7b-a71ce5d81da3",
       "groupId": "legacy-import-group",
       "id": "e7ed1f9f-0c8b-46ad-806f-14032937c84b",
       "laneSections": [],
@@ -6431,9 +7679,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            548.6499633789063,
+            548.6500244140625,
             1436.343505859375,
-            -684.1323852539063
+            -684.1324462890625
           ],
           "useCurvatureRadius": 0
         }
@@ -6457,7 +7705,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "744e6632-c06b-44c2-b8a8-ed863ab1d009",
       "groupId": "legacy-import-group",
       "id": "1d94a733-1419-458e-bdcb-a181a499a299",
       "laneSections": [],
@@ -6502,15 +7750,15 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -720.1724853515625,
+            -720.1725463867188,
             1436.9091796875,
-            278.6520080566406
+            278.65203857421875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "a3ce6bb2-d82b-46ee-a54f-e546eed15da2",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -6815,7 +8063,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "63237863-5c74-4897-a4f8-7b0366c116c5",
       "groupId": "legacy-import-group",
       "id": "a090225b-4064-497f-9c06-57b4cec21428",
       "laneSections": [],
@@ -6824,7 +8072,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            409.4416809082031,
+            409.44171142578125,
             1438.5013427734375,
             -232.25213623046875
           ],
@@ -6862,13 +8110,13 @@
           "pos": [
             292.2034606933594,
             1436.0384521484375,
-            -169.7282257080078
+            -169.72824096679688
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "392cd9f2-2542-485d-abe8-9b0fde01828c",
       "verticalCurve": []
     },
     {
@@ -6880,7 +8128,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "392cd9f2-2542-485d-abe8-9b0fde01828c",
       "groupId": "legacy-import-group",
       "id": "24d22359-f01c-4e88-aad8-8f30b30ea621",
       "laneSections": [],
@@ -6889,7 +8137,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            434.3157043457031,
+            434.31573486328125,
             1439.4287109375,
             -176.248779296875
           ],
@@ -6916,7 +8164,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            409.4416809082031,
+            409.44171142578125,
             1438.5013427734375,
             -232.25213623046875
           ],
@@ -6924,7 +8172,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "3b61d8a0-d33a-49d4-b20a-c39ecbfc04c6",
       "verticalCurve": []
     },
     {
@@ -6936,7 +8184,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "392cd9f2-2542-485d-abe8-9b0fde01828c",
       "groupId": "legacy-import-group",
       "id": "0a91cfa8-2863-4954-a6c0-196bfcc85f90",
       "laneSections": [],
@@ -6947,7 +8195,7 @@
           "pos": [
             590.8455810546875,
             1442.4140625,
-            -342.70782470703125
+            -342.7078552246094
           ],
           "useCurvatureRadius": 0
         },
@@ -6981,7 +8229,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            409.4416809082031,
+            409.44171142578125,
             1438.5013427734375,
             -232.25213623046875
           ],
@@ -6989,7 +8237,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "fe66277a-f085-4e5a-852a-225e8ea88b24",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -7022,7 +8270,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             848.2489624023438,
-            1469.712158203125,
+            1469.7122802734375,
             -488.11181640625
           ],
           "useCurvatureRadius": 0
@@ -7155,7 +8403,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "e86125a9-6e5c-4572-88e6-c98e2d2f3c4f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -7193,7 +8441,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "e86125a9-6e5c-4572-88e6-c98e2d2f3c4f",
       "groupId": "legacy-import-group",
       "id": "5becd461-52af-49ed-9528-2451d1667481",
       "laneSections": [],
@@ -7203,7 +8451,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             887.9603271484375,
-            1475.684814453125,
+            1475.6849365234375,
             -547.6842041015625
           ],
           "useCurvatureRadius": 0
@@ -7230,14 +8478,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             848.2489624023438,
-            1469.712158203125,
+            1469.7122802734375,
             -488.11181640625
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "4e827d21-62f7-4205-9dde-c65aac752038",
       "verticalCurve": []
     },
     {
@@ -7249,7 +8497,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "4e827d21-62f7-4205-9dde-c65aac752038",
       "groupId": "legacy-import-group",
       "id": "0309c706-0a43-474a-a40e-405c8cf914a2",
       "laneSections": [],
@@ -7259,7 +8507,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             848.2489624023438,
-            1469.712158203125,
+            1469.7122802734375,
             -488.11181640625
           ],
           "useCurvatureRadius": 0
@@ -7376,14 +8624,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             887.9603271484375,
-            1475.684814453125,
+            1475.6849365234375,
             -547.6842041015625
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "e86125a9-6e5c-4572-88e6-c98e2d2f3c4f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -7458,7 +8706,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "bee1a16b-6597-43a5-b177-4848ab9d79a2",
       "groupId": "legacy-import-group",
       "id": "af588192-b5b0-430a-8014-f43a07c06b67",
       "laneSections": [],
@@ -7505,13 +8753,13 @@
           "pos": [
             112.24263763427734,
             1432.7274169921875,
-            -461.0953674316406
+            -461.09539794921875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "6f1eff15-1919-415a-b2a2-e5f446acfb91",
       "verticalCurve": []
     },
     {
@@ -7523,7 +8771,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "258bfc91-ff11-4250-8846-0d16cf390bb0",
       "groupId": "legacy-import-group",
       "id": "0ba1a575-7381-4f98-b461-3d62d4e10712",
       "laneSections": [],
@@ -7595,18 +8843,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            280.7688903808594,
-            1428.998046875,
-            -1135.5706787109375
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            300.3205871582031,
-            1429.1865234375,
-            -1110.50439453125
+            280.6275634765625,
+            1425.8988037109375,
+            -1130.55517578125
           ],
           "useCurvatureRadius": 0
         },
@@ -7631,27 +8870,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            368.50091552734375,
-            1429.2705078125,
-            -1060.371826171875
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            405.5989990234375,
-            1430.8173828125,
-            -1035.3055419921875
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            439.1878356933594,
-            1431.5546875,
-            -994.6981811523438
+            408.9054260253906,
+            1430.564697265625,
+            -1039.1187744140625
           ],
           "useCurvatureRadius": 0
         },
@@ -7694,7 +8915,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            437.6838684082031,
+            437.68389892578125,
             1435.26171875,
             -758.57373046875
           ],
@@ -7702,7 +8923,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "e22f36b3-efba-4203-8271-9d4c3247df33",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -7760,7 +8981,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "42fe2399-0cb8-4ba5-84d2-c8cc42774257",
       "groupId": "legacy-import-group",
       "id": "0bbc0981-3f88-4a9b-94f8-f1f08df9fe41",
       "laneSections": [],
@@ -7769,7 +8990,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            494.7654113769531,
+            494.76544189453125,
             1434.067138671875,
             -1088.970703125
           ],
@@ -7831,7 +9052,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "14bd26c3-7cca-4e43-a79b-d1c689eee413",
       "verticalCurve": []
     },
     {
@@ -7843,7 +9064,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "fca0fb6e-07ac-4894-9bb8-e417ec6aada4",
       "groupId": "legacy-import-group",
       "id": "c0366df7-2193-4b0e-9bf7-b7ff5253d2d9",
       "laneSections": [],
@@ -8125,7 +9346,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "fca0fb6e-07ac-4894-9bb8-e417ec6aada4",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -8223,7 +9444,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "14bd26c3-7cca-4e43-a79b-d1c689eee413",
       "groupId": "legacy-import-group",
       "id": "f5030aa2-22de-477d-b573-519a88b24032",
       "laneSections": [],
@@ -8259,7 +9480,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            494.7654113769531,
+            494.76544189453125,
             1434.067138671875,
             -1088.970703125
           ],
@@ -8279,7 +9500,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "fca0fb6e-07ac-4894-9bb8-e417ec6aada4",
       "groupId": "legacy-import-group",
       "id": "bca77592-d184-4f41-87d1-958bd3dfe337",
       "laneSections": [],
@@ -8326,7 +9547,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a042454d-7607-4000-b131-26336e09dcce",
       "groupId": "legacy-import-group",
       "id": "93ba86f3-81e9-4c99-ae88-3e6cd85c1a2a",
       "laneSections": [],
@@ -8335,7 +9556,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            437.6838684082031,
+            437.68389892578125,
             1435.26171875,
             -758.57373046875
           ],
@@ -8362,27 +9583,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            251.190673828125,
-            1435.69140625,
-            -678.8629150390625
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            219.60714721679688,
-            1435.7490234375,
-            -650.287353515625
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            199.55410766601563,
-            1435.638671875,
-            -623.2157592773438
+            218.79168701171875,
+            1430.564697265625,
+            -663.9625244140625
           ],
           "useCurvatureRadius": 0
         },
@@ -8742,13 +9945,13 @@
           "pos": [
             -1139.00048828125,
             1450.2333984375,
-            945.0974731445313
+            945.0975341796875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "258bfc91-ff11-4250-8846-0d16cf390bb0",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -8946,7 +10149,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "24c5ebfa-295e-4c89-8595-70e806a021ad",
       "groupId": "legacy-import-group",
       "id": "23dff629-ae0d-47e8-8a26-86b6ba68b869",
       "laneSections": [],
@@ -8973,7 +10176,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            1913.870361328125,
+            1913.8704833984375,
             1821.8125,
             -1290.1126708984375
           ],
@@ -8993,7 +10196,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "aa235167-a20b-4cec-807e-59dc907d01c5",
       "groupId": "legacy-import-group",
       "id": "760faf8f-78ca-4f59-9a53-fea739343470",
       "laneSections": [],
@@ -9310,7 +10513,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "1536a8f5-9469-4fd5-a1cf-b71df356952b",
       "groupId": "legacy-import-group",
       "id": "5d7f491f-b2d6-4c92-8074-3c9cc5ad9d30",
       "laneSections": [],
@@ -9320,7 +10523,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             887.9603271484375,
-            1475.684814453125,
+            1475.6849365234375,
             -547.6842041015625
           ],
           "useCurvatureRadius": 0
@@ -9518,14 +10721,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             911.0138549804688,
-            1519.2872314453125,
+            1519.287353515625,
             -793.0814208984375
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "4e827d21-62f7-4205-9dde-c65aac752038",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -9578,7 +10781,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "0769c035-2bd4-4795-88fb-1f2d124064b2",
       "groupId": "legacy-import-group",
       "id": "78e51a82-1c13-4b28-9f4b-8e191848ba2a",
       "laneSections": [],
@@ -9606,14 +10809,14 @@
           "curvatureRadius": 0.0,
           "pos": [
             -58.27462387084961,
-            1433.531494140625,
+            1433.5316162109375,
             -35.643333435058594
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "88831439-e45f-4183-a50b-062a70083040",
       "verticalCurve": []
     },
     {
@@ -9625,7 +10828,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "10672ed9-ccb5-497c-9202-d8b2c841ba39",
       "groupId": "legacy-import-group",
       "id": "0dbf9d0a-39bb-4af2-978f-5275a474304f",
       "laneSections": [],
@@ -9741,7 +10944,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "88831439-e45f-4183-a50b-062a70083040",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -9789,7 +10992,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "10cdb77c-2a81-49d5-82c3-28c3b3d4e933",
       "groupId": "legacy-import-group",
       "id": "cd987634-1616-4418-aaed-35f87f7a414a",
       "laneSections": [],
@@ -9888,7 +11091,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "d5916e1f-aca2-4526-8cac-fa0b959401ae",
       "groupId": "legacy-import-group",
       "id": "2b88a824-1d6a-41d0-a9cf-13bb2d800bb9",
       "laneSections": [],
@@ -9977,7 +11180,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "d9ded75f-0afd-4d81-9050-6c3f2d6bb22f",
       "groupId": "legacy-import-group",
       "id": "6d035483-db22-4c5a-9f8c-4afc7bda6ba7",
       "laneSections": [],
@@ -10021,7 +11224,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "5770ab10-877d-46f2-b33a-869655ab2cdc",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -10039,7 +11242,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "1536a8f5-9469-4fd5-a1cf-b71df356952b",
       "groupId": "legacy-import-group",
       "id": "6babf3b9-40b3-4a46-904b-c6ef3c649d66",
       "laneSections": [],
@@ -10139,7 +11342,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             911.0138549804688,
-            1519.2872314453125,
+            1519.287353515625,
             -793.0814208984375
           ],
           "useCurvatureRadius": 0
@@ -10169,7 +11372,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "0e6124c1-f38d-4412-9c7f-525406285bf2",
       "groupId": "legacy-import-group",
       "id": "e9d75139-c0bd-420f-b1df-0ba2be9d0c3d",
       "laneSections": [],
@@ -10179,7 +11382,7 @@
           "curvatureRadius": 0.0,
           "pos": [
             911.0138549804688,
-            1519.2872314453125,
+            1519.287353515625,
             -793.0814208984375
           ],
           "useCurvatureRadius": 0
@@ -10474,7 +11677,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "1536a8f5-9469-4fd5-a1cf-b71df356952b",
       "verticalCurve": []
     },
     {
@@ -10640,7 +11843,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "96e1a991-98df-4647-91c7-71aea0ea7fe3",
       "groupId": "legacy-import-group",
       "id": "47c6e0ee-875c-4364-89dd-8a4155bba909",
       "laneSections": [
@@ -10718,7 +11921,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -743.9729614257813,
+            -743.9730224609375,
             1435.0869140625,
             -180.01458740234375
           ],
@@ -10762,7 +11965,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -743.9729614257813,
+            -743.9730224609375,
             1435.0869140625,
             -180.01458740234375
           ],
@@ -10797,7 +12000,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "96e1a991-98df-4647-91c7-71aea0ea7fe3",
       "verticalCurve": []
     },
     {
@@ -10809,7 +12012,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "96e1a991-98df-4647-91c7-71aea0ea7fe3",
       "groupId": "legacy-import-group",
       "id": "2616cb5c-1a0e-4fed-98cb-3825cd8b45e4",
       "laneSections": [],
@@ -10820,7 +12023,7 @@
           "pos": [
             -1033.33251953125,
             1440.248046875,
-            106.18582916259766
+            106.18583679199219
           ],
           "useCurvatureRadius": 0
         },
@@ -10962,7 +12165,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -743.9729614257813,
+            -743.9730224609375,
             1435.0869140625,
             -180.01458740234375
           ],
@@ -10970,7 +12173,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "6d7914b2-33c0-4f5d-a4e4-8429f3a71dd6",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -11008,7 +12211,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "6d7914b2-33c0-4f5d-a4e4-8429f3a71dd6",
       "groupId": "legacy-import-group",
       "id": "8cea01bb-53b9-4204-bdcd-114bc752a868",
       "laneSections": [],
@@ -11082,13 +12285,13 @@
           "pos": [
             -1033.33251953125,
             1440.248046875,
-            106.18582916259766
+            106.18583679199219
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "94505ad0-885f-4be0-a460-9711b2d5cbae",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -11106,7 +12309,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "94505ad0-885f-4be0-a460-9711b2d5cbae",
       "groupId": "legacy-import-group",
       "id": "87fcf6d5-0cdf-46a8-9fae-9be3c8f5a109",
       "laneSections": [],
@@ -11309,7 +12512,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "6d7914b2-33c0-4f5d-a4e4-8429f3a71dd6",
       "groupId": "legacy-import-group",
       "id": "5b0be6fe-f613-4bec-93a9-e1e3ef1a149e",
       "laneSections": [
@@ -11479,13 +12682,13 @@
           "pos": [
             -1033.33251953125,
             1440.248046875,
-            106.18582916259766
+            106.18583679199219
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "a9b82b71-c73e-4d3a-a469-a22fa39ed9d7",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -11518,7 +12721,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "a9b82b71-c73e-4d3a-a469-a22fa39ed9d7",
       "groupId": "legacy-import-group",
       "id": "3dd79535-f7f5-46b4-9a41-33f531fb64cc",
       "laneSections": [
@@ -11704,7 +12907,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "a9b82b71-c73e-4d3a-a469-a22fa39ed9d7",
       "groupId": "legacy-import-group",
       "id": "14717986-e92f-4493-b343-5fa885291350",
       "laneSections": [],
@@ -11964,7 +13167,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "85bbd689-3de4-4621-9a65-9e91a69161d1",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -12012,7 +13215,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "85bbd689-3de4-4621-9a65-9e91a69161d1",
       "groupId": "legacy-import-group",
       "id": "02f58ba5-2e61-4b01-96f4-0cff074b430c",
       "laneSections": [],
@@ -12068,7 +13271,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "85bbd689-3de4-4621-9a65-9e91a69161d1",
       "groupId": "legacy-import-group",
       "id": "23e5d4b5-7072-4f16-8a69-83fb895488b6",
       "laneSections": [],
@@ -12366,7 +13569,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1090.7525634765625,
+            -1090.752685546875,
             1457.72265625,
             584.7340698242188
           ],
@@ -12419,7 +13622,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "0b4b868e-7839-4e16-95d9-ab83b67dc3a5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -12437,7 +13640,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a3ce6bb2-d82b-46ee-a54f-e546eed15da2",
       "groupId": "legacy-import-group",
       "id": "43806ad8-8b64-4a17-b604-930f9d756f2b",
       "laneSections": [],
@@ -12601,7 +13804,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a3ce6bb2-d82b-46ee-a54f-e546eed15da2",
       "groupId": "legacy-import-group",
       "id": "b1d62a42-4fc2-4330-b692-464b311722b8",
       "laneSections": [],
@@ -12663,7 +13866,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "246d55f2-ab60-47ae-bd8f-ee21c9fb313b",
       "verticalCurve": []
     },
     {
@@ -12675,7 +13878,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "246d55f2-ab60-47ae-bd8f-ee21c9fb313b",
       "groupId": "legacy-import-group",
       "id": "7e471f55-0790-43f2-94ef-ccce50082e19",
       "laneSections": [],
@@ -12686,7 +13889,7 @@
           "pos": [
             -989.4877319335938,
             1440.33984375,
-            442.12432861328125
+            442.1243591308594
           ],
           "useCurvatureRadius": 0
         },
@@ -12719,7 +13922,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "aca346f0-0085-4080-ba43-4e516a3d9fc3",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -12737,7 +13940,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "aca346f0-0085-4080-ba43-4e516a3d9fc3",
       "groupId": "legacy-import-group",
       "id": "654989c5-734c-4275-a704-d37ddbba7bc4",
       "laneSections": [],
@@ -12784,7 +13987,7 @@
           "pos": [
             -989.4877319335938,
             1440.33984375,
-            442.12432861328125
+            442.1243591308594
           ],
           "useCurvatureRadius": 0
         }
@@ -12916,7 +14119,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "6f203472-465a-4c80-9710-1d4c5fa26bb5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -12944,7 +14147,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "6f203472-465a-4c80-9710-1d4c5fa26bb5",
       "groupId": "legacy-import-group",
       "id": "98d99806-7fb6-4228-badf-8f0fbdc5130f",
       "laneSections": [],
@@ -13065,7 +14268,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "6f203472-465a-4c80-9710-1d4c5fa26bb5",
       "groupId": "legacy-import-group",
       "id": "91b24fd7-86f5-4d7e-b28c-b39016f56a85",
       "laneSections": [],
@@ -13163,7 +14366,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "648e4428-82d1-4b54-9ac3-78b0caa9b3b3",
       "groupId": "legacy-import-group",
       "id": "c237ae09-23d0-45a5-a510-247608206e20",
       "laneSections": [],
@@ -13234,7 +14437,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "ac8569d6-0745-4b19-80a0-5ff16d875bab",
       "groupId": "legacy-import-group",
       "id": "b3c4d751-532a-4ff4-8737-3c8f13ea3e90",
       "laneSections": [],
@@ -13370,7 +14573,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "6a002188-e040-4194-b1bb-32c5fdc43597",
       "verticalCurve": []
     },
     {
@@ -13382,7 +14585,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "4bd54c33-e8e2-49db-833b-02615fe41ce9",
       "groupId": "legacy-import-group",
       "id": "c5ad48cc-4bef-4d8a-8ef8-b975bb883df3",
       "laneSections": [],
@@ -13598,9 +14801,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -651.9224243164063,
-            1434.5391845703125,
-            161.79640197753906
+            -651.9224853515625,
+            1434.539306640625,
+            161.79641723632813
           ],
           "useCurvatureRadius": 0
         }
@@ -13772,7 +14975,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "43ca8bcc-fbfe-4aa5-99bf-bea99d292c78",
       "verticalCurve": []
     },
     {
@@ -13784,7 +14987,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "43ca8bcc-fbfe-4aa5-99bf-bea99d292c78",
       "groupId": "legacy-import-group",
       "id": "b348efe9-60c0-414d-a38a-807a735d5cac",
       "laneSections": [],
@@ -13840,7 +15043,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "43ca8bcc-fbfe-4aa5-99bf-bea99d292c78",
       "groupId": "legacy-import-group",
       "id": "7cbc8f3c-0766-435a-a7de-1cf5f12c83cd",
       "laneSections": [],
@@ -13983,7 +15186,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "94505ad0-885f-4be0-a460-9711b2d5cbae",
       "verticalCurve": []
     },
     {
@@ -13995,7 +15198,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "aca346f0-0085-4080-ba43-4e516a3d9fc3",
       "groupId": "legacy-import-group",
       "id": "ddbc89f6-e0a9-4320-9837-b238fb1addb2",
       "laneSections": [],
@@ -14004,9 +15207,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -720.1724853515625,
+            -720.1725463867188,
             1436.9091796875,
-            278.6520080566406
+            278.65203857421875
           ],
           "useCurvatureRadius": 0
         },
@@ -14159,13 +15362,13 @@
           "pos": [
             -989.4877319335938,
             1440.33984375,
-            442.12432861328125
+            442.1243591308594
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "744e6632-c06b-44c2-b8a8-ed863ab1d009",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -14198,7 +15401,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "246d55f2-ab60-47ae-bd8f-ee21c9fb313b",
       "groupId": "legacy-import-group",
       "id": "ef74e091-632e-49b9-b28e-0cd240fdc3e7",
       "laneSections": [],
@@ -14207,7 +15410,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1090.7525634765625,
+            -1090.752685546875,
             1457.72265625,
             584.7340698242188
           ],
@@ -14278,7 +15481,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "0b4b868e-7839-4e16-95d9-ab83b67dc3a5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -14301,7 +15504,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "0b4b868e-7839-4e16-95d9-ab83b67dc3a5",
       "groupId": "legacy-import-group",
       "id": "7fc9f5e8-3791-4b51-803a-ebe91efcc756",
       "laneSections": [],
@@ -14400,7 +15603,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1090.7525634765625,
+            -1090.752685546875,
             1457.72265625,
             584.7340698242188
           ],
@@ -14408,7 +15611,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "a504e900-b4bc-4912-ae99-9cdb962746c1",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -14436,7 +15639,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "4451f1c5-f861-45ec-be66-40f1df8acb5d",
       "groupId": "legacy-import-group",
       "id": "051d545a-e976-4e01-964a-7347711c5367",
       "laneSections": [],
@@ -14474,7 +15677,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "8cba7f69-a9ff-462c-a7ca-bb88df40242b",
       "groupId": "legacy-import-group",
       "id": "3175a184-a1f5-4749-834c-36762d2aefb2",
       "laneSections": [],
@@ -14500,7 +15703,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "4451f1c5-f861-45ec-be66-40f1df8acb5d",
       "verticalCurve": []
     },
     {
@@ -14512,7 +15715,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "4451f1c5-f861-45ec-be66-40f1df8acb5d",
       "groupId": "legacy-import-group",
       "id": "e4f70f1e-35a0-4d23-9090-3bcc610218a6",
       "laneSections": [],
@@ -14521,9 +15724,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1179.9237060546875,
-            1450.2177734375,
-            958.3709716796875
+            -1179.8338623046875,
+            1450.219482421875,
+            958.4952392578125
           ],
           "useCurvatureRadius": 0
         },
@@ -14610,7 +15813,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "0379a9c4-cbd8-4bab-9213-77bd5e2b5223",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -14633,7 +15836,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "0379a9c4-cbd8-4bab-9213-77bd5e2b5223",
       "groupId": "legacy-import-group",
       "id": "409601f6-60c4-4c6a-b7f5-0b24d1587603",
       "laneSections": [],
@@ -14705,9 +15908,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1179.9237060546875,
-            1450.2177734375,
-            958.3709716796875
+            -1179.8338623046875,
+            1450.219482421875,
+            958.4952392578125
           ],
           "useCurvatureRadius": 0
         }
@@ -14731,7 +15934,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "0379a9c4-cbd8-4bab-9213-77bd5e2b5223",
       "groupId": "legacy-import-group",
       "id": "08ec7c62-d81d-4113-aec9-5976161e4e3c",
       "laneSections": [],
@@ -14767,9 +15970,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1179.654052734375,
-            1450.22265625,
-            958.7437133789063
+            -1179.8338623046875,
+            1450.219482421875,
+            958.4952392578125
           ],
           "useCurvatureRadius": 0
         }
@@ -14787,7 +15990,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a504e900-b4bc-4912-ae99-9cdb962746c1",
       "groupId": "legacy-import-group",
       "id": "d0396069-b766-4be8-b2b7-e0cc39748646",
       "laneSections": [],
@@ -14867,7 +16070,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "df52ebc5-b478-4f1a-918e-4f3fd699eff3",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -14890,7 +16093,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "df52ebc5-b478-4f1a-918e-4f3fd699eff3",
       "groupId": "legacy-import-group",
       "id": "1de523d9-1d36-472e-8231-483d6dc2daa1",
       "laneSections": [],
@@ -15121,7 +16324,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "df52ebc5-b478-4f1a-918e-4f3fd699eff3",
       "groupId": "legacy-import-group",
       "id": "8b47280e-ab5b-4153-94aa-e063f88f38d0",
       "laneSections": [],
@@ -15385,7 +16588,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "df52ebc5-b478-4f1a-918e-4f3fd699eff3",
       "groupId": "legacy-import-group",
       "id": "96f614e5-231f-46bc-8955-962121bdb663",
       "laneSections": [],
@@ -15441,7 +16644,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a042454d-7607-4000-b131-26336e09dcce",
       "groupId": "legacy-import-group",
       "id": "901cae04-fc57-45a9-8df9-68094c734a7f",
       "laneSections": [],
@@ -15659,7 +16862,7 @@
           "pos": [
             -1139.00048828125,
             1450.2333984375,
-            945.0974731445313
+            945.0975341796875
           ],
           "useCurvatureRadius": 0
         }
@@ -15759,7 +16962,7 @@
           "pos": [
             -1139.00048828125,
             1450.2333984375,
-            945.0974731445313
+            945.0975341796875
           ],
           "useCurvatureRadius": 0
         },
@@ -15801,7 +17004,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "a042454d-7607-4000-b131-26336e09dcce",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -15819,7 +17022,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "24c5ebfa-295e-4c89-8595-70e806a021ad",
       "groupId": "legacy-import-group",
       "id": "ce186ce9-c88d-4d59-a5d8-4ba6ed12816e",
       "laneSections": [],
@@ -15963,7 +17166,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            1913.870361328125,
+            1913.8704833984375,
             1821.8125,
             -1290.1126708984375
           ],
@@ -15971,7 +17174,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "12cabc68-ee0f-4cf8-b7b2-ca5ebdbd93e5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -16014,7 +17217,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "12cabc68-ee0f-4cf8-b7b2-ca5ebdbd93e5",
       "groupId": "legacy-import-group",
       "id": "9eab3fe9-6c2d-4afb-b1d6-d357aa2e8f3f",
       "laneSections": [],
@@ -16061,7 +17264,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "12cabc68-ee0f-4cf8-b7b2-ca5ebdbd93e5",
       "groupId": "legacy-import-group",
       "id": "6680b484-bea5-4b7d-9ca0-51dc194f98ad",
       "laneSections": [],
@@ -16201,7 +17404,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "165a3790-3295-47ed-b6a0-f3eb296fe21e",
       "groupId": "legacy-import-group",
       "id": "2015872c-6f69-4b4a-ba64-66cf6ef06e50",
       "laneSections": [],
@@ -16624,7 +17827,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            1728.185791015625,
+            1728.1859130859375,
             1845.4716796875,
             -1393.9124755859375
           ],
@@ -16804,7 +18007,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            1728.185791015625,
+            1728.1859130859375,
             1845.4716796875,
             -1393.9124755859375
           ],
@@ -16839,7 +18042,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "165a3790-3295-47ed-b6a0-f3eb296fe21e",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -16857,7 +18060,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "165a3790-3295-47ed-b6a0-f3eb296fe21e",
       "groupId": "legacy-import-group",
       "id": "b0ee4860-bd94-4d03-a07a-334a4739d90a",
       "laneSections": [],
@@ -16902,7 +18105,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            1728.185791015625,
+            1728.1859130859375,
             1845.4716796875,
             -1393.9124755859375
           ],
@@ -16928,7 +18131,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "60adb095-b65a-494c-912c-3c4eea9e0e91",
       "groupId": "legacy-import-group",
       "id": "86fea3cb-bdf1-4fb5-a1a5-585c16187160",
       "laneSections": [],
@@ -16939,7 +18142,7 @@
           "pos": [
             -1543.4984130859375,
             1541.1796875,
-            1551.9425048828125
+            1551.942626953125
           ],
           "useCurvatureRadius": 0
         },
@@ -17036,15 +18239,15 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1757.5074462890625,
-            1504.281494140625,
+            -1757.507568359375,
+            1504.2816162109375,
             1494.96337890625
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "e0d1ef74-8886-495f-a47e-cb2795df9190",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -17092,7 +18295,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "e0d1ef74-8886-495f-a47e-cb2795df9190",
       "groupId": "legacy-import-group",
       "id": "0f3af488-5ecd-4852-a7fc-4ec801870447",
       "laneSections": [],
@@ -17130,7 +18333,7 @@
           "pos": [
             -1543.4984130859375,
             1541.1796875,
-            1551.9425048828125
+            1551.942626953125
           ],
           "useCurvatureRadius": 0
         }
@@ -17148,7 +18351,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "60adb095-b65a-494c-912c-3c4eea9e0e91",
       "groupId": "legacy-import-group",
       "id": "48cc8a3b-353d-46c8-baff-8be465e26ab6",
       "laneSections": [],
@@ -17157,7 +18360,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1443.221923828125,
+            -1443.2220458984375,
             1549.775390625,
             1541.8662109375
           ],
@@ -17445,15 +18648,15 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1757.5074462890625,
-            1504.281494140625,
+            -1757.507568359375,
+            1504.2816162109375,
             1494.96337890625
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "1a227f8f-4a8e-4331-8339-c9cb9877bd55",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -17526,7 +18729,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "e0d1ef74-8886-495f-a47e-cb2795df9190",
       "groupId": "legacy-import-group",
       "id": "fec08806-365b-487e-b477-b9b0d50b0c9a",
       "laneSections": [],
@@ -17535,7 +18738,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1443.221923828125,
+            -1443.2220458984375,
             1549.775390625,
             1541.8662109375
           ],
@@ -17573,13 +18776,13 @@
           "pos": [
             -1543.4984130859375,
             1541.1796875,
-            1551.9425048828125
+            1551.942626953125
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "1a227f8f-4a8e-4331-8339-c9cb9877bd55",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -17597,7 +18800,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "8d1f3572-20a7-4e75-9ad8-1ddb5997713c",
       "groupId": "legacy-import-group",
       "id": "e288bd08-d803-497c-b7c8-4a5fc77cf259",
       "laneSections": [],
@@ -17848,7 +19051,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "63237863-5c74-4897-a4f8-7b0366c116c5",
       "groupId": "legacy-import-group",
       "id": "9573cc7c-cacc-4ad0-94e9-df2ff4af7637",
       "laneSections": [],
@@ -17857,7 +19060,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            400.0082092285156,
+            400.00823974609375,
             1447.6688232421875,
             -131.88897705078125
           ],
@@ -17922,13 +19125,13 @@
           "pos": [
             292.2034606933594,
             1436.0384521484375,
-            -169.7282257080078
+            -169.72824096679688
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "f6c09741-ee79-4100-a383-f3936243725d",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -17946,7 +19149,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "f6c09741-ee79-4100-a383-f3936243725d",
       "groupId": "legacy-import-group",
       "id": "fe06505f-189a-4349-94a2-135815119ecf",
       "laneSections": [],
@@ -17955,7 +19158,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            434.3157043457031,
+            434.31573486328125,
             1439.4287109375,
             -176.248779296875
           ],
@@ -17991,7 +19194,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            400.0082092285156,
+            400.00823974609375,
             1447.6688232421875,
             -131.88897705078125
           ],
@@ -17999,7 +19202,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "3b61d8a0-d33a-49d4-b20a-c39ecbfc04c6",
       "verticalCurve": []
     },
     {
@@ -18020,9 +19223,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -720.1724853515625,
+            -720.1725463867188,
             1436.9091796875,
-            278.6520080566406
+            278.65203857421875
           ],
           "useCurvatureRadius": 0
         },
@@ -18064,7 +19267,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "744e6632-c06b-44c2-b8a8-ed863ab1d009",
       "verticalCurve": []
     },
     {
@@ -18076,7 +19279,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "addec0f5-1b39-4c4f-b0af-a3d72b9b64f2",
       "groupId": "legacy-import-group",
       "id": "1f2f4bae-48a5-4563-a00e-860c8f09757a",
       "laneSections": [],
@@ -18114,7 +19317,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "582950e9-cefc-42c1-8509-3ae534adb2fe",
       "groupId": "legacy-import-group",
       "id": "28fdba20-2e85-4804-8d6a-57db28fa20ba",
       "laneSections": [],
@@ -18212,7 +19415,7 @@
         }
       ],
       "roadType": 2,
-      "startIntersectionId": "",
+      "startIntersectionId": "10cdb77c-2a81-49d5-82c3-28c3b3d4e933",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -18245,7 +19448,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "e22f36b3-efba-4203-8271-9d4c3247df33",
       "groupId": "legacy-import-group",
       "id": "db1c43b0-025d-4771-ab7c-1edda7280830",
       "laneSections": [],
@@ -18361,7 +19564,7 @@
         }
       ],
       "roadType": 2,
-      "startIntersectionId": "",
+      "startIntersectionId": "d5916e1f-aca2-4526-8cac-fa0b959401ae",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -18399,7 +19602,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a380e103-6f92-489d-8f54-db0c96e65e6e",
       "groupId": "legacy-import-group",
       "id": "8164a5ef-af65-4c0c-80f9-d0661b770eb6",
       "laneSections": [],
@@ -18542,7 +19745,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "546bbdd8-ca18-4326-b847-747cf7a8f9de",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -18580,7 +19783,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "546bbdd8-ca18-4326-b847-747cf7a8f9de",
       "groupId": "legacy-import-group",
       "id": "8b921c00-a6d1-4ccd-8cdd-de5fa90615ec",
       "laneSections": [],
@@ -18633,7 +19836,7 @@
         }
       ],
       "roadType": 2,
-      "startIntersectionId": "",
+      "startIntersectionId": "a7db5ac2-ea0a-4db6-be09-22f6cf65bb7d",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -18656,7 +19859,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a7db5ac2-ea0a-4db6-be09-22f6cf65bb7d",
       "groupId": "legacy-import-group",
       "id": "540f8416-de2d-48fe-ae71-85a0195adfb0",
       "laneSections": [],
@@ -18781,7 +19984,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "02d5cb84-d0e5-4e3a-a6ed-6934df899c7b",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -18829,7 +20032,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "02d5cb84-d0e5-4e3a-a6ed-6934df899c7b",
       "groupId": "legacy-import-group",
       "id": "c76db1dc-0430-4f7c-a38f-c262b291dd30",
       "laneSections": [],
@@ -18891,7 +20094,7 @@
         }
       ],
       "roadType": 2,
-      "startIntersectionId": "",
+      "startIntersectionId": "2f736193-76c8-4ff3-8275-b9d2c3aa0461",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -18919,7 +20122,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "dcdd9d19-3cca-408a-a8e6-715615b9ff44",
       "groupId": "legacy-import-group",
       "id": "98b3a6eb-aed0-4443-96ee-49c86dcb5889",
       "laneSections": [],
@@ -18981,7 +20184,7 @@
         }
       ],
       "roadType": 2,
-      "startIntersectionId": "",
+      "startIntersectionId": "aa235167-a20b-4cec-807e-59dc907d01c5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -19014,7 +20217,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "ac76fee6-8192-4ff2-bd62-63b17abee428",
       "groupId": "legacy-import-group",
       "id": "7a5cfaa0-6c7c-468e-bfec-93a5c7414140",
       "laneSections": [],
@@ -19130,7 +20333,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "dcdd9d19-3cca-408a-a8e6-715615b9ff44",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -19168,7 +20371,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "6d151ef5-8e1f-4d9b-a1a8-85e581009ede",
       "groupId": "legacy-import-group",
       "id": "457ab3a0-3f21-4f63-b36e-89c0d1e5950a",
       "laneSections": [],
@@ -19203,7 +20406,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "ac76fee6-8192-4ff2-bd62-63b17abee428",
       "verticalCurve": []
     },
     {
@@ -19215,7 +20418,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "2f736193-76c8-4ff3-8275-b9d2c3aa0461",
       "groupId": "legacy-import-group",
       "id": "67b4bd5e-0900-404d-a2b3-0ef72e3669b5",
       "laneSections": [],
@@ -19313,7 +20516,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "6d151ef5-8e1f-4d9b-a1a8-85e581009ede",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -19346,7 +20549,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "24c5ebfa-295e-4c89-8595-70e806a021ad",
       "groupId": "legacy-import-group",
       "id": "03ecfeec-b5c7-4942-8da4-dfb08573044c",
       "laneSections": [],
@@ -19931,7 +21134,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            1913.870361328125,
+            1913.8704833984375,
             1821.8125,
             -1290.1126708984375
           ],
@@ -19939,7 +21142,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "47cd2327-f2ef-4a37-98a8-5befef1d3eea",
       "verticalCurve": []
     },
     {
@@ -19951,7 +21154,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "47cd2327-f2ef-4a37-98a8-5befef1d3eea",
       "groupId": "legacy-import-group",
       "id": "d9aa0e69-b42f-4650-a82b-5f2f537962b0",
       "laneSections": [],
@@ -20013,7 +21216,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "0e6124c1-f38d-4412-9c7f-525406285bf2",
       "verticalCurve": []
     },
     {
@@ -20025,7 +21228,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "258bfc91-ff11-4250-8846-0d16cf390bb0",
       "groupId": "legacy-import-group",
       "id": "5db2bd59-8926-484a-8bd0-0b55606f6a09",
       "laneSections": [],
@@ -20223,7 +21426,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            437.6838684082031,
+            437.68389892578125,
             1435.26171875,
             -758.57373046875
           ],
@@ -20231,7 +21434,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "d115c404-9b05-44a2-8735-5b0c8c8fda1f",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -20294,7 +21497,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "d115c404-9b05-44a2-8735-5b0c8c8fda1f",
       "groupId": "legacy-import-group",
       "id": "4ffc92c7-9c65-472c-ac67-f38e70d59b53",
       "laneSections": [],
@@ -20320,7 +21523,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "a380e103-6f92-489d-8f54-db0c96e65e6e",
       "verticalCurve": []
     },
     {
@@ -20332,7 +21535,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "09dee9ba-4ad1-4dcd-b62f-4f3380c332a4",
       "groupId": "legacy-import-group",
       "id": "920b95ac-7c58-46ec-b7df-7b0686b01985",
       "laneSections": [],
@@ -20358,7 +21561,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "ecff961e-6163-43b8-8665-58b4e34e5781",
       "verticalCurve": []
     },
     {
@@ -20370,7 +21573,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "ecff961e-6163-43b8-8665-58b4e34e5781",
       "groupId": "legacy-import-group",
       "id": "0b3b427a-4475-48bd-b99c-a17db663511c",
       "laneSections": [],
@@ -20405,7 +21608,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "5c71ebae-197a-4338-9387-c2dd6ea5d1e7",
       "verticalCurve": []
     },
     {
@@ -20417,7 +21620,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "ff8bcae5-a8fc-4f0a-af10-b15d634c68d7",
       "groupId": "legacy-import-group",
       "id": "b5ebe2be-724e-40ee-ae86-ba8354fab742",
       "laneSections": [],
@@ -20443,7 +21646,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "cebb3043-689c-48c5-9100-2fa0912b2a46",
       "verticalCurve": []
     },
     {
@@ -20455,7 +21658,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "589fad97-e91b-4b41-81ad-21f65262aa36",
       "groupId": "legacy-import-group",
       "id": "d201401d-935c-4b06-bdae-6e2b27a2191d",
       "laneSections": [],
@@ -20511,13 +21714,13 @@
           "pos": [
             18.79506492614746,
             1432.83984375,
-            -901.8629150390625
+            -901.8629760742188
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "ff8bcae5-a8fc-4f0a-af10-b15d634c68d7",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -20535,7 +21738,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "fcb7c881-5a52-47bf-a30b-7efb3c1ce8f7",
       "groupId": "legacy-import-group",
       "id": "f0e7348c-ff29-437f-b81a-4cd9136abbce",
       "laneSections": [],
@@ -20561,7 +21764,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "18ff7615-f3a8-49c6-9ead-a1c8bbf829ff",
       "verticalCurve": []
     },
     {
@@ -20573,7 +21776,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.0,
       "defaultWidthLaneRight1": 1.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "6f1eff15-1919-415a-b2a2-e5f446acfb91",
       "groupId": "legacy-import-group",
       "id": "a1788728-8572-41b2-b66f-8e9653919789",
       "laneSections": [],
@@ -20653,7 +21856,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "fcb7c881-5a52-47bf-a30b-7efb3c1ce8f7",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -20686,7 +21889,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "b5bf9030-56f1-4ce4-b6b6-d67c047ef6b7",
       "groupId": "legacy-import-group",
       "id": "cfad5aa1-9f94-44da-96cd-d79e36269227",
       "laneSections": [],
@@ -20722,15 +21925,15 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            278.1531066894531,
+            278.15313720703125,
             1437.5560302734375,
-            -917.1040649414063
+            -917.1041259765625
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "b343e198-da55-4afd-a3d9-a0b310aa06e9",
       "verticalCurve": []
     },
     {
@@ -20742,7 +21945,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "b343e198-da55-4afd-a3d9-a0b310aa06e9",
       "groupId": "legacy-import-group",
       "id": "a1f1bf55-0b42-4f4b-a565-bee5bdb03580",
       "laneSections": [],
@@ -20786,7 +21989,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "55180575-fb6d-4a1d-b085-89ccc6fba574",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -20809,7 +22012,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "36cbbc3d-d95f-440d-a80f-937dc9453803",
       "groupId": "legacy-import-group",
       "id": "af4d5d67-5a23-4144-bc08-a13266d6e161",
       "laneSections": [],
@@ -20835,7 +22038,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "66fef63c-5fa0-48ee-8200-e632b5dd62e5",
       "verticalCurve": []
     },
     {
@@ -20847,7 +22050,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "c0b004a0-5edf-4d61-8ba3-a7142bb45855",
       "groupId": "legacy-import-group",
       "id": "7d84880f-34d0-49c6-a5db-29b4a8af1f8a",
       "laneSections": [],
@@ -20873,7 +22076,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "36cbbc3d-d95f-440d-a80f-937dc9453803",
       "verticalCurve": []
     },
     {
@@ -20885,7 +22088,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "6f1eff15-1919-415a-b2a2-e5f446acfb91",
       "groupId": "legacy-import-group",
       "id": "f0fc67e7-0afa-4f8b-a6ca-21e79f35f12b",
       "laneSections": [],
@@ -20929,7 +22132,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "7b5010d5-f9da-433e-b5f8-4fa5f655f92d",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -20947,7 +22150,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "7b5010d5-f9da-433e-b5f8-4fa5f655f92d",
       "groupId": "legacy-import-group",
       "id": "bc851b58-302e-4ef1-8dc4-f758662af68c",
       "laneSections": [],
@@ -20973,7 +22176,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "c0b004a0-5edf-4d61-8ba3-a7142bb45855",
       "verticalCurve": []
     },
     {
@@ -20985,7 +22188,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "bee1a16b-6597-43a5-b177-4848ab9d79a2",
       "groupId": "legacy-import-group",
       "id": "027b9ea6-b6f3-42f8-9575-3abac01c5cfa",
       "laneSections": [],
@@ -21059,13 +22262,13 @@
           "pos": [
             112.24263763427734,
             1432.7274169921875,
-            -461.0953674316406
+            -461.09539794921875
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "0e0aecd4-badd-42df-b676-fcef3baf38aa",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -21088,7 +22291,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "0e0aecd4-badd-42df-b676-fcef3baf38aa",
       "groupId": "legacy-import-group",
       "id": "8fd955ed-f366-4224-b45a-09f6ee6d6833",
       "laneSections": [],
@@ -21114,7 +22317,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "c9f4d0fd-6607-409d-bcb3-f6dc7fc4d370",
       "verticalCurve": []
     },
     {
@@ -21126,7 +22329,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "3851f1fa-bc9f-471f-b299-532ddf6e48e5",
       "groupId": "legacy-import-group",
       "id": "40c03be3-c770-44ad-b537-52b2d2a728d8",
       "laneSections": [],
@@ -21152,7 +22355,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "6e7a0ef7-7447-4249-9f56-bda4e53ec3c7",
       "verticalCurve": []
     },
     {
@@ -21164,7 +22367,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "fe66277a-f085-4e5a-852a-225e8ea88b24",
       "groupId": "legacy-import-group",
       "id": "0f3aa518-1b7c-45ed-9ee2-6d3d2eb59ae0",
       "laneSections": [],
@@ -21193,13 +22396,13 @@
           "pos": [
             590.8455810546875,
             1442.4140625,
-            -342.70782470703125
+            -342.7078552246094
           ],
           "useCurvatureRadius": 0
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "3851f1fa-bc9f-471f-b299-532ddf6e48e5",
       "verticalCurve": []
     },
     {
@@ -21211,7 +22414,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "daf84eee-7ada-43fe-8bb6-51bcc7bd4e60",
       "groupId": "legacy-import-group",
       "id": "6ba36a09-9994-4b89-b3d2-60c51c839d9b",
       "laneSections": [],
@@ -21292,7 +22495,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -17.67436408996582,
+            -17.674365997314453,
             1433.0452880859375,
             -175.31121826171875
           ],
@@ -21300,7 +22503,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "50f3540b-a3ac-4008-ba81-742ecc2adf96",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -21318,7 +22521,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "6a002188-e040-4194-b1bb-32c5fdc43597",
       "groupId": "legacy-import-group",
       "id": "088d5482-ce2e-4443-9f02-bf8073cb36ea",
       "laneSections": [],
@@ -21344,7 +22547,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "1f1d5ab0-bc88-462a-bf98-7176c1bf4c45",
       "verticalCurve": []
     },
     {
@@ -21356,7 +22559,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "1f1d5ab0-bc88-462a-bf98-7176c1bf4c45",
       "groupId": "legacy-import-group",
       "id": "d52c6bdd-1e05-458c-bf07-14fe68bcedf0",
       "laneSections": [],
@@ -21382,7 +22585,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "ac8569d6-0745-4b19-80a0-5ff16d875bab",
       "verticalCurve": []
     },
     {
@@ -21394,7 +22597,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "10672ed9-ccb5-497c-9202-d8b2c841ba39",
       "groupId": "legacy-import-group",
       "id": "7ed118e9-2019-44c4-93fb-c41c23c16881",
       "laneSections": [],
@@ -21465,7 +22668,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "addec0f5-1b39-4c4f-b0af-a3d72b9b64f2",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -21483,7 +22686,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "091d152a-f68c-49a4-ad42-2dd7950738c5",
       "groupId": "legacy-import-group",
       "id": "29ddc6dc-fb3b-4fc5-82af-1d2bc9afe1e8",
       "laneSections": [],
@@ -21509,7 +22712,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "8cba7f69-a9ff-462c-a7ca-bb88df40242b",
       "verticalCurve": []
     },
     {
@@ -21521,7 +22724,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 1.5,
       "defaultWidthLaneRight1": 1.5,
-      "endIntersectionId": "",
+      "endIntersectionId": "a504e900-b4bc-4912-ae99-9cdb962746c1",
       "groupId": "legacy-import-group",
       "id": "0ca14a11-aa22-4424-8fc2-ab1cbdd15419",
       "laneSections": [],
@@ -21628,7 +22831,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "091d152a-f68c-49a4-ad42-2dd7950738c5",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -21656,7 +22859,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "10672ed9-ccb5-497c-9202-d8b2c841ba39",
       "groupId": "legacy-import-group",
       "id": "a142a4ef-183f-4ab6-bded-c4a69f2d8ee1",
       "laneSections": [],
@@ -21853,7 +23056,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "7d4af2bc-4df4-48ad-8279-d71b282003b8",
       "verticalCurve": [
         {
           "offset": 0.0,
@@ -21951,7 +23154,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 4.0,
       "defaultWidthLaneRight1": 4.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "7d4af2bc-4df4-48ad-8279-d71b282003b8",
       "groupId": "legacy-import-group",
       "id": "6dece29b-07bb-44b5-b3bd-d99c40d364b4",
       "laneSections": [],
@@ -21986,7 +23189,7 @@
         }
       ],
       "roadType": 1,
-      "startIntersectionId": "",
+      "startIntersectionId": "5ce688fb-2845-479a-83c5-52e293c83e66",
       "verticalCurve": []
     },
     {
@@ -21998,7 +23201,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "1a227f8f-4a8e-4331-8339-c9cb9877bd55",
       "groupId": "legacy-import-group",
       "id": "f74e673d-8e20-4491-bc1c-6eb6a1d08154",
       "laneSections": [],
@@ -22025,7 +23228,7 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -1443.221923828125,
+            -1443.2220458984375,
             1549.775390625,
             1541.8662109375
           ],
@@ -22033,7 +23236,7 @@
         }
       ],
       "roadType": 0,
-      "startIntersectionId": "",
+      "startIntersectionId": "1e26734f-4d3b-4991-9477-41f4db638671",
       "verticalCurve": []
     },
     {
@@ -22045,7 +23248,7 @@
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 3.0,
       "defaultWidthLaneRight1": 3.0,
-      "endIntersectionId": "",
+      "endIntersectionId": "1e26734f-4d3b-4991-9477-41f4db638671",
       "groupId": "legacy-import-group",
       "id": "6bed16e4-5059-4dc5-a722-14a0a828aee5",
       "laneSections": [],
@@ -22080,7 +23283,7 @@
         }
       ],
       "roadType": 2,
-      "startIntersectionId": "",
+      "startIntersectionId": "8d1f3572-20a7-4e75-9ad8-1ddb5997713c",
       "verticalCurve": []
     }
   ],

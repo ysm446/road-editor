@@ -27,6 +27,70 @@ namespace
 constexpr const char* kViewSettingsPath = "data/view_settings.json";
 namespace fs = std::filesystem;
 
+void LoadSavedWindowLayout(const nlohmann::json& root,
+                           const char* key,
+                           SavedImGuiWindowLayout& outLayout)
+{
+    outLayout = SavedImGuiWindowLayout();
+    if (!root.contains(key) || !root[key].is_object())
+        return;
+
+    const nlohmann::json& item = root[key];
+    outLayout.valid = true;
+    outLayout.x = item.value("x", 0.0f);
+    outLayout.y = item.value("y", 0.0f);
+    outLayout.width = item.value("width", 0.0f);
+    outLayout.height = item.value("height", 0.0f);
+}
+
+nlohmann::json SaveSavedWindowLayout(const SavedImGuiWindowLayout& layout)
+{
+    return
+    {
+        { "x", layout.x },
+        { "y", layout.y },
+        { "width", layout.width },
+        { "height", layout.height }
+    };
+}
+
+void CaptureSavedWindowLayout(SavedImGuiWindowLayout& layout)
+{
+    const ImVec2 pos = ImGui::GetWindowPos();
+    const ImVec2 size = ImGui::GetWindowSize();
+    layout.valid = true;
+    layout.x = pos.x;
+    layout.y = pos.y;
+    layout.width = size.x;
+    layout.height = size.y;
+}
+
+void ApplySavedWindowLayout(const SavedImGuiWindowLayout& layout,
+                            ImVec2 defaultPos,
+                            ImVec2 defaultSize,
+                            bool applyManagedLayouts)
+{
+    if (applyManagedLayouts)
+    {
+        const ImVec2 pos = layout.valid ? ImVec2(layout.x, layout.y) : defaultPos;
+        const ImVec2 size = layout.valid ? ImVec2(layout.width, layout.height) : defaultSize;
+        ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+        return;
+    }
+
+    if (layout.valid)
+    {
+        ImGui::SetNextWindowPos(ImVec2(layout.x, layout.y), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(layout.width, layout.height), ImGuiCond_FirstUseEver);
+    }
+    else
+    {
+        ImGui::SetNextWindowPos(defaultPos, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(defaultSize, ImGuiCond_FirstUseEver);
+    }
+}
+
 struct PathGridConfig
 {
     float minX = 0.0f;
@@ -554,8 +618,8 @@ void App::LoadViewSettings()
     m_showRoadPreviewMetrics = false;
     m_showRoadGradeGradient = false;
     m_showGrid = true;
-    m_showCameraWindow = true;
-    m_showTerrainWindow = true;
+    m_showCameraWindow = false;
+    m_showTerrainWindow = false;
     m_showRoadEditorWindow = true;
     m_showPropertiesWindow = true;
     m_showFps = true;
@@ -590,8 +654,8 @@ void App::LoadViewSettings()
             m_showRoadPreviewMetrics = root.value("showRoadPreviewMetrics", false);
             m_showRoadGradeGradient = root.value("showRoadGradeGradient", false);
             m_showGrid = root.value("showGrid", true);
-            m_showCameraWindow = root.value("showCameraWindow", true);
-            m_showTerrainWindow = root.value("showTerrainWindow", true);
+            m_showCameraWindow = root.value("showCameraWindow", false);
+            m_showTerrainWindow = root.value("showTerrainWindow", false);
             m_showRoadEditorWindow = root.value("showRoadEditorWindow", true);
             m_showPropertiesWindow = root.value("showPropertiesWindow", true);
             m_showFps = root.value("showFps", true);
@@ -648,6 +712,15 @@ void App::LoadViewSettings()
                         break;
                 }
             }
+            if (root.contains("windowLayouts") && root["windowLayouts"].is_object())
+            {
+                const nlohmann::json& layouts = root["windowLayouts"];
+                LoadSavedWindowLayout(layouts, "camera", m_cameraWindowLayout);
+                LoadSavedWindowLayout(layouts, "terrain", m_terrainWindowLayout);
+                LoadSavedWindowLayout(layouts, "roadEditor", m_roadEditorWindowLayout);
+                LoadSavedWindowLayout(layouts, "properties", m_propertiesWindowLayout);
+                LoadSavedWindowLayout(layouts, "displaySettings", m_displaySettingsWindowLayout);
+            }
         }
     }
     catch (...)
@@ -668,6 +741,7 @@ void App::LoadViewSettings()
     m_editor.SetSelectedRoadColor(m_selectedRoadColor);
     m_editor.SetIntersectionScreenGizmoRadius(m_intersectionScreenGizmoRadius);
     m_editor.SetIntersectionCircleColor(m_intersectionCircleColor);
+    m_applyManagedWindowLayouts = true;
     RebuildContourCache();
 }
 
@@ -711,6 +785,13 @@ void App::SaveViewSettings() const
             { "intersectionCircleColor", { m_intersectionCircleColor.x, m_intersectionCircleColor.y, m_intersectionCircleColor.z } },
             { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
             { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } },
+            { "windowLayouts", {
+                { "camera", SaveSavedWindowLayout(m_cameraWindowLayout) },
+                { "terrain", SaveSavedWindowLayout(m_terrainWindowLayout) },
+                { "roadEditor", SaveSavedWindowLayout(m_roadEditorWindowLayout) },
+                { "properties", SaveSavedWindowLayout(m_propertiesWindowLayout) },
+                { "displaySettings", SaveSavedWindowLayout(m_displaySettingsWindowLayout) }
+            } },
             { "recentProjectPaths", recentProjectPaths }
         };
 
@@ -726,6 +807,22 @@ void App::SaveViewSettings() const
 void App::SetStatusMessage(const std::string& message)
 {
     m_statusMessage = message;
+}
+
+void App::ResetManagedWindowLayouts()
+{
+    m_showRoadEditorWindow = true;
+    m_showPropertiesWindow = true;
+    m_showCameraWindow = false;
+    m_showTerrainWindow = false;
+    m_showDisplaySettingsWindow = false;
+
+    m_cameraWindowLayout = SavedImGuiWindowLayout();
+    m_terrainWindowLayout = SavedImGuiWindowLayout();
+    m_roadEditorWindowLayout = SavedImGuiWindowLayout();
+    m_propertiesWindowLayout = SavedImGuiWindowLayout();
+    m_displaySettingsWindowLayout = SavedImGuiWindowLayout();
+    m_applyManagedWindowLayouts = true;
 }
 
 void App::AddRecentProjectPath(const char* path)
@@ -1594,6 +1691,7 @@ int App::Run()
         Render();
     }
 
+    SaveViewSettings();
     m_debugDraw.Shutdown();
     m_terrain->Shutdown();
     m_grid->Shutdown();
@@ -1742,6 +1840,12 @@ void App::Render()
         }
         if (ImGui::BeginMenu(u8"\u30A6\u30A4\u30F3\u30C9\u30A6"))
         {
+            if (ImGui::MenuItem(u8"\u30A6\u30A4\u30F3\u30C9\u30A6\u914D\u7F6E\u3092\u521D\u671F\u5316"))
+            {
+                ResetManagedWindowLayouts();
+                SaveViewSettings();
+            }
+            ImGui::Separator();
             if (ImGui::MenuItem(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9", nullptr, m_showTerrainWindow))
             {
                 m_showTerrainWindow = !m_showTerrainWindow;
@@ -1986,9 +2090,17 @@ void App::Render()
 
     if (m_showDisplaySettingsWindow)
     {
-        ImGui::SetNextWindowSize(ImVec2(360, 320), ImGuiCond_FirstUseEver);
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        const ImVec2 workPos = mainViewport->WorkPos;
+        const ImVec2 workSize = mainViewport->WorkSize;
+        ApplySavedWindowLayout(
+            m_displaySettingsWindowLayout,
+            ImVec2(workPos.x + workSize.x - 400.0f, workPos.y + 40.0f),
+            ImVec2(380.0f, 340.0f),
+            m_applyManagedWindowLayouts);
         if (ImGui::Begin(u8"\u8868\u793A\u8A2D\u5B9A", &m_showDisplaySettingsWindow))
         {
+            CaptureSavedWindowLayout(m_displaySettingsWindowLayout);
             if (ImGui::CollapsingHeader(u8"\u4E00\u822C", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 if (ImGui::Checkbox(u8"\u30B0\u30EA\u30C3\u30C9", &m_showGrid))
@@ -2154,10 +2266,17 @@ void App::Render()
     const bool wasShowingCameraWindow = m_showCameraWindow;
     if (m_showCameraWindow)
     {
-        ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(280, 110), ImGuiCond_FirstUseEver);
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        const ImVec2 workPos = mainViewport->WorkPos;
+        const ImVec2 workSize = mainViewport->WorkSize;
+        ApplySavedWindowLayout(
+            m_cameraWindowLayout,
+            ImVec2(workPos.x + workSize.x - 340.0f, workPos.y + workSize.y - 170.0f),
+            ImVec2(320.0f, 140.0f),
+            m_applyManagedWindowLayouts);
         if (ImGui::Begin(u8"\u30AB\u30E1\u30E9", &m_showCameraWindow))
         {
+            CaptureSavedWindowLayout(m_cameraWindowLayout);
             auto p = m_camera->GetPosition();
             ImGui::Text("Position  %.2f  %.2f  %.2f", p.x, p.y, p.z);
             ImGui::Separator();
@@ -2180,9 +2299,17 @@ void App::Render()
     const bool wasShowingTerrainWindow = m_showTerrainWindow;
     if (m_showTerrainWindow)
     {
-        ImGui::SetNextWindowPos(ImVec2(10, 150), ImGuiCond_FirstUseEver);
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        const ImVec2 workPos = mainViewport->WorkPos;
+        const ImVec2 workSize = mainViewport->WorkSize;
+        ApplySavedWindowLayout(
+            m_terrainWindowLayout,
+            ImVec2(workPos.x + workSize.x - 380.0f, workPos.y + 40.0f),
+            ImVec2(360.0f, 420.0f),
+            m_applyManagedWindowLayouts);
         ImGui::Begin(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9", &m_showTerrainWindow, ImGuiWindowFlags_AlwaysAutoResize);
         {
+        CaptureSavedWindowLayout(m_terrainWindowLayout);
         ImGui::Checkbox(u8"\u30EF\u30A4\u30E4\u30FC\u30D5\u30EC\u30FC\u30E0", &m_terrain->wireframe);
         ImGui::Separator();
 
@@ -2318,12 +2445,19 @@ void App::Render()
     // Road editor panel
     const bool wasShowingRoadEditorWindow = m_showRoadEditorWindow;
     const bool wasShowingPropertiesWindow = m_showPropertiesWindow;
-    m_editor.DrawUI(m_d3d->GetDevice(), &m_showRoadEditorWindow, &m_showPropertiesWindow);
+    m_editor.DrawUI(
+        m_d3d->GetDevice(),
+        &m_showRoadEditorWindow,
+        &m_showPropertiesWindow,
+        &m_roadEditorWindowLayout,
+        &m_propertiesWindowLayout,
+        m_applyManagedWindowLayouts);
     if (wasShowingRoadEditorWindow != m_showRoadEditorWindow ||
         wasShowingPropertiesWindow != m_showPropertiesWindow)
     {
         SaveViewSettings();
     }
+    m_applyManagedWindowLayouts = false;
 
     std::string editorStatus;
     if (m_editor.ConsumeStatusMessage(editorStatus))

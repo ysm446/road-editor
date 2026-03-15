@@ -5,12 +5,12 @@
     0.2664092779159546
   ],
   "contourColor": [
-    0.6640926599502563,
-    0.6640926599502563,
-    0.6640926599502563
+    0.7837837934494019,
+    0.7837837934494019,
+    0.7837837934494019
   ],
-  "contourInterval": 20.0,
-  "gridBaseScale": 100.0,
+  "contourInterval": 2.0,
+  "gridBaseScale": 1000.0,
   "gridFadeDistance": 10000.0,
   "intersectionCircleColor": [
     0.3137255012989044,
@@ -20,8 +20,8 @@
   "intersectionScreenGizmoRadius": 6.0,
   "previewCurveThickness": 2.0,
   "recentProjectPaths": [
-    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj",
-    "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj"
+    "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj",
+    "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj"
   ],
   "roadGradeRedThresholdPercent": 12.0,
   "roadLineThickness": 1.0,
@@ -37,17 +37,48 @@
     1.0
   ],
   "selectedRoadLineThickness": 2.0,
-  "showCameraWindow": true,
-  "showContours": false,
+  "showCameraWindow": false,
   "showDisplaySettingsWindow": true,
   "showFps": false,
   "showGrid": false,
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": false,
+  "showRoadGradeGradient": true,
   "showRoadGuidelines": true,
-  "showRoadNames": false,
+  "showRoadNames": true,
   "showRoadPreviewMetrics": false,
-  "showTerrainWindow": true
+  "showTerrainWindow": false,
+  "windowLayouts": {
+    "camera": {
+      "height": 0.0,
+      "width": 0.0,
+      "x": 0.0,
+      "y": 0.0
+    },
+    "displaySettings": {
+      "height": 567.0,
+      "width": 380.0,
+      "x": 993.0,
+      "y": 496.0
+    },
+    "properties": {
+      "height": 717.0,
+      "width": 380.0,
+      "x": 1188.0,
+      "y": 64.0
+    },
+    "roadEditor": {
+      "height": 478.0,
+      "width": 523.0,
+      "x": 16.0,
+      "y": 64.0
+    },
+    "terrain": {
+      "height": 330.0,
+      "width": 449.0,
+      "x": 819.0,
+      "y": 153.0
+    }
+  }
 }

@@ -1,0 +1,147 @@
+//
+// ガイドポリラインをバーチカル曲線に変換する
+// Run Over: Primitives
+// input0: ガイドポリライン
+// input0にはXY平面に伸ばしたベジェ曲線（2次）のガイドラインが入っている想定
+// ガイドラインは始点から縦断曲線ポイントをつなぎ、終点へ至るポリラインを中間点で分割したポリラインが入っている想定
+//
+// 概要:
+// - 3点 p0, p1, p2 を「前勾配」「縦断曲線の中心(PVI相当)」「後勾配」とみなす
+// - p0-p1 と p1-p2 の勾配差から、放物線 y = (i1 - i2) / (2L) * x^2 を使って縦断曲線を作る
+// - 曲線長 L は属性 f@vcl を使うが、前後の接線区間が短い場合はそこに収まるよう短縮する
+// - 最終的に、始点側直線 + 縦断曲線 + 終点側直線の3本のポリラインに作り直す
+//
+
+// Sin
+float easeInOutSin(const float x)
+{
+    return -(cos(PI * (x*2)) - 1) / 2;
+}
+
+//
+// 直線の交点を求める関数
+//
+vector CrossPointXY(vector p0; vector p1; vector p2; vector p3)
+{
+    // 2本の無限直線の交点を XY 平面上で求める。
+    // 係数 a*x + b*y + c = 0 を2本作り、連立一次方程式として解く。
+    float a1 = p0.y - p1.y;
+    float b1 = p1.x - p0.x;
+    float c1 = (p1.x - p0.x) * p0.y - (p1.y - p0.y) * p0.x;
+     
+    float a2 = p2.y - p3.y;
+    float b2 = p3.x - p2.x;
+    float c2 = (p3.x - p2.x) * p2.y - (p3.y - p2.y) * p2.x;
+
+    float det = a1 * b2 - a2 * b1;
+    if(abs(det) < 1e-6)
+    {
+        // 平行またはほぼ平行で交点が安定しない場合は安全側で p1 を返す。
+        return p1;
+    }
+
+    float x = (c1 * b2 - c2 * b1) / det;
+    float y = (a1 * c2 - a2 * c1) / det;
+
+    return set(x, y, 0);
+}
+
+//
+// 放物線オフセット:
+// y = (i1 - i2) / (2 * L) * x^2
+// ここで i1, i2 は前後の勾配、L は縦断曲線の水平長。
+// 接線からのずれ量をこの式で求め、接線上の点へ加えることで縦断曲線を作る。
+//
+int pts[] = primpoints(0, @primnum);
+if(len(pts) > 2)
+{
+    float eps = 1e-6;
+    float L = f@vcl; // 水平長（バーチカル曲線の最大距離）
+
+    vector p0 = point(0, "P", pts[0]);
+    vector p1 = point(0, "P", pts[1]);
+    vector p2 = point(0, "P", pts[2]);
+
+    // XY 平面上の水平距離。これを分母に使って勾配を求めるため 0 除算を避ける。
+    float dx0 = p1.x - p0.x;
+    float dx1 = p2.x - p1.x;
+    if(abs(dx0) < eps || abs(dx1) < eps)
+    {
+        return;
+    }
+
+    // i = Δy / Δx として前後接線の勾配を計算する。
+    float i1 = (p1.y - p0.y) / dx0; // 前勾配
+    float i2 = (p2.y - p1.y) / dx1;
+
+    // p1 が曲線中央にある前提なので、各接線区間が許容する最大曲線長はその x 差分の2倍。
+    float length0 = abs(dx0) * 2;
+    float length1 = abs(dx1) * 2;
+    
+    // バーチカル曲線の水平長より辺が短かったらバーチカル曲線の長さを短縮する
+    L = min(length1, min(length0, L));
+
+    if(L < eps)
+    {
+        return;
+    }
+
+    vector diff = p1 - p0;
+    // 縦断曲線の基準になる前接線の傾き。
+    float slope = diff.y / dx0;
+    
+    // p1 を中心に L/2 だけ戻った x を曲線始点とみなし、
+    // その x と前接線の交点を曲線ローカル座標の原点にする。
+    float x = p1.x - L/2;
+    vector cross = CrossPointXY(p0, p1, set(x, -1000, 0), set(x, 1000, 0));
+    
+    vector curvePos[];  // バーチカル曲線の座標リスト
+    int num = 100;
+    float dist = L / float(num-1);
+    
+    for(int i = 0; i < num; i++)
+    {
+        x = dist * i;
+        // 接線からの鉛直オフセット。
+        // x = 0 で 0、x = L に向かって前後勾配差に応じた放物線量になる。
+        float y  = (i1-i2) / (2 * L) * pow(x,2);
+        // 前接線上の点 slope * x から放物線分だけ差し引いて曲線位置を作る。
+        curvePos[i] = cross + set(x, slope * x - y, 0);
+    }
+    
+    // ポリライン（始点からの直線）の生成
+    int prim = addprim(0, "polyline");
+    int pt = addpoint(0, pts[0]);
+    addvertex(0, prim, pt);
+    pt = addpoint(0, curvePos[0]);
+    addvertex(0, prim, pt);
+    
+    // ポリライン（バーチカル曲線部分）の生成
+    prim = addprim(0, "polyline");
+    
+    // XY 平面での折れ方向から谷側か山側かを判定し、表示色に使う。
+    vector left = cross(set(0,0,1), p1-p0);
+    float d = dot(left, p2-p1);
+    
+    vector slopeColor = set(1, 0.5, 0);   // 山
+    if(d > 0) slopeColor = set(0, 0.5, 1.0);   // 谷
+        
+    for(int i = 0; i < len(curvePos); i++)
+    {
+        int pt2 = addpoint(0, curvePos[i]);
+        addvertex(0, prim, pt2);
+        
+        vector color = slopeColor;
+        setpointattrib(0, "Cd", pt2, color);
+    }
+    
+    // ポリライン（終点までの曲線）の生成
+    prim = addprim(0, "polyline");
+    pt = addpoint(0, curvePos[-1]);
+    addvertex(0, prim, pt);
+    pt = addpoint(0, pts[2]);
+    addvertex(0, prim, pt);
+    
+    // 元のポリラインを削除
+    removeprim(0, @primnum, 1);
+}
