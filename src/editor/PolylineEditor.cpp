@@ -15,6 +15,8 @@ constexpr int kPreviewCurveSubdivisions = 12;
 constexpr float kVerticalCurveDefaultLength = 50.0f;
 constexpr float kBankAngleDefaultTargetSpeed = 40.0f;
 constexpr float kLaneSectionDefaultWidth = 3.0f;
+constexpr float kPreviewCurveSampleLength = 2.0f;
+constexpr float kPreviewClothoidAngleRatio = 0.2f;
 constexpr float kMinIntersectionSpacingMeters = 10.0f;
 
 float Distance3(XMFLOAT3 a, XMFLOAT3 b)
@@ -35,6 +37,15 @@ XMFLOAT3 Lerp3(XMFLOAT3 a, XMFLOAT3 b, float t)
     };
 }
 
+XMFLOAT2 Lerp2(XMFLOAT2 a, XMFLOAT2 b, float t)
+{
+    return
+    {
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t
+    };
+}
+
 XMFLOAT4 Lerp4(XMFLOAT4 a, XMFLOAT4 b, float t)
 {
     return
@@ -51,6 +62,112 @@ float DistanceXZ3(XMFLOAT3 a, XMFLOAT3 b)
     const float dx = a.x - b.x;
     const float dz = a.z - b.z;
     return sqrtf(dx * dx + dz * dz);
+}
+
+float Distance2(XMFLOAT2 a, XMFLOAT2 b)
+{
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return sqrtf(dx * dx + dy * dy);
+}
+
+float Dot3(XMFLOAT3 a, XMFLOAT3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+float Dot2(XMFLOAT2 a, XMFLOAT2 b)
+{
+    return a.x * b.x + a.y * b.y;
+}
+
+XMFLOAT3 Add3(XMFLOAT3 a, XMFLOAT3 b)
+{
+    return { a.x + b.x, a.y + b.y, a.z + b.z };
+}
+
+XMFLOAT3 Sub3(XMFLOAT3 a, XMFLOAT3 b)
+{
+    return { a.x - b.x, a.y - b.y, a.z - b.z };
+}
+
+XMFLOAT3 Scale3(XMFLOAT3 v, float s)
+{
+    return { v.x * s, v.y * s, v.z * s };
+}
+
+XMFLOAT3 Cross3(XMFLOAT3 a, XMFLOAT3 b)
+{
+    return
+    {
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    };
+}
+
+XMFLOAT2 Add2(XMFLOAT2 a, XMFLOAT2 b)
+{
+    return { a.x + b.x, a.y + b.y };
+}
+
+XMFLOAT2 Sub2(XMFLOAT2 a, XMFLOAT2 b)
+{
+    return { a.x - b.x, a.y - b.y };
+}
+
+XMFLOAT2 Scale2(XMFLOAT2 v, float s)
+{
+    return { v.x * s, v.y * s };
+}
+
+XMFLOAT2 Rotate2(XMFLOAT2 v, float angle)
+{
+    const float c = cosf(angle);
+    const float s = sinf(angle);
+    return
+    {
+        v.x * c - v.y * s,
+        v.x * s + v.y * c
+    };
+}
+
+float Length3(XMFLOAT3 v)
+{
+    return sqrtf(Dot3(v, v));
+}
+
+float Length2(XMFLOAT2 v)
+{
+    return sqrtf(Dot2(v, v));
+}
+
+XMFLOAT3 Normalize3(XMFLOAT3 v)
+{
+    const float len = Length3(v);
+    if (len <= 1e-6f)
+        return { 0.0f, 0.0f, 0.0f };
+    return Scale3(v, 1.0f / len);
+}
+
+XMFLOAT2 Normalize2(XMFLOAT2 v)
+{
+    const float len = Length2(v);
+    if (len <= 1e-6f)
+        return { 0.0f, 0.0f };
+    return Scale2(v, 1.0f / len);
+}
+
+bool NearlyEqual3(XMFLOAT3 a, XMFLOAT3 b, float epsilon = 1e-3f)
+{
+    return Distance3(a, b) <= epsilon;
+}
+
+void AppendUniquePoint(std::vector<XMFLOAT3>& samples, XMFLOAT3 point)
+{
+    if (!samples.empty() && NearlyEqual3(samples.back(), point))
+        return;
+    samples.push_back(point);
 }
 
 XMFLOAT4 PreviewGradeColor(float gradePercent, float redThresholdPercent)
@@ -78,29 +195,489 @@ XMFLOAT3 QuadraticBezier(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, float t)
     };
 }
 
+struct PreviewPlaneFrame
+{
+    XMFLOAT3 origin = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 xAxis = { 1.0f, 0.0f, 0.0f };
+    XMFLOAT3 yAxis = { 0.0f, 1.0f, 0.0f };
+    XMFLOAT3 zAxis = { 0.0f, 0.0f, 1.0f };
+};
+
+enum class PreviewCurveSegmentKind
+{
+    Other,
+    Clothoid,
+    Arc
+};
+
+struct PreviewCurvePoint
+{
+    XMFLOAT3 pos = { 0.0f, 0.0f, 0.0f };
+    PreviewCurveSegmentKind kind = PreviewCurveSegmentKind::Other;
+};
+
+void AppendUniquePreviewPoint(
+    std::vector<PreviewCurvePoint>& samples,
+    XMFLOAT3 point,
+    PreviewCurveSegmentKind kind)
+{
+    if (!samples.empty() && NearlyEqual3(samples.back().pos, point))
+    {
+        samples.back().kind = kind;
+        return;
+    }
+    samples.push_back({ point, kind });
+}
+
+bool BuildPreviewPlaneFrame(XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2, PreviewPlaneFrame& outFrame)
+{
+    const XMFLOAT3 seg0 = Sub3(p1, p0);
+    const XMFLOAT3 seg1 = Sub3(p2, p1);
+    const float segLen0 = Length3(seg0);
+    const float segLen1 = Length3(seg1);
+    if (segLen0 <= 1e-4f || segLen1 <= 1e-4f)
+        return false;
+
+    const XMFLOAT3 xAxis = Scale3(seg0, 1.0f / segLen0);
+    const XMFLOAT3 zAxis = Normalize3(Cross3(xAxis, seg1));
+    if (Length3(zAxis) <= 1e-4f)
+        return false;
+
+    const XMFLOAT3 yAxis = Normalize3(Cross3(zAxis, xAxis));
+    if (Length3(yAxis) <= 1e-4f)
+        return false;
+
+    outFrame.origin = p0;
+    outFrame.xAxis = xAxis;
+    outFrame.yAxis = yAxis;
+    outFrame.zAxis = zAxis;
+    return true;
+}
+
+XMFLOAT3 WorldToPlane(const PreviewPlaneFrame& frame, XMFLOAT3 point)
+{
+    const XMFLOAT3 relative = Sub3(point, frame.origin);
+    return
+    {
+        Dot3(relative, frame.xAxis),
+        Dot3(relative, frame.yAxis),
+        Dot3(relative, frame.zAxis)
+    };
+}
+
+XMFLOAT3 PlaneToWorld(const PreviewPlaneFrame& frame, XMFLOAT3 point)
+{
+    return Add3(
+        frame.origin,
+        Add3(
+            Add3(Scale3(frame.xAxis, point.x), Scale3(frame.yAxis, point.y)),
+            Scale3(frame.zAxis, point.z)));
+}
+
+XMFLOAT2 CrossPointXY(XMFLOAT2 p0, XMFLOAT2 p1, XMFLOAT2 p2, XMFLOAT2 p3)
+{
+    const float a1 = p0.y - p1.y;
+    const float b1 = p1.x - p0.x;
+    const float c1 = (p1.x - p0.x) * p0.y - (p1.y - p0.y) * p0.x;
+
+    const float a2 = p2.y - p3.y;
+    const float b2 = p3.x - p2.x;
+    const float c2 = (p3.x - p2.x) * p2.y - (p3.y - p2.y) * p2.x;
+
+    const float denom = a1 * b2 - a2 * b1;
+    if (fabsf(denom) < 1e-6f)
+    {
+        const XMFLOAT2 dir = Sub2(p1, p0);
+        const float dirLen2 = Dot2(dir, dir);
+        if (dirLen2 < 1e-6f)
+            return p2;
+        const float t = Dot2(Sub2(p2, p0), dir) / dirLen2;
+        return Add2(p0, Scale2(dir, t));
+    }
+
+    return
+    {
+        (c1 * b2 - c2 * b1) / denom,
+        (a1 * c2 - a2 * c1) / denom
+    };
+}
+
+float ClothoidX(float tau, float A)
+{
+    return A / sqrtf(2.0f) * 2.0f * sqrtf((std::max)(tau, 0.0f)) *
+        (1.0f - (0.1f * powf(tau, 2.0f) + (1.0f / 216.0f) * powf(tau, 4.0f) -
+                  (1.0f / 9360.0f) * powf(tau, 6.0f)));
+}
+
+float ClothoidY(float tau, float A)
+{
+    return A / sqrtf(2.0f) * (2.0f / 3.0f) * sqrtf((std::max)(tau, 0.0f)) * tau *
+        (1.0f - (powf(tau, 2.0f) / 14.0f) + (powf(tau, 4.0f) / 440.0f) -
+         (powf(tau, 6.0f) / 25200.0f));
+}
+
 void AppendQuadraticBezierSamples(
     std::vector<XMFLOAT3>& samples,
     XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2,
     int subdivisions)
 {
+    AppendUniquePoint(samples, p0);
     for (int step = 1; step <= subdivisions; ++step)
     {
         const float t = static_cast<float>(step) / static_cast<float>(subdivisions);
-        samples.push_back(QuadraticBezier(p0, p1, p2, t));
+        AppendUniquePoint(samples, QuadraticBezier(p0, p1, p2, t));
     }
 }
 
-std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
+void AppendBezierFallbackGuide(
+    std::vector<XMFLOAT3>& samples,
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
 {
-    std::vector<XMFLOAT3> samples;
+    const float approxLength = Distance3(p0, p1) + Distance3(p1, p2);
+    const int subdivisions = (std::max)(
+        kPreviewCurveSubdivisions,
+        static_cast<int>(ceilf(approxLength / kPreviewCurveSampleLength)));
+    AppendQuadraticBezierSamples(samples, p0, p1, p2, subdivisions);
+}
+
+void AppendBezierFallbackGuideDetailed(
+    std::vector<PreviewCurvePoint>& samples,
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+{
+    const float approxLength = Distance3(p0, p1) + Distance3(p1, p2);
+    const int subdivisions = (std::max)(
+        kPreviewCurveSubdivisions,
+        static_cast<int>(ceilf(approxLength / kPreviewCurveSampleLength)));
+    AppendUniquePreviewPoint(samples, p0, PreviewCurveSegmentKind::Other);
+    for (int step = 1; step <= subdivisions; ++step)
+    {
+        const float t = static_cast<float>(step) / static_cast<float>(subdivisions);
+        AppendUniquePreviewPoint(
+            samples,
+            QuadraticBezier(p0, p1, p2, t),
+            PreviewCurveSegmentKind::Other);
+    }
+}
+
+void AppendClothoidGuideCurve(
+    std::vector<XMFLOAT3>& samples,
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+{
+    const XMFLOAT3 seg0 = Sub3(p1, p0);
+    const XMFLOAT3 seg1 = Sub3(p2, p1);
+    const float segLen0 = Length3(seg0);
+    const float segLen1 = Length3(seg1);
+    if (segLen0 <= 1e-4f || segLen1 <= 1e-4f)
+    {
+        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        return;
+    }
+
+    const XMFLOAT3 v0World = Scale3(seg0, 1.0f / segLen0);
+    const XMFLOAT3 v1World = Scale3(seg1, 1.0f / segLen1);
+    const float worldDot = std::clamp(Dot3(v0World, v1World), -1.0f, 1.0f);
+    if (Length3(Cross3(v0World, v1World)) < 0.001f &&
+        fabsf(1.0f - fabsf(worldDot)) < 0.001f)
+    {
+        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        return;
+    }
+
+    PreviewPlaneFrame frame;
+    if (!BuildPreviewPlaneFrame(p0, p1, p2, frame))
+    {
+        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        return;
+    }
+
+    const XMFLOAT3 localP1_3 = WorldToPlane(frame, p1);
+    const XMFLOAT3 localP2_3 = WorldToPlane(frame, p2);
+    const XMFLOAT2 localP1 = { localP1_3.x, localP1_3.y };
+    const XMFLOAT2 localP2 = { localP2_3.x, localP2_3.y };
+    const float localSegLen0 = Length2(localP1);
+    const float localSegLen1 = Distance2(localP2, localP1);
+    if (localSegLen0 <= 1e-4f || localSegLen1 <= 1e-4f)
+    {
+        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        return;
+    }
+
+    const XMFLOAT2 v0 = Normalize2(localP1);
+    const XMFLOAT2 v1 = Normalize2(Sub2(localP2, localP1));
+    const float I = acosf(std::clamp(Dot2(v0, v1), -1.0f, 1.0f));
+    if (I < 0.001f)
+    {
+        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        return;
+    }
+
+    const float tau1 = I * kPreviewClothoidAngleRatio * 0.5f;
+    const float tau2 = tau1;
+    const float theta = I - (tau1 + tau2);
+    const float A1 = sqrtf(tau1 * 2.0f);
+    const float A2 = sqrtf(tau2 * 2.0f);
+    const float L1 = A1 * A1;
+    const float L2 = A2 * A2;
+
+    const XMFLOAT2 clothoidEnd0 = { ClothoidX(tau1, A1), ClothoidY(tau1, A1) };
+    const XMFLOAT2 clothoidEnd1 = { ClothoidX(tau2, A2), ClothoidY(tau2, A2) };
+    const XMFLOAT2 vecTau1 = { cosf(tau1), sinf(tau1) };
+    const XMFLOAT2 center = Add2(clothoidEnd0, { -vecTau1.y, vecTau1.x });
+    const XMFLOAT2 diff = Sub2(clothoidEnd0, center);
+    const float startRot = atan2f(diff.y, diff.x);
+    const float endRot = startRot + theta;
+    const XMFLOAT2 arcEnd = Add2({ cosf(endRot), sinf(endRot) }, center);
+
+    const XMFLOAT2 mirroredClothoidStart = Add2(
+        arcEnd,
+        Rotate2({ clothoidEnd1.x, -clothoidEnd1.y }, I));
+
+    const XMFLOAT2 localGuideP0 = { 0.0f, 0.0f };
+    const XMFLOAT2 localGuideP2 = mirroredClothoidStart;
+    const XMFLOAT2 localGuideP1 = CrossPointXY(
+        { 0.0f, 0.0f },
+        { 1.0f, 0.0f },
+        mirroredClothoidStart,
+        Add2(mirroredClothoidStart, Sub2(localP1, localP2)));
+
+    const float localLen0 = (std::max)(Distance2(localGuideP1, localGuideP0), 1e-4f);
+    const float localLen1 = (std::max)(Distance2(localGuideP1, localGuideP2), 1e-4f);
+    const float localRatio = localLen0 / localLen1;
+    const float ratio = localSegLen0 / localSegLen1;
+
+    float scale = 1.0f;
+    float offset = 0.0f;
+    if (ratio > localRatio)
+    {
+        scale = localSegLen1 / localLen1;
+        offset = localSegLen0 - localLen0 * scale;
+    }
+    else
+    {
+        scale = localSegLen0 / localLen0;
+    }
+
+    const float localSampleLength =
+        (std::max)(kPreviewCurveSampleLength / (std::max)(scale, 1e-4f), 1e-4f);
+    auto fitPoint = [scale, offset, ratio, localRatio](XMFLOAT2 point) -> XMFLOAT2
+    {
+        XMFLOAT2 result = Scale2(point, scale);
+        if (ratio > localRatio)
+            result.x += offset;
+        return result;
+    };
+    auto appendLocalPoint = [&samples, &frame, &fitPoint](XMFLOAT2 point)
+    {
+        const XMFLOAT2 fitted = fitPoint(point);
+        AppendUniquePoint(samples, PlaneToWorld(frame, { fitted.x, fitted.y, 0.0f }));
+    };
+
+    AppendUniquePoint(samples, p0);
+
+    const int clothoidSampleCount0 =
+        (std::max)(static_cast<int>(ceilf(L1 / localSampleLength)), 2);
+    for (int i = 0; i < clothoidSampleCount0; ++i)
+    {
+        const float t = tau1 * static_cast<float>(i) /
+            static_cast<float>((std::max)(clothoidSampleCount0 - 1, 1));
+        appendLocalPoint({ ClothoidX(t, A1), ClothoidY(t, A1) });
+    }
+
+    const float arcLength = theta;
+    const int arcSampleCount =
+        (std::max)(static_cast<int>(ceilf(arcLength / localSampleLength)), 2);
+    for (int i = 1; i <= arcSampleCount; ++i)
+    {
+        const float angle =
+            startRot + theta * static_cast<float>(i) / static_cast<float>(arcSampleCount);
+        appendLocalPoint(Add2({ cosf(angle), sinf(angle) }, center));
+    }
+
+    const int clothoidSampleCount1 =
+        (std::max)(static_cast<int>(ceilf(L2 / localSampleLength)), 2);
+    std::vector<XMFLOAT2> secondClothoid;
+    secondClothoid.reserve(clothoidSampleCount1);
+    for (int i = 0; i < clothoidSampleCount1; ++i)
+    {
+        const float t = tau2 * static_cast<float>(i) /
+            static_cast<float>((std::max)(clothoidSampleCount1 - 1, 1));
+        const XMFLOAT2 sample = { ClothoidX(t, A2), ClothoidY(t, A2) };
+        secondClothoid.push_back(Add2(
+            arcEnd,
+            Rotate2({ clothoidEnd1.x - sample.x, sample.y - clothoidEnd1.y }, I)));
+    }
+    std::reverse(secondClothoid.begin(), secondClothoid.end());
+    for (const XMFLOAT2& point : secondClothoid)
+        appendLocalPoint(point);
+
+    AppendUniquePoint(samples, p2);
+}
+
+void AppendClothoidGuideCurveDetailed(
+    std::vector<PreviewCurvePoint>& samples,
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+{
+    const XMFLOAT3 seg0 = Sub3(p1, p0);
+    const XMFLOAT3 seg1 = Sub3(p2, p1);
+    const float segLen0 = Length3(seg0);
+    const float segLen1 = Length3(seg1);
+    if (segLen0 <= 1e-4f || segLen1 <= 1e-4f)
+    {
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        return;
+    }
+
+    const XMFLOAT3 v0World = Scale3(seg0, 1.0f / segLen0);
+    const XMFLOAT3 v1World = Scale3(seg1, 1.0f / segLen1);
+    const float worldDot = std::clamp(Dot3(v0World, v1World), -1.0f, 1.0f);
+    if (Length3(Cross3(v0World, v1World)) < 0.001f &&
+        fabsf(1.0f - fabsf(worldDot)) < 0.001f)
+    {
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        return;
+    }
+
+    PreviewPlaneFrame frame;
+    if (!BuildPreviewPlaneFrame(p0, p1, p2, frame))
+    {
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        return;
+    }
+
+    const XMFLOAT3 localP1_3 = WorldToPlane(frame, p1);
+    const XMFLOAT3 localP2_3 = WorldToPlane(frame, p2);
+    const XMFLOAT2 localP1 = { localP1_3.x, localP1_3.y };
+    const XMFLOAT2 localP2 = { localP2_3.x, localP2_3.y };
+    const float localSegLen0 = Length2(localP1);
+    const float localSegLen1 = Distance2(localP2, localP1);
+    if (localSegLen0 <= 1e-4f || localSegLen1 <= 1e-4f)
+    {
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        return;
+    }
+
+    const XMFLOAT2 v0 = Normalize2(localP1);
+    const XMFLOAT2 v1 = Normalize2(Sub2(localP2, localP1));
+    const float I = acosf(std::clamp(Dot2(v0, v1), -1.0f, 1.0f));
+    if (I < 0.001f)
+    {
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        return;
+    }
+
+    const float tau1 = I * kPreviewClothoidAngleRatio * 0.5f;
+    const float tau2 = tau1;
+    const float theta = I - (tau1 + tau2);
+    const float A1 = sqrtf(tau1 * 2.0f);
+    const float A2 = sqrtf(tau2 * 2.0f);
+    const float L1 = A1 * A1;
+    const float L2 = A2 * A2;
+
+    const XMFLOAT2 clothoidEnd0 = { ClothoidX(tau1, A1), ClothoidY(tau1, A1) };
+    const XMFLOAT2 clothoidEnd1 = { ClothoidX(tau2, A2), ClothoidY(tau2, A2) };
+    const XMFLOAT2 vecTau1 = { cosf(tau1), sinf(tau1) };
+    const XMFLOAT2 center = Add2(clothoidEnd0, { -vecTau1.y, vecTau1.x });
+    const XMFLOAT2 diff = Sub2(clothoidEnd0, center);
+    const float startRot = atan2f(diff.y, diff.x);
+    const float endRot = startRot + theta;
+    const XMFLOAT2 arcEnd = Add2({ cosf(endRot), sinf(endRot) }, center);
+
+    const XMFLOAT2 mirroredClothoidStart = Add2(
+        arcEnd,
+        Rotate2({ clothoidEnd1.x, -clothoidEnd1.y }, I));
+
+    const XMFLOAT2 localGuideP0 = { 0.0f, 0.0f };
+    const XMFLOAT2 localGuideP2 = mirroredClothoidStart;
+    const XMFLOAT2 localGuideP1 = CrossPointXY(
+        { 0.0f, 0.0f },
+        { 1.0f, 0.0f },
+        mirroredClothoidStart,
+        Add2(mirroredClothoidStart, Sub2(localP1, localP2)));
+
+    const float localLen0 = (std::max)(Distance2(localGuideP1, localGuideP0), 1e-4f);
+    const float localLen1 = (std::max)(Distance2(localGuideP1, localGuideP2), 1e-4f);
+    const float localRatio = localLen0 / localLen1;
+    const float ratio = localSegLen0 / localSegLen1;
+
+    float scale = 1.0f;
+    float offset = 0.0f;
+    if (ratio > localRatio)
+    {
+        scale = localSegLen1 / localLen1;
+        offset = localSegLen0 - localLen0 * scale;
+    }
+    else
+    {
+        scale = localSegLen0 / localLen0;
+    }
+
+    const float localSampleLength =
+        (std::max)(kPreviewCurveSampleLength / (std::max)(scale, 1e-4f), 1e-4f);
+    auto fitPoint = [scale, offset, ratio, localRatio](XMFLOAT2 point) -> XMFLOAT2
+    {
+        XMFLOAT2 result = Scale2(point, scale);
+        if (ratio > localRatio)
+            result.x += offset;
+        return result;
+    };
+    auto appendLocalPoint = [&samples, &frame, &fitPoint](XMFLOAT2 point, PreviewCurveSegmentKind kind)
+    {
+        const XMFLOAT2 fitted = fitPoint(point);
+        AppendUniquePreviewPoint(samples, PlaneToWorld(frame, { fitted.x, fitted.y, 0.0f }), kind);
+    };
+
+    AppendUniquePreviewPoint(samples, p0, PreviewCurveSegmentKind::Other);
+
+    const int clothoidSampleCount0 =
+        (std::max)(static_cast<int>(ceilf(L1 / localSampleLength)), 2);
+    for (int i = 0; i < clothoidSampleCount0; ++i)
+    {
+        const float t = tau1 * static_cast<float>(i) /
+            static_cast<float>((std::max)(clothoidSampleCount0 - 1, 1));
+        appendLocalPoint({ ClothoidX(t, A1), ClothoidY(t, A1) }, PreviewCurveSegmentKind::Clothoid);
+    }
+
+    const float arcLength = theta;
+    const int arcSampleCount =
+        (std::max)(static_cast<int>(ceilf(arcLength / localSampleLength)), 2);
+    for (int i = 1; i <= arcSampleCount; ++i)
+    {
+        const float angle =
+            startRot + theta * static_cast<float>(i) / static_cast<float>(arcSampleCount);
+        appendLocalPoint(Add2({ cosf(angle), sinf(angle) }, center), PreviewCurveSegmentKind::Arc);
+    }
+
+    const int clothoidSampleCount1 =
+        (std::max)(static_cast<int>(ceilf(L2 / localSampleLength)), 2);
+    std::vector<XMFLOAT2> secondClothoid;
+    secondClothoid.reserve(clothoidSampleCount1);
+    for (int i = 0; i < clothoidSampleCount1; ++i)
+    {
+        const float t = tau2 * static_cast<float>(i) /
+            static_cast<float>((std::max)(clothoidSampleCount1 - 1, 1));
+        const XMFLOAT2 sample = { ClothoidX(t, A2), ClothoidY(t, A2) };
+        secondClothoid.push_back(Add2(
+            arcEnd,
+            Rotate2({ clothoidEnd1.x - sample.x, sample.y - clothoidEnd1.y }, I)));
+    }
+    std::reverse(secondClothoid.begin(), secondClothoid.end());
+    for (const XMFLOAT2& point : secondClothoid)
+        appendLocalPoint(point, PreviewCurveSegmentKind::Clothoid);
+
+    AppendUniquePreviewPoint(samples, p2, PreviewCurveSegmentKind::Other);
+}
+
+std::vector<PreviewCurvePoint> BuildRoadPreviewCurveDetailed(const Road& road)
+{
+    std::vector<PreviewCurvePoint> samples;
     const int pointCount = static_cast<int>(road.points.size());
     if (pointCount < 2)
         return samples;
 
     if (pointCount == 2)
     {
-        samples.push_back(road.points[0].pos);
-        samples.push_back(road.points[1].pos);
+        samples.push_back({ road.points[0].pos, PreviewCurveSegmentKind::Other });
+        samples.push_back({ road.points[1].pos, PreviewCurveSegmentKind::Other });
         return samples;
     }
 
@@ -141,28 +718,40 @@ std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
 
     if (closed)
     {
-        samples.push_back(edgeMidpoints.back());
+        AppendUniquePreviewPoint(samples, edgeMidpoints.back(), PreviewCurveSegmentKind::Other);
         for (int pointIndex = 0; pointIndex < pointCount; ++pointIndex)
         {
-            const XMFLOAT3 p0 = edgeMidpoints[(pointIndex - 1 + edgeCount) % edgeCount];
-            const XMFLOAT3 p1 = road.points[pointIndex].pos;
-            const XMFLOAT3 p2 = edgeMidpoints[pointIndex];
-            AppendQuadraticBezierSamples(samples, p0, p1, p2, kPreviewCurveSubdivisions);
+            AppendClothoidGuideCurveDetailed(
+                samples,
+                edgeMidpoints[(pointIndex - 1 + edgeCount) % edgeCount],
+                road.points[pointIndex].pos,
+                edgeMidpoints[pointIndex]);
         }
-        samples.push_back(samples.front());
+        if (!samples.empty())
+            samples.push_back(samples.front());
         return samples;
     }
 
-    samples.push_back(road.points.front().pos);
-    samples.push_back(edgeMidpoints.front());
+    AppendUniquePreviewPoint(samples, road.points.front().pos, PreviewCurveSegmentKind::Other);
     for (int pointIndex = 1; pointIndex < pointCount - 1; ++pointIndex)
     {
-        const XMFLOAT3 p0 = edgeMidpoints[pointIndex - 1];
-        const XMFLOAT3 p1 = road.points[pointIndex].pos;
-        const XMFLOAT3 p2 = edgeMidpoints[pointIndex];
-        AppendQuadraticBezierSamples(samples, p0, p1, p2, kPreviewCurveSubdivisions);
+        AppendClothoidGuideCurveDetailed(
+            samples,
+            edgeMidpoints[pointIndex - 1],
+            road.points[pointIndex].pos,
+            edgeMidpoints[pointIndex]);
     }
-    samples.push_back(road.points.back().pos);
+    AppendUniquePreviewPoint(samples, road.points.back().pos, PreviewCurveSegmentKind::Other);
+    return samples;
+}
+
+std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
+{
+    const std::vector<PreviewCurvePoint> detailed = BuildRoadPreviewCurveDetailed(road);
+    std::vector<XMFLOAT3> samples;
+    samples.reserve(detailed.size());
+    for (const PreviewCurvePoint& point : detailed)
+        samples.push_back(point.pos);
     return samples;
 }
 
@@ -4879,22 +5468,32 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         if (!IsRoadVisible(road))
             continue;
 
-        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
-        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurve.size()); ++sampleIndex)
+        const std::vector<PreviewCurvePoint> previewCurveDetailed = BuildRoadPreviewCurveDetailed(road);
+        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(previewCurveDetailed.size()); ++sampleIndex)
         {
             ImVec2 a;
             ImVec2 b;
-            if (!WorldToScreen(previewCurve[sampleIndex], viewProj, vpW, vpH, a) ||
-                !WorldToScreen(previewCurve[sampleIndex + 1], viewProj, vpW, vpH, b))
+            if (!WorldToScreen(previewCurveDetailed[sampleIndex].pos, viewProj, vpW, vpH, a) ||
+                !WorldToScreen(previewCurveDetailed[sampleIndex + 1].pos, viewProj, vpW, vpH, b))
                 continue;
 
-            ImU32 segmentColor = colorFromFloat3({ 0.45f, 0.95f, 0.95f }, 230);
+            ImU32 segmentColor = IM_COL32(255, 255, 255, 230);
+            if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Arc ||
+                previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Arc)
+            {
+                segmentColor = IM_COL32(110, 220, 120, 230);
+            }
+            else if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Clothoid ||
+                     previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Clothoid)
+            {
+                segmentColor = IM_COL32(255, 165, 70, 230);
+            }
             if (m_showRoadGradeGradient)
             {
-                const float horizontalDistance = DistanceXZ3(previewCurve[sampleIndex], previewCurve[sampleIndex + 1]);
+                const float horizontalDistance = DistanceXZ3(previewCurveDetailed[sampleIndex].pos, previewCurveDetailed[sampleIndex + 1].pos);
                 if (horizontalDistance > 1e-4f)
                 {
-                    const float dy = previewCurve[sampleIndex + 1].y - previewCurve[sampleIndex].y;
+                    const float dy = previewCurveDetailed[sampleIndex + 1].pos.y - previewCurveDetailed[sampleIndex].pos.y;
                     const float gradePercent = fabsf(dy) / horizontalDistance * 100.0f;
                     const XMFLOAT4 gradeColor =
                         PreviewGradeColor(gradePercent, m_roadGradeRedThresholdPercent);
@@ -4912,6 +5511,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         if (m_mode != EditorMode::VerticalCurveEdit || road.verticalCurve.empty())
             continue;
 
+        const std::vector<XMFLOAT3> previewCurve = BuildRoadPreviewCurve(road);
         const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(previewCurve);
         for (int curveIndex = 0; curveIndex < static_cast<int>(road.verticalCurve.size()); ++curveIndex)
         {

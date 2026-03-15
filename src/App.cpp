@@ -596,7 +596,6 @@ void App::LoadViewSettings()
             m_showPropertiesWindow = root.value("showPropertiesWindow", true);
             m_showFps = root.value("showFps", true);
             m_roadGradeRedThresholdPercent = root.value("roadGradeRedThresholdPercent", 12.0f);
-            m_showContours = root.value("showContours", false);
             m_contourInterval = root.value("contourInterval", 5.0f);
             m_showDisplaySettingsWindow = root.value("showDisplaySettingsWindow", false);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
@@ -698,7 +697,6 @@ void App::SaveViewSettings() const
             { "showPropertiesWindow", m_showPropertiesWindow },
             { "showFps", m_showFps },
             { "roadGradeRedThresholdPercent", m_roadGradeRedThresholdPercent },
-            { "showContours", m_showContours },
             { "contourInterval", m_contourInterval },
             { "showDisplaySettingsWindow", m_showDisplaySettingsWindow },
             { "gridBaseScale", m_gridBaseScale },
@@ -2123,7 +2121,6 @@ void App::Render()
                 {
                     if (m_showContours)
                         RebuildContourCache();
-                    SaveViewSettings();
                 }
 
                 float contourInterval = m_contourInterval;
