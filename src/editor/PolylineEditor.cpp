@@ -207,13 +207,38 @@ enum class PreviewCurveSegmentKind
 {
     Other,
     Clothoid,
-    Arc
+    Arc,
+    VerticalCurveCrest,
+    VerticalCurveSag
 };
 
 struct PreviewCurvePoint
 {
     XMFLOAT3 pos = { 0.0f, 0.0f, 0.0f };
     PreviewCurveSegmentKind kind = PreviewCurveSegmentKind::Other;
+};
+
+struct VerticalGuidePoint
+{
+    float x = 0.0f;
+    float y = 0.0f;
+    float vcl = 0.0f;
+};
+
+struct VerticalPreviewSegment
+{
+    VerticalGuidePoint p0;
+    VerticalGuidePoint p1;
+    VerticalGuidePoint p2;
+    float curveStartX = 0.0f;
+    float curveStartY = 0.0f;
+    float curveEndX = 0.0f;
+    float curveEndY = 0.0f;
+    float curveLength = 0.0f;
+    float slopeIn = 0.0f;
+    float slopeOut = 0.0f;
+    bool validCurve = false;
+    PreviewCurveSegmentKind curveKind = PreviewCurveSegmentKind::Other;
 };
 
 void AppendUniquePreviewPoint(
@@ -799,6 +824,226 @@ float ComputePolylineLength(const std::vector<XMFLOAT3>& points)
     for (size_t i = 1; i < points.size(); ++i)
         length += Distance3(points[i - 1], points[i]);
     return length;
+}
+
+XMFLOAT3 SamplePolylineAtDistance(const std::vector<XMFLOAT3>& points,
+                                  const std::vector<float>& cumulativeLengths,
+                                  float distance)
+{
+    if (points.empty())
+        return { 0.0f, 0.0f, 0.0f };
+    if (points.size() == 1 || cumulativeLengths.empty())
+        return points.front();
+
+    const float totalLength = cumulativeLengths.back();
+    if (totalLength <= 1e-5f)
+        return points.front();
+
+    const float targetLength = std::clamp(distance, 0.0f, totalLength);
+    for (size_t i = 1; i < points.size(); ++i)
+    {
+        if (targetLength > cumulativeLengths[i])
+            continue;
+
+        const float segmentLength = cumulativeLengths[i] - cumulativeLengths[i - 1];
+        if (segmentLength <= 1e-5f)
+            return points[i];
+
+        const float t = (targetLength - cumulativeLengths[i - 1]) / segmentLength;
+        return Lerp3(points[i - 1], points[i], t);
+    }
+
+    return points.back();
+}
+
+void AppendVerticalPreviewWorldPoint(std::vector<PreviewCurvePoint>& samples,
+                                     const std::vector<XMFLOAT3>& baseCurve,
+                                     const std::vector<float>& cumulativeLengths,
+                                     float distance,
+                                     float height,
+                                     PreviewCurveSegmentKind kind)
+{
+    XMFLOAT3 worldPoint = SamplePolylineAtDistance(baseCurve, cumulativeLengths, distance);
+    worldPoint.y = height;
+    AppendUniquePreviewPoint(samples, worldPoint, kind);
+}
+
+VerticalPreviewSegment BuildVerticalPreviewSegment(VerticalGuidePoint p0,
+                                                   VerticalGuidePoint p1,
+                                                   VerticalGuidePoint p2)
+{
+    VerticalPreviewSegment segment;
+    segment.p0 = p0;
+    segment.p1 = p1;
+    segment.p2 = p2;
+
+    const float eps = 1e-5f;
+    const float dx0 = p1.x - p0.x;
+    const float dx1 = p2.x - p1.x;
+    if (fabsf(dx0) < eps || fabsf(dx1) < eps)
+        return segment;
+
+    const float i1 = (p1.y - p0.y) / dx0;
+    const float i2 = (p2.y - p1.y) / dx1;
+    float L = (std::max)(0.0f, p1.vcl);
+    L = (std::min)(L, fabsf(dx0) * 2.0f);
+    L = (std::min)(L, fabsf(dx1) * 2.0f);
+    if (L < eps)
+        return segment;
+
+    segment.validCurve = true;
+    segment.slopeIn = i1;
+    segment.slopeOut = i2;
+    segment.curveLength = L;
+    segment.curveStartX = p1.x - L * 0.5f;
+    segment.curveStartY = p0.y + i1 * (segment.curveStartX - p0.x);
+    segment.curveEndX = segment.curveStartX + L;
+    segment.curveEndY = segment.curveStartY + i1 * L - ((i1 - i2) / (2.0f * L)) * L * L;
+    segment.curveKind =
+        (i2 > i1) ? PreviewCurveSegmentKind::VerticalCurveSag : PreviewCurveSegmentKind::VerticalCurveCrest;
+    return segment;
+}
+
+float SampleVerticalPreviewHeight(const VerticalPreviewSegment& segment, float distance)
+{
+    if (!segment.validCurve)
+    {
+        const float dx = segment.p2.x - segment.p0.x;
+        if (fabsf(dx) <= 1e-5f)
+            return segment.p0.y;
+        const float t = (distance - segment.p0.x) / dx;
+        const float clampedT = std::clamp(t, 0.0f, 1.0f);
+        return segment.p0.y + (segment.p2.y - segment.p0.y) * clampedT;
+    }
+
+    if (distance <= segment.curveStartX)
+        return segment.p0.y + segment.slopeIn * (distance - segment.p0.x);
+    if (distance >= segment.curveEndX)
+        return segment.p2.y - segment.slopeOut * (segment.p2.x - distance);
+
+    const float x = distance - segment.curveStartX;
+    return segment.curveStartY + segment.slopeIn * x -
+        ((segment.slopeIn - segment.slopeOut) / (2.0f * segment.curveLength)) * x * x;
+}
+
+PreviewCurveSegmentKind SampleVerticalPreviewKind(const VerticalPreviewSegment& segment, float distance)
+{
+    if (!segment.validCurve)
+        return PreviewCurveSegmentKind::Other;
+    if (distance >= segment.curveStartX && distance <= segment.curveEndX)
+        return segment.curveKind;
+    return PreviewCurveSegmentKind::Other;
+}
+
+std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(const Road& road)
+{
+    std::vector<PreviewCurvePoint> samples;
+    const std::vector<XMFLOAT3> baseCurve = BuildRoadPreviewCurve(road);
+    if (baseCurve.size() < 2)
+        return samples;
+
+    const std::vector<float> cumulativeLengths = BuildPolylineArcLengths(baseCurve);
+    if (cumulativeLengths.empty())
+        return samples;
+
+    const float totalLength = cumulativeLengths.back();
+    if (totalLength <= 1e-5f)
+        return samples;
+
+    if (road.verticalCurve.empty())
+    {
+        const float sampleStep = (std::max)(kPreviewCurveSampleLength * 0.5f, 0.5f);
+        const int sampleCount =
+            (std::max)(static_cast<int>(ceilf(totalLength / sampleStep)), 2);
+        for (int step = 0; step <= sampleCount; ++step)
+        {
+            const float t = static_cast<float>(step) / static_cast<float>(sampleCount);
+            const float distance = totalLength * t;
+            const float height = baseCurve.front().y + (baseCurve.back().y - baseCurve.front().y) * t;
+            AppendVerticalPreviewWorldPoint(
+                samples,
+                baseCurve,
+                cumulativeLengths,
+                distance,
+                height,
+                PreviewCurveSegmentKind::Other);
+        }
+        return samples;
+    }
+
+    std::vector<VerticalGuidePoint> guidePoints;
+    guidePoints.reserve(road.verticalCurve.size() + 2);
+    guidePoints.push_back({ 0.0f, baseCurve.front().y, 0.0f });
+
+    std::vector<VerticalCurvePoint> verticalCurvePoints = road.verticalCurve;
+    std::sort(
+        verticalCurvePoints.begin(),
+        verticalCurvePoints.end(),
+        [](const VerticalCurvePoint& a, const VerticalCurvePoint& b)
+        {
+            return a.uCoord < b.uCoord;
+        });
+
+    for (const VerticalCurvePoint& curvePoint : verticalCurvePoints)
+    {
+        const float distance = std::clamp(curvePoint.uCoord, 0.0f, 1.0f) * totalLength;
+        const XMFLOAT3 basePoint = SamplePolylineAtDistance(baseCurve, cumulativeLengths, distance);
+        guidePoints.push_back({ distance, basePoint.y + curvePoint.offset, curvePoint.vcl });
+    }
+
+    guidePoints.push_back({ totalLength, baseCurve.back().y, 0.0f });
+    if (guidePoints.size() < 3)
+        return samples;
+
+    std::vector<VerticalPreviewSegment> segments;
+    segments.reserve(guidePoints.size() - 2);
+    for (size_t i = 1; i + 1 < guidePoints.size(); ++i)
+    {
+        const bool isFirstCurve = (i == 1);
+        const bool isLastCurve = (i + 2 == guidePoints.size());
+        const VerticalGuidePoint segmentStart = isFirstCurve
+            ? guidePoints.front()
+            : VerticalGuidePoint
+            {
+                (guidePoints[i - 1].x + guidePoints[i].x) * 0.5f,
+                (guidePoints[i - 1].y + guidePoints[i].y) * 0.5f,
+                0.0f
+            };
+        const VerticalGuidePoint segmentEnd = isLastCurve
+            ? guidePoints.back()
+            : VerticalGuidePoint
+            {
+                (guidePoints[i].x + guidePoints[i + 1].x) * 0.5f,
+                (guidePoints[i].y + guidePoints[i + 1].y) * 0.5f,
+                0.0f
+            };
+        segments.push_back(BuildVerticalPreviewSegment(segmentStart, guidePoints[i], segmentEnd));
+    }
+
+    const float sampleStep = (std::max)(kPreviewCurveSampleLength * 0.5f, 0.5f);
+    for (size_t segmentIndex = 0; segmentIndex < segments.size(); ++segmentIndex)
+    {
+        const VerticalPreviewSegment& segment = segments[segmentIndex];
+        const float segmentStartX = segment.p0.x;
+        const float segmentEndX = segment.p2.x;
+        const float segmentLength = segmentEndX - segmentStartX;
+        if (segmentLength <= 1e-5f)
+            continue;
+
+        const int sampleCount =
+            (std::max)(static_cast<int>(ceilf(segmentLength / sampleStep)), 2);
+        const int startStep = (segmentIndex == 0) ? 0 : 1;
+        for (int step = startStep; step <= sampleCount; ++step)
+        {
+            const float t = static_cast<float>(step) / static_cast<float>(sampleCount);
+            const float distance = segmentStartX + (segmentEndX - segmentStartX) * t;
+            const float height = SampleVerticalPreviewHeight(segment, distance);
+            const PreviewCurveSegmentKind kind = SampleVerticalPreviewKind(segment, distance);
+            AppendVerticalPreviewWorldPoint(samples, baseCurve, cumulativeLengths, distance, height, kind);
+        }
+    }
+
+    return samples;
 }
 
 float ComputeAverageAbsoluteGradePercent(const std::vector<XMFLOAT3>& points)
@@ -5506,6 +5751,31 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             }
 
             dl->AddLine(a, b, segmentColor, kPreviewCurveThickness);
+        }
+
+        const std::vector<PreviewCurvePoint> verticalPreviewCurveDetailed =
+            BuildRoadVerticalPreviewCurveDetailed(road);
+        for (int sampleIndex = 0; sampleIndex + 1 < static_cast<int>(verticalPreviewCurveDetailed.size()); ++sampleIndex)
+        {
+            ImVec2 a;
+            ImVec2 b;
+            if (!WorldToScreen(verticalPreviewCurveDetailed[sampleIndex].pos, viewProj, vpW, vpH, a) ||
+                !WorldToScreen(verticalPreviewCurveDetailed[sampleIndex + 1].pos, viewProj, vpW, vpH, b))
+                continue;
+
+            ImU32 segmentColor = IM_COL32(255, 255, 255, 210);
+            if (verticalPreviewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::VerticalCurveCrest ||
+                verticalPreviewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::VerticalCurveCrest)
+            {
+                segmentColor = IM_COL32(255, 170, 40, 245);
+            }
+            else if (verticalPreviewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::VerticalCurveSag ||
+                     verticalPreviewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::VerticalCurveSag)
+            {
+                segmentColor = IM_COL32(70, 190, 255, 245);
+            }
+
+            dl->AddLine(a, b, segmentColor, kPreviewCurveThickness + 1.0f);
         }
 
         if (m_mode != EditorMode::VerticalCurveEdit || road.verticalCurve.empty())
