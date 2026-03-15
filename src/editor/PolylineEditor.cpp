@@ -4202,6 +4202,16 @@ void PolylineEditor::Update(int vpW, int vpH,
     bool rPress = rDown && !m_prevRKey;
     bool vDown = (GetAsyncKeyState('V') & 0x8000) != 0;
     bool vPress = vDown && !m_prevVKey;
+    bool oneDown = (GetAsyncKeyState('1') & 0x8000) != 0;
+    bool onePress = oneDown && !m_prev1Key;
+    bool twoDown = (GetAsyncKeyState('2') & 0x8000) != 0;
+    bool twoPress = twoDown && !m_prev2Key;
+    bool threeDown = (GetAsyncKeyState('3') & 0x8000) != 0;
+    bool threePress = threeDown && !m_prev3Key;
+    bool fourDown = (GetAsyncKeyState('4') & 0x8000) != 0;
+    bool fourPress = fourDown && !m_prev4Key;
+    bool fiveDown = (GetAsyncKeyState('5') & 0x8000) != 0;
+    bool fivePress = fiveDown && !m_prev5Key;
 
     if (wantMouse || alt)
     {
@@ -4212,6 +4222,11 @@ void PolylineEditor::Update(int vpW, int vpH,
         m_prevEKey     = eDown;
         m_prevRKey     = rDown;
         m_prevVKey     = vDown;
+        m_prev1Key     = oneDown;
+        m_prev2Key     = twoDown;
+        m_prev3Key     = threeDown;
+        m_prev4Key     = fourDown;
+        m_prev5Key     = fiveDown;
         return;
     }
     m_prevLButton = lDown;
@@ -4219,6 +4234,11 @@ void PolylineEditor::Update(int vpW, int vpH,
     m_prevEKey = eDown;
     m_prevRKey = rDown;
     m_prevVKey = vDown;
+    m_prev1Key = oneDown;
+    m_prev2Key = twoDown;
+    m_prev3Key = threeDown;
+    m_prev4Key = fourDown;
+    m_prev5Key = fiveDown;
 
     // Compute ray
     XMFLOAT3 rayOrig, rayDir;
@@ -4312,6 +4332,35 @@ void PolylineEditor::Update(int vpW, int vpH,
     m_prevCopyShortcut = copyShortcut;
     m_prevPasteShortcut = pasteShortcut;
     m_prevSelectAllShortcut = selectAllShortcut;
+
+    if (!ImGui::GetIO().WantTextInput && !ctrlDown)
+    {
+        if (onePress)
+        {
+            SetMode(EditorMode::Navigate);
+            return;
+        }
+        if (twoPress && m_mode != EditorMode::Pathfinding)
+        {
+            SetMode(EditorMode::PointEdit);
+            return;
+        }
+        if (threePress)
+        {
+            SetMode(EditorMode::VerticalCurveEdit);
+            return;
+        }
+        if (fourPress)
+        {
+            SetMode(EditorMode::BankAngleEdit);
+            return;
+        }
+        if (fivePress)
+        {
+            SetMode(EditorMode::LaneEdit);
+            return;
+        }
+    }
 
     if (wPress && m_mode != EditorMode::Pathfinding)
     {
