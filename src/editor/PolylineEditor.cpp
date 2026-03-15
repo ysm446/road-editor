@@ -3788,6 +3788,33 @@ PolylineEditor::GizmoAxis PolylineEditor::PickGizmoAxis(
             { pivotPos.x + worldRadius, pivotPos.y, pivotPos.z - worldRadius },
             { pivotPos.x + worldRadius, pivotPos.y, pivotPos.z + worldRadius }
         };
+        XMFLOAT2 screenCorners[kSegments] = {};
+        bool validQuad = true;
+        for (int i = 0; i < kSegments; ++i)
+        {
+            screenCorners[i] = WorldToScreen(corners[i], viewProj, vpW, vpH);
+            if (screenCorners[i].x < 0.0f)
+            {
+                validQuad = false;
+                break;
+            }
+        }
+        if (validQuad)
+        {
+            bool inside = false;
+            for (int i = 0, j = kSegments - 1; i < kSegments; j = i++)
+            {
+                const XMFLOAT2 a = screenCorners[i];
+                const XMFLOAT2 b = screenCorners[j];
+                const bool intersects =
+                    ((a.y > px.y) != (b.y > px.y)) &&
+                    (px.x < (b.x - a.x) * (px.y - a.y) / ((b.y - a.y) + 1e-6f) + a.x);
+                if (intersects)
+                    inside = !inside;
+            }
+            if (inside)
+                return GizmoAxis::ScaleXZ;
+        }
         for (int i = 0; i < kSegments; ++i)
         {
             const XMFLOAT2 s0 = WorldToScreen(corners[i], viewProj, vpW, vpH);
