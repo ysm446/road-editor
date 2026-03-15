@@ -7027,7 +7027,7 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             drawRoadOverlay(
                 road,
                 active ? colGuideActive : colGuideInactive,
-                active ? (kSelectedRoadThickness + 1.0f) : (kRoadThickness + 0.5f));
+                active ? (kSelectedRoadThickness + 2.5f) : (kRoadThickness + 0.75f));
         }
     }
 
@@ -7057,15 +7057,18 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
                     continue;
 
                 ImU32 segmentColor = IM_COL32(255, 255, 255, 230);
-                if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Arc ||
-                    previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Arc)
+                if (m_mode != EditorMode::VerticalCurveEdit)
                 {
-                    segmentColor = IM_COL32(128, 255, 0, 230);
-                }
-                else if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Clothoid ||
-                         previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Clothoid)
-                {
-                    segmentColor = IM_COL32(255, 128, 0, 230);
+                    if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Arc ||
+                        previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Arc)
+                    {
+                        segmentColor = IM_COL32(128, 255, 0, 230);
+                    }
+                    else if (previewCurveDetailed[sampleIndex].kind == PreviewCurveSegmentKind::Clothoid ||
+                             previewCurveDetailed[sampleIndex + 1].kind == PreviewCurveSegmentKind::Clothoid)
+                    {
+                        segmentColor = IM_COL32(255, 128, 0, 230);
+                    }
                 }
 
                 dl->AddLine(a, b, segmentColor, kPreviewCurveThickness);
