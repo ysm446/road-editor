@@ -159,6 +159,7 @@ private:
     float             m_gridFadeDistance = 1200.0f;
     float             m_roadLineThickness = 2.0f;
     float             m_previewCurveThickness = 2.0f;
+    float             m_previewSampleInterval = 2.0f;
     float             m_selectedRoadLineThickness = 3.0f;
     float             m_roadVertexScreenRadius = 3.0f;
     float             m_intersectionScreenGizmoRadius = 10.0f;

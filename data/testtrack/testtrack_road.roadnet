@@ -3359,27 +3359,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            571.9799194335938,
-            1436.5865478515625,
-            -817.5284423828125
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            579.6429443359375,
-            1436.3583984375,
-            -834.0480346679688
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            589.4484252929688,
-            1434.427490234375,
-            -844.1317138671875
+            586.125732421875,
+            1435.2626953125,
+            -829.5321044921875
           ],
           "useCurvatureRadius": 0
         },
@@ -4082,22 +4064,7 @@
       "endIntersectionId": "648e4428-82d1-4b54-9ac3-78b0caa9b3b3",
       "groupId": "legacy-import-group",
       "id": "f3b4da4a-83f2-4aaa-b5f3-de15cb247afc",
-      "laneSections": [
-        {
-          "offsetCenter": 0.0,
-          "u_coord": 0.2878878116607666,
-          "useLaneCenter": 1,
-          "useLaneLeft1": 1,
-          "useLaneLeft2": 0,
-          "useLaneRight1": 1,
-          "useLaneRight2": 0,
-          "widthLaneCenter": 0.0,
-          "widthLaneLeft1": 2.0,
-          "widthLaneLeft2": 3.0,
-          "widthLaneRight1": 2.0,
-          "widthLaneRight2": 3.0
-        }
-      ],
+      "laneSections": [],
       "name": "Road 25",
       "point": [
         {

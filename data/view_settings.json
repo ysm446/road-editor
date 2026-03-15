@@ -21,6 +21,7 @@
   ],
   "intersectionScreenGizmoRadius": 6.0,
   "previewCurveThickness": 2.0,
+  "previewSampleInterval": 2.0,
   "recentProjectPaths": [
     "D:\\GitHub\\road-editor\\data\\testtrack\\testtrack_project.roadproj",
     "D:\\GitHub\\road-editor\\data\\toscana\\toscana.roadproj"
@@ -39,7 +40,7 @@
     1.0,
     1.0
   ],
-  "selectedRoadLineThickness": 2.0,
+  "selectedRoadLineThickness": 3.0,
   "showCameraWindow": false,
   "showDisplaySettingsWindow": true,
   "showFps": true,
@@ -47,11 +48,11 @@
   "showIntersectionNames": false,
   "showPropertiesWindow": true,
   "showRoadEditorWindow": true,
-  "showRoadGradeGradient": true,
+  "showRoadGradeGradient": false,
   "showRoadGuidelines": true,
   "showRoadNames": false,
   "showRoadPreviewMetrics": false,
-  "showRoadTerrainClearance": false,
+  "showRoadTerrainClearance": true,
   "showTerrainWindow": false,
   "windowLayouts": {
     "camera": {

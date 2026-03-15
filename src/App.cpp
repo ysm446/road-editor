@@ -628,6 +628,7 @@ void App::LoadViewSettings()
     m_roadTerrainClearanceInterval = 10.0f;
     m_bankVectorInterval = 5.0f;
     m_bankAngleColorMaxDegrees = 15.0f;
+    m_previewSampleInterval = 2.0f;
     m_showContours = false;
     m_contourInterval = 5.0f;
     m_showDisplaySettingsWindow = false;
@@ -668,6 +669,7 @@ void App::LoadViewSettings()
             m_roadTerrainClearanceInterval = root.value("roadTerrainClearanceInterval", 10.0f);
             m_bankVectorInterval = root.value("bankVectorInterval", 5.0f);
             m_bankAngleColorMaxDegrees = root.value("bankAngleColorMaxDegrees", 15.0f);
+            m_previewSampleInterval = (std::max)(1.0f, root.value("previewSampleInterval", 2.0f));
             m_contourInterval = root.value("contourInterval", 5.0f);
             m_showDisplaySettingsWindow = root.value("showDisplaySettingsWindow", false);
             m_gridBaseScale = root.value("gridBaseScale", 1.0f);
@@ -745,6 +747,7 @@ void App::LoadViewSettings()
     m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
     m_editor.SetBankVectorInterval(m_bankVectorInterval);
     m_editor.SetBankAngleColorMaxDegrees(m_bankAngleColorMaxDegrees);
+    m_editor.SetPreviewSampleInterval(m_previewSampleInterval);
     m_editor.SetRoadLineThickness(m_roadLineThickness);
     m_editor.SetPreviewCurveThickness(m_previewCurveThickness);
     m_editor.SetSelectedRoadLineThickness(m_selectedRoadLineThickness);
@@ -787,6 +790,7 @@ void App::SaveViewSettings() const
             { "roadTerrainClearanceInterval", m_roadTerrainClearanceInterval },
             { "bankVectorInterval", m_bankVectorInterval },
             { "bankAngleColorMaxDegrees", m_bankAngleColorMaxDegrees },
+            { "previewSampleInterval", m_previewSampleInterval },
             { "contourInterval", m_contourInterval },
             { "showDisplaySettingsWindow", m_showDisplaySettingsWindow },
             { "gridBaseScale", m_gridBaseScale },
@@ -2196,6 +2200,14 @@ void App::Render()
                         m_editor.SetRoadTerrainClearanceInterval(m_roadTerrainClearanceInterval);
                         SaveViewSettings();
                     }
+                }
+                float previewSampleInterval = m_previewSampleInterval;
+                ImGui::InputFloat(u8"\u30D7\u30EC\u30D3\u30E5\u30FC\u9593\u9694 (m)", &previewSampleInterval, 1.0f, 5.0f, "%.1f");
+                if (ImGui::IsItemDeactivatedAfterEdit())
+                {
+                    m_previewSampleInterval = (std::max)(1.0f, previewSampleInterval);
+                    m_editor.SetPreviewSampleInterval(m_previewSampleInterval);
+                    SaveViewSettings();
                 }
                 float bankVectorInterval = m_bankVectorInterval;
                 ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u30D9\u30AF\u30C8\u30EB\u9593\u9694 (m)", &bankVectorInterval, 1.0f, 5.0f, "%.1f");

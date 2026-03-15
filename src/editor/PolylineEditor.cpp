@@ -15,7 +15,6 @@ constexpr int kPreviewCurveSubdivisions = 12;
 constexpr float kVerticalCurveDefaultLength = 50.0f;
 constexpr float kBankAngleDefaultTargetSpeed = 40.0f;
 constexpr float kLaneSectionDefaultWidth = 3.0f;
-constexpr float kPreviewCurveSampleLength = 2.0f;
 constexpr float kPreviewClothoidAngleRatio = 0.2f;
 constexpr float kMinIntersectionSpacingMeters = 10.0f;
 constexpr float kBankCurvatureStepMeters = 10.0f;
@@ -615,10 +614,11 @@ struct VerticalGuidePoint
     float vcl = 0.0f;
 };
 
-std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(const Road& road);
+std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(const Road& road, float sampleInterval);
 std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(
     const Road& road,
-    const std::vector<XMFLOAT3>& baseCurve);
+    const std::vector<XMFLOAT3>& baseCurve,
+    float sampleInterval);
 std::vector<float> BuildPolylineArcLengths(const std::vector<XMFLOAT3>& points);
 XMFLOAT3 SamplePolylineAtDistance(const std::vector<XMFLOAT3>& points,
                                   const std::vector<float>& cumulativeLengths,
@@ -755,23 +755,25 @@ void AppendQuadraticBezierSamples(
 
 void AppendBezierFallbackGuide(
     std::vector<XMFLOAT3>& samples,
-    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2,
+    float sampleInterval)
 {
     const float approxLength = Distance3(p0, p1) + Distance3(p1, p2);
     const int subdivisions = (std::max)(
         kPreviewCurveSubdivisions,
-        static_cast<int>(ceilf(approxLength / kPreviewCurveSampleLength)));
+        static_cast<int>(ceilf(approxLength / sampleInterval)));
     AppendQuadraticBezierSamples(samples, p0, p1, p2, subdivisions);
 }
 
 void AppendBezierFallbackGuideDetailed(
     std::vector<PreviewCurvePoint>& samples,
-    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2,
+    float sampleInterval)
 {
     const float approxLength = Distance3(p0, p1) + Distance3(p1, p2);
     const int subdivisions = (std::max)(
         kPreviewCurveSubdivisions,
-        static_cast<int>(ceilf(approxLength / kPreviewCurveSampleLength)));
+        static_cast<int>(ceilf(approxLength / sampleInterval)));
     AppendUniquePreviewPoint(samples, p0, PreviewCurveSegmentKind::Other);
     for (int step = 1; step <= subdivisions; ++step)
     {
@@ -785,7 +787,8 @@ void AppendBezierFallbackGuideDetailed(
 
 void AppendClothoidGuideCurve(
     std::vector<XMFLOAT3>& samples,
-    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2,
+    float sampleInterval)
 {
     const XMFLOAT3 seg0 = Sub3(p1, p0);
     const XMFLOAT3 seg1 = Sub3(p2, p1);
@@ -793,7 +796,7 @@ void AppendClothoidGuideCurve(
     const float segLen1 = Length3(seg1);
     if (segLen0 <= 1e-4f || segLen1 <= 1e-4f)
     {
-        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        AppendBezierFallbackGuide(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -803,14 +806,14 @@ void AppendClothoidGuideCurve(
     if (Length3(Cross3(v0World, v1World)) < 0.001f &&
         fabsf(1.0f - fabsf(worldDot)) < 0.001f)
     {
-        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        AppendBezierFallbackGuide(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
     PreviewPlaneFrame frame;
     if (!BuildPreviewPlaneFrame(p0, p1, p2, frame))
     {
-        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        AppendBezierFallbackGuide(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -822,7 +825,7 @@ void AppendClothoidGuideCurve(
     const float localSegLen1 = Distance2(localP2, localP1);
     if (localSegLen0 <= 1e-4f || localSegLen1 <= 1e-4f)
     {
-        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        AppendBezierFallbackGuide(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -831,7 +834,7 @@ void AppendClothoidGuideCurve(
     const float I = acosf(std::clamp(Dot2(v0, v1), -1.0f, 1.0f));
     if (I < 0.001f)
     {
-        AppendBezierFallbackGuide(samples, p0, p1, p2);
+        AppendBezierFallbackGuide(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -882,7 +885,7 @@ void AppendClothoidGuideCurve(
     }
 
     const float localSampleLength =
-        (std::max)(kPreviewCurveSampleLength / (std::max)(scale, 1e-4f), 1e-4f);
+        (std::max)(sampleInterval / (std::max)(scale, 1e-4f), 1e-4f);
     auto fitPoint = [scale, offset, ratio, localRatio](XMFLOAT2 point) -> XMFLOAT2
     {
         XMFLOAT2 result = Scale2(point, scale);
@@ -939,7 +942,8 @@ void AppendClothoidGuideCurve(
 
 void AppendClothoidGuideCurveDetailed(
     std::vector<PreviewCurvePoint>& samples,
-    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2)
+    XMFLOAT3 p0, XMFLOAT3 p1, XMFLOAT3 p2,
+    float sampleInterval)
 {
     const XMFLOAT3 seg0 = Sub3(p1, p0);
     const XMFLOAT3 seg1 = Sub3(p2, p1);
@@ -947,7 +951,7 @@ void AppendClothoidGuideCurveDetailed(
     const float segLen1 = Length3(seg1);
     if (segLen0 <= 1e-4f || segLen1 <= 1e-4f)
     {
-        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -957,14 +961,14 @@ void AppendClothoidGuideCurveDetailed(
     if (Length3(Cross3(v0World, v1World)) < 0.001f &&
         fabsf(1.0f - fabsf(worldDot)) < 0.001f)
     {
-        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
     PreviewPlaneFrame frame;
     if (!BuildPreviewPlaneFrame(p0, p1, p2, frame))
     {
-        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -976,7 +980,7 @@ void AppendClothoidGuideCurveDetailed(
     const float localSegLen1 = Distance2(localP2, localP1);
     if (localSegLen0 <= 1e-4f || localSegLen1 <= 1e-4f)
     {
-        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -985,7 +989,7 @@ void AppendClothoidGuideCurveDetailed(
     const float I = acosf(std::clamp(Dot2(v0, v1), -1.0f, 1.0f));
     if (I < 0.001f)
     {
-        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2);
+        AppendBezierFallbackGuideDetailed(samples, p0, p1, p2, sampleInterval);
         return;
     }
 
@@ -1036,7 +1040,7 @@ void AppendClothoidGuideCurveDetailed(
     }
 
     const float localSampleLength =
-        (std::max)(kPreviewCurveSampleLength / (std::max)(scale, 1e-4f), 1e-4f);
+        (std::max)(sampleInterval / (std::max)(scale, 1e-4f), 1e-4f);
     auto fitPoint = [scale, offset, ratio, localRatio](XMFLOAT2 point) -> XMFLOAT2
     {
         XMFLOAT2 result = Scale2(point, scale);
@@ -1091,7 +1095,7 @@ void AppendClothoidGuideCurveDetailed(
     AppendUniquePreviewPoint(samples, p2, PreviewCurveSegmentKind::Other);
 }
 
-std::vector<PreviewCurvePoint> BuildRoadPreviewCurveDetailed(const Road& road)
+std::vector<PreviewCurvePoint> BuildRoadPreviewCurveDetailed(const Road& road, float sampleInterval)
 {
     std::vector<PreviewCurvePoint> samples;
     const int pointCount = static_cast<int>(road.points.size());
@@ -1149,7 +1153,8 @@ std::vector<PreviewCurvePoint> BuildRoadPreviewCurveDetailed(const Road& road)
                 samples,
                 edgeMidpoints[(pointIndex - 1 + edgeCount) % edgeCount],
                 road.points[pointIndex].pos,
-                edgeMidpoints[pointIndex]);
+                edgeMidpoints[pointIndex],
+                sampleInterval);
         }
         if (!samples.empty())
             samples.push_back(samples.front());
@@ -1163,15 +1168,16 @@ std::vector<PreviewCurvePoint> BuildRoadPreviewCurveDetailed(const Road& road)
             samples,
             edgeMidpoints[pointIndex - 1],
             road.points[pointIndex].pos,
-            edgeMidpoints[pointIndex]);
+            edgeMidpoints[pointIndex],
+            sampleInterval);
     }
     AppendUniquePreviewPoint(samples, road.points.back().pos, PreviewCurveSegmentKind::Other);
     return samples;
 }
 
-std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road)
+std::vector<XMFLOAT3> BuildRoadPreviewCurve(const Road& road, float sampleInterval)
 {
-    const std::vector<PreviewCurvePoint> detailed = BuildRoadPreviewCurveDetailed(road);
+    const std::vector<PreviewCurvePoint> detailed = BuildRoadPreviewCurveDetailed(road, sampleInterval);
     std::vector<XMFLOAT3> samples;
     samples.reserve(detailed.size());
     for (const PreviewCurvePoint& point : detailed)
@@ -1343,15 +1349,16 @@ PreviewCurveSegmentKind SampleVerticalPreviewKind(const VerticalPreviewSegment& 
     return PreviewCurveSegmentKind::Other;
 }
 
-std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(const Road& road)
+std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(const Road& road, float sampleInterval)
 {
-    const std::vector<XMFLOAT3> baseCurve = BuildRoadPreviewCurve(road);
-    return BuildRoadVerticalPreviewCurveDetailed(road, baseCurve);
+    const std::vector<XMFLOAT3> baseCurve = BuildRoadPreviewCurve(road, sampleInterval);
+    return BuildRoadVerticalPreviewCurveDetailed(road, baseCurve, sampleInterval);
 }
 
 std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(
     const Road& road,
-    const std::vector<XMFLOAT3>& baseCurve)
+    const std::vector<XMFLOAT3>& baseCurve,
+    float sampleInterval)
 {
     std::vector<PreviewCurvePoint> samples;
     if (baseCurve.size() < 2)
@@ -1367,7 +1374,7 @@ std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(
 
     if (road.verticalCurve.empty())
     {
-        const float sampleStep = (std::max)(kPreviewCurveSampleLength * 0.5f, 0.5f);
+        const float sampleStep = (std::max)(sampleInterval, 1.0f);
         const int sampleCount =
             (std::max)(static_cast<int>(ceilf(totalLength / sampleStep)), 2);
         for (int step = 0; step <= sampleCount; ++step)
@@ -1435,7 +1442,7 @@ std::vector<PreviewCurvePoint> BuildRoadVerticalPreviewCurveDetailed(
         segments.push_back(BuildVerticalPreviewSegment(segmentStart, guidePoints[i], segmentEnd));
     }
 
-    const float sampleStep = (std::max)(kPreviewCurveSampleLength * 0.5f, 0.5f);
+    const float sampleStep = (std::max)(sampleInterval, 1.0f);
     for (size_t segmentIndex = 0; segmentIndex < segments.size(); ++segmentIndex)
     {
         const VerticalPreviewSegment& segment = segments[segmentIndex];
@@ -1562,6 +1569,15 @@ void PolylineEditor::InvalidateAllBankCaches()
     }
 }
 
+void PolylineEditor::SetPreviewSampleInterval(float value)
+{
+    const float clampedValue = (std::max)(1.0f, value);
+    if (fabsf(m_previewSampleInterval - clampedValue) <= 1e-5f)
+        return;
+    m_previewSampleInterval = clampedValue;
+    InvalidateAllPreviewCaches();
+}
+
 void PolylineEditor::EnsureRoadPreviewCacheSize() const
 {
     if (!m_network)
@@ -1583,7 +1599,9 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadPreviewCurveDetaile
     RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
     if (!cache.previewDetailedValid)
     {
-        cache.previewDetailed = BuildRoadPreviewCurveDetailed(m_network->roads[roadIndex]);
+        cache.previewDetailed = BuildRoadPreviewCurveDetailed(
+            m_network->roads[roadIndex],
+            m_previewSampleInterval);
         cache.previewDetailedValid = true;
         cache.previewPositionsValid = false;
         cache.previewArcLengthsValid = false;
@@ -1635,7 +1653,10 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadVerticalPreviewCurv
     if (!cache.verticalDetailedValid)
     {
         cache.verticalDetailed =
-            BuildRoadVerticalPreviewCurveDetailed(m_network->roads[roadIndex], GetRoadPreviewCurveCached(roadIndex));
+            BuildRoadVerticalPreviewCurveDetailed(
+                m_network->roads[roadIndex],
+                GetRoadPreviewCurveCached(roadIndex),
+                m_previewSampleInterval);
         cache.verticalDetailedValid = true;
         cache.verticalPositionsValid = false;
         cache.verticalArcLengthsValid = false;

@@ -181,6 +181,7 @@ public:
     void SetRoadTerrainClearanceInterval(float value);
     void SetBankVectorInterval(float value);
     void SetBankAngleColorMaxDegrees(float value);
+    void SetPreviewSampleInterval(float value);
     void SetRoadLineThickness(float value) { m_roadLineThickness = value; }
     void SetPreviewCurveThickness(float value) { m_previewCurveThickness = value; }
     void SetSelectedRoadLineThickness(float value) { m_selectedRoadLineThickness = value; }
@@ -468,6 +469,7 @@ private:
     float m_bankAngleColorMaxDegrees = 15.0f;
     float m_roadLineThickness = 2.0f;
     float m_previewCurveThickness = 2.0f;
+    float m_previewSampleInterval = 2.0f;
     float m_selectedRoadLineThickness = 3.0f;
     float m_roadVertexScreenRadius = 3.0f;
     float m_intersectionScreenGizmoRadius = 10.0f;
