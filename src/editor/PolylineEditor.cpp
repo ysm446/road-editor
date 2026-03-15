@@ -19,7 +19,6 @@ constexpr float kPreviewCurveSampleLength = 2.0f;
 constexpr float kPreviewClothoidAngleRatio = 0.2f;
 constexpr float kMinIntersectionSpacingMeters = 10.0f;
 constexpr float kBankCurvatureStepMeters = 10.0f;
-constexpr float kBankVectorDisplayLength = 2.5f;
 
 std::vector<float> BuildPolylineArcLengths(const std::vector<XMFLOAT3>& points);
 XMFLOAT3 SamplePolylineAtDistance(const std::vector<XMFLOAT3>& points,
@@ -170,6 +169,32 @@ XMFLOAT2 Rotate2(XMFLOAT2 v, float angle)
     };
 }
 
+bool IsFiniteFloat(float value)
+{
+    return std::isfinite(value);
+}
+
+bool IsFinitePoint3(XMFLOAT3 p)
+{
+    return IsFiniteFloat(p.x) && IsFiniteFloat(p.y) && IsFiniteFloat(p.z);
+}
+
+bool HasAnyFinitePoint(const std::vector<XMFLOAT3>& points)
+{
+    for (const XMFLOAT3& point : points)
+    {
+        if (IsFinitePoint3(point))
+            return true;
+    }
+    return false;
+}
+
+XMFLOAT3 MakeInvalidPoint3()
+{
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    return { nan, nan, nan };
+}
+
 float Length3(XMFLOAT3 v)
 {
     return sqrtf(Dot3(v, v));
@@ -254,6 +279,16 @@ float ComputeBankAngleRadians(float radius, float targetSpeedKmh, float friction
         theta = 0.0f;
     return theta;
 }
+
+struct EvaluatedLaneSection
+{
+    float offsetCenter = 0.0f;
+    float widthLeft2 = 0.0f;
+    float widthLeft1 = 0.0f;
+    float widthCenter = 0.0f;
+    float widthRight1 = 0.0f;
+    float widthRight2 = 0.0f;
+};
 
 float EvaluateInterpolatedBankAngleRadians(const Road& road,
                                            const std::vector<XMFLOAT3>& curve,
@@ -407,6 +442,121 @@ float EvaluateInterpolatedBankAngleRadians(const Road& road,
     }
 
     return autoAngleRadians;
+}
+
+BankFrameSample EvaluateBankFrameAtDistance(const Road& road,
+                                            const std::vector<XMFLOAT3>& curve,
+                                            const std::vector<float>& arcLengths,
+                                            float distance)
+{
+    const float totalLength = arcLengths.empty() ? 0.0f : arcLengths.back();
+    const float clampedDistance = std::clamp(distance, 0.0f, totalLength);
+    const float prevDistance = (std::max)(0.0f, clampedDistance - kBankCurvatureStepMeters);
+    const float nextDistance = (std::min)(totalLength, clampedDistance + kBankCurvatureStepMeters);
+    const XMFLOAT3 p0 = SamplePolylineAtDistance(curve, arcLengths, prevDistance);
+    const XMFLOAT3 p1 = SamplePolylineAtDistance(curve, arcLengths, clampedDistance);
+    const XMFLOAT3 p2 = SamplePolylineAtDistance(curve, arcLengths, nextDistance);
+
+    XMFLOAT3 tangent = Normalize3(Sub3(p2, p0));
+    if (Length3(tangent) <= 1e-5f)
+        tangent = Normalize3(Sub3(p2, p1));
+    if (Length3(tangent) <= 1e-5f)
+        tangent = Normalize3(Sub3(p1, p0));
+    if (Length3(tangent) <= 1e-5f)
+        tangent = { 0.0f, 0.0f, 1.0f };
+
+    const XMFLOAT3 halfVector = ComputeHalfVectorXZ(p0, p1, p2);
+    XMFLOAT3 baseLeft = Normalize3(Cross3({ 0.0f, 1.0f, 0.0f }, tangent));
+    if (Length3(baseLeft) <= 1e-5f)
+        baseLeft = { 1.0f, 0.0f, 0.0f };
+    XMFLOAT3 baseUp = Normalize3(Cross3(tangent, baseLeft));
+    if (Length3(baseUp) <= 1e-5f)
+        baseUp = { 0.0f, 1.0f, 0.0f };
+
+    const float localHalfX = DotXZ(halfVector, baseLeft);
+    const float sign = localHalfX < 0.0f ? -1.0f : 1.0f;
+    const float angleRadians = EvaluateInterpolatedBankAngleRadians(road, curve, arcLengths, clampedDistance);
+    XMFLOAT3 bankLeft = Normalize3(Add3(
+        Scale3(baseLeft, cosf(angleRadians)),
+        Scale3(baseUp, sign * sinf(angleRadians))));
+    XMFLOAT3 bankUp = Normalize3(Cross3(tangent, bankLeft));
+    if (Length3(bankUp) <= 1e-5f)
+        bankUp = baseUp;
+
+    return { p1, bankLeft, bankUp, angleRadians };
+}
+
+EvaluatedLaneSection EvaluateLaneSectionAtDistance(const Road& road,
+                                                   const std::vector<float>& arcLengths,
+                                                   float distance)
+{
+    auto fromPoint = [](const LaneSectionPoint& point) -> EvaluatedLaneSection
+    {
+        return {
+            point.offsetCenter,
+            point.useLaneLeft2 ? (std::max)(0.0f, point.widthLaneLeft2) : 0.0f,
+            point.useLaneLeft1 ? (std::max)(0.0f, point.widthLaneLeft1) : 0.0f,
+            point.useLaneCenter ? (std::max)(0.0f, point.widthLaneCenter) : 0.0f,
+            point.useLaneRight1 ? (std::max)(0.0f, point.widthLaneRight1) : 0.0f,
+            point.useLaneRight2 ? (std::max)(0.0f, point.widthLaneRight2) : 0.0f
+        };
+    };
+
+    auto lerpSection = [](const EvaluatedLaneSection& a, const EvaluatedLaneSection& b, float t) -> EvaluatedLaneSection
+    {
+        return {
+            a.offsetCenter + (b.offsetCenter - a.offsetCenter) * t,
+            a.widthLeft2 + (b.widthLeft2 - a.widthLeft2) * t,
+            a.widthLeft1 + (b.widthLeft1 - a.widthLeft1) * t,
+            a.widthCenter + (b.widthCenter - a.widthCenter) * t,
+            a.widthRight1 + (b.widthRight1 - a.widthRight1) * t,
+            a.widthRight2 + (b.widthRight2 - a.widthRight2) * t
+        };
+    };
+
+    if (road.laneSections.empty() || arcLengths.empty())
+    {
+        return {
+            0.0f,
+            0.0f,
+            (std::max)(0.0f, road.defaultWidthLaneLeft1),
+            (std::max)(0.0f, road.defaultWidthLaneCenter),
+            (std::max)(0.0f, road.defaultWidthLaneRight1),
+            0.0f
+        };
+    }
+
+    const float totalLength = arcLengths.back();
+    std::vector<std::pair<float, EvaluatedLaneSection>> sections;
+    sections.reserve(road.laneSections.size());
+    for (const LaneSectionPoint& point : road.laneSections)
+        sections.push_back({ std::clamp(point.uCoord, 0.0f, 1.0f) * totalLength, fromPoint(point) });
+
+    std::sort(
+        sections.begin(),
+        sections.end(),
+        [](const auto& a, const auto& b)
+        {
+            return a.first < b.first;
+        });
+
+    if (distance <= sections.front().first)
+        return sections.front().second;
+    if (distance >= sections.back().first)
+        return sections.back().second;
+
+    for (size_t i = 1; i < sections.size(); ++i)
+    {
+        if (distance > sections[i].first)
+            continue;
+        const float span = sections[i].first - sections[i - 1].first;
+        if (span <= 1e-5f)
+            return sections[i].second;
+        const float t = (distance - sections[i - 1].first) / span;
+        return lerpSection(sections[i - 1].second, sections[i].second, t);
+    }
+
+    return sections.back().second;
 }
 
 bool NearlyEqual3(XMFLOAT3 a, XMFLOAT3 b, float epsilon = 1e-3f)
@@ -1491,6 +1641,7 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadVerticalPreviewCurv
         cache.verticalArcLengthsValid = false;
         cache.bankFrameSamplesValid = false;
         cache.verticalGradeColorsValid = false;
+        cache.lanePreviewLinesValid = false;
         cache.metricsValid = false;
     }
     return cache.verticalDetailed;
@@ -1654,6 +1805,134 @@ const std::vector<unsigned int>& PolylineEditor::GetRoadBankPreviewColorsCached(
         cache.bankPreviewColorsValid = true;
     }
     return cache.bankPreviewColors;
+}
+
+const std::vector<LanePreviewLine>& PolylineEditor::GetRoadLanePreviewLinesCached(int roadIndex) const
+{
+    static const std::vector<LanePreviewLine> kEmpty;
+    if (!m_network || roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return kEmpty;
+
+    EnsureRoadPreviewCacheSize();
+    RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
+    if (!cache.lanePreviewLinesValid)
+    {
+        cache.lanePreviewLines.clear();
+        const Road& road = m_network->roads[roadIndex];
+        const std::vector<XMFLOAT3>& curve = GetRoadVerticalPreviewCurveCached(roadIndex);
+        const std::vector<float>& arcLengths = GetRoadVerticalPreviewCurveArcLengthsCached(roadIndex);
+        if (curve.size() >= 2 && arcLengths.size() == curve.size())
+        {
+            cache.lanePreviewLines.resize(static_cast<size_t>(LanePreviewLineKind::Count));
+
+            auto appendBreak = [&](LanePreviewLineKind kind)
+            {
+                std::vector<XMFLOAT3>& points =
+                    cache.lanePreviewLines[static_cast<size_t>(kind)].points;
+                if (!points.empty() && IsFinitePoint3(points.back()))
+                    points.push_back(MakeInvalidPoint3());
+            };
+
+            auto pushPoint = [&](LanePreviewLineKind kind, XMFLOAT3 point)
+            {
+                std::vector<XMFLOAT3>& points =
+                    cache.lanePreviewLines[static_cast<size_t>(kind)].points;
+                if (!points.empty() && !IsFinitePoint3(points.back()))
+                {
+                    if (!points.empty() && points.size() >= 2 &&
+                        !IsFinitePoint3(points[points.size() - 2]))
+                    {
+                        points.pop_back();
+                    }
+                    points.push_back(point);
+                    return;
+                }
+                AppendUniquePoint(points, point);
+            };
+
+            for (size_t sampleIndex = 0; sampleIndex < curve.size(); ++sampleIndex)
+            {
+                const float distance = arcLengths[sampleIndex];
+                const BankFrameSample frame = EvaluateBankFrameAtDistance(road, curve, arcLengths, distance);
+                const EvaluatedLaneSection section = EvaluateLaneSectionAtDistance(road, arcLengths, distance);
+
+                const float centerOffset = section.offsetCenter;
+                const float centerLeftBoundary = centerOffset + section.widthCenter * 0.5f;
+                const float centerRightBoundary = centerOffset - section.widthCenter * 0.5f;
+                const float left1Outer = centerLeftBoundary + section.widthLeft1;
+                const float left2Outer = left1Outer + section.widthLeft2;
+                const float right1Outer = centerRightBoundary - section.widthRight1;
+                const float right2Outer = right1Outer - section.widthRight2;
+
+                pushPoint(LanePreviewLineKind::Centerline, Add3(frame.pos, Scale3(frame.left, centerOffset)));
+
+                if (section.widthLeft2 > 1e-4f)
+                    pushPoint(LanePreviewLineKind::LeftOuter2, Add3(frame.pos, Scale3(frame.left, left2Outer)));
+                else
+                    appendBreak(LanePreviewLineKind::LeftOuter2);
+
+                if (section.widthLeft1 > 1e-4f)
+                {
+                    const XMFLOAT3 point = Add3(frame.pos, Scale3(frame.left, left1Outer));
+                    if (section.widthLeft2 > 1e-4f)
+                    {
+                        pushPoint(LanePreviewLineKind::LeftBoundary1, point);
+                        appendBreak(LanePreviewLineKind::LeftOuter1);
+                    }
+                    else
+                    {
+                        pushPoint(LanePreviewLineKind::LeftOuter1, point);
+                        appendBreak(LanePreviewLineKind::LeftBoundary1);
+                    }
+                }
+                else
+                {
+                    appendBreak(LanePreviewLineKind::LeftOuter1);
+                    appendBreak(LanePreviewLineKind::LeftBoundary1);
+                }
+
+                if (section.widthCenter > 1e-4f)
+                {
+                    pushPoint(LanePreviewLineKind::CenterLeftBoundary,
+                        Add3(frame.pos, Scale3(frame.left, centerLeftBoundary)));
+                    pushPoint(LanePreviewLineKind::CenterRightBoundary,
+                        Add3(frame.pos, Scale3(frame.left, centerRightBoundary)));
+                }
+                else
+                {
+                    appendBreak(LanePreviewLineKind::CenterLeftBoundary);
+                    appendBreak(LanePreviewLineKind::CenterRightBoundary);
+                }
+
+                if (section.widthRight1 > 1e-4f)
+                {
+                    const XMFLOAT3 point = Add3(frame.pos, Scale3(frame.left, right1Outer));
+                    if (section.widthRight2 > 1e-4f)
+                    {
+                        pushPoint(LanePreviewLineKind::RightBoundary1, point);
+                        appendBreak(LanePreviewLineKind::RightOuter1);
+                    }
+                    else
+                    {
+                        pushPoint(LanePreviewLineKind::RightOuter1, point);
+                        appendBreak(LanePreviewLineKind::RightBoundary1);
+                    }
+                }
+                else
+                {
+                    appendBreak(LanePreviewLineKind::RightOuter1);
+                    appendBreak(LanePreviewLineKind::RightBoundary1);
+                }
+
+                if (section.widthRight2 > 1e-4f)
+                    pushPoint(LanePreviewLineKind::RightOuter2, Add3(frame.pos, Scale3(frame.left, right2Outer)));
+                else
+                    appendBreak(LanePreviewLineKind::RightOuter2);
+            }
+        }
+        cache.lanePreviewLinesValid = true;
+    }
+    return cache.lanePreviewLines;
 }
 
 const std::vector<unsigned int>& PolylineEditor::GetRoadVerticalGradeColorsCached(int roadIndex) const
@@ -6555,6 +6834,9 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     const ImU32 colBankLeft = IM_COL32(120, 210, 255, 220);
     const ImU32 colLane = IM_COL32(150, 255, 120, 245);
     const ImU32 colLaneSel = IM_COL32(70, 210, 60, 255);
+    const ImU32 colLaneCenterline = IM_COL32(120, 220, 255, 220);
+    const ImU32 colLaneBoundary = IM_COL32(180, 255, 90, 210);
+    const ImU32 colLaneOutline = IM_COL32(190, 110, 255, 230);
     bool showClothoidPreview = true;
     bool showVerticalPreview = true;
     switch (m_mode)
@@ -6753,8 +7035,12 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
             ImVec2 upEnd;
             ImVec2 leftEnd;
             if (!WorldToScreen(sample.pos, viewProj, vpW, vpH, origin) ||
-                !WorldToScreen(Add3(sample.pos, Scale3(sample.up, kBankVectorDisplayLength)), viewProj, vpW, vpH, upEnd) ||
-                !WorldToScreen(Add3(sample.pos, Scale3(sample.left, kBankVectorDisplayLength)), viewProj, vpW, vpH, leftEnd))
+                !WorldToScreen(
+                    Add3(sample.pos, Scale3(sample.up, (std::max)(0.5f, m_bankVectorInterval))),
+                    viewProj, vpW, vpH, upEnd) ||
+                !WorldToScreen(
+                    Add3(sample.pos, Scale3(sample.left, (std::max)(0.5f, m_bankVectorInterval))),
+                    viewProj, vpW, vpH, leftEnd))
             {
                 continue;
             }
@@ -6804,8 +7090,39 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
     for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
     {
         const Road& road = m_network->roads[ri];
-        if (!IsRoadVisible(road) || m_mode != EditorMode::LaneEdit || road.laneSections.empty())
+        if (!IsRoadVisible(road) || m_mode != EditorMode::LaneEdit)
             continue;
+
+        const std::vector<LanePreviewLine>& lanePreviewLines = GetRoadLanePreviewLinesCached(ri);
+        for (size_t lineIndex = 0; lineIndex < lanePreviewLines.size(); ++lineIndex)
+        {
+            const std::vector<XMFLOAT3>& linePoints = lanePreviewLines[lineIndex].points;
+            if (linePoints.size() < 2)
+                continue;
+
+            ImU32 lineColor = colLaneBoundary;
+            if (lineIndex == static_cast<size_t>(LanePreviewLineKind::Centerline))
+                lineColor = colLaneCenterline;
+            else if (lineIndex == static_cast<size_t>(LanePreviewLineKind::LeftOuter2) ||
+                     lineIndex == static_cast<size_t>(LanePreviewLineKind::LeftOuter1) ||
+                     lineIndex == static_cast<size_t>(LanePreviewLineKind::RightOuter1) ||
+                     lineIndex == static_cast<size_t>(LanePreviewLineKind::RightOuter2))
+                lineColor = colLaneOutline;
+
+            for (size_t pointIndex = 0; pointIndex + 1 < linePoints.size(); ++pointIndex)
+            {
+                if (!IsFinitePoint3(linePoints[pointIndex]) ||
+                    !IsFinitePoint3(linePoints[pointIndex + 1]))
+                    continue;
+
+                ImVec2 a;
+                ImVec2 b;
+                if (!WorldToScreen(linePoints[pointIndex], viewProj, vpW, vpH, a) ||
+                    !WorldToScreen(linePoints[pointIndex + 1], viewProj, vpW, vpH, b))
+                    continue;
+                dl->AddLine(a, b, lineColor, kPreviewCurveThickness);
+            }
+        }
 
         const std::vector<XMFLOAT3>& previewCurve = GetRoadParametricPreviewCurveCached(ri);
         if (previewCurve.size() < 2)
@@ -7668,6 +7985,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         {
             PushUndoState();
             road.defaultWidthLaneLeft1 = (std::max)(0.0f, defaultWidthLaneLeft1);
+            InvalidateRoadPreviewCache(m_activeRoad);
         }
 
         float defaultWidthLaneRight1 = road.defaultWidthLaneRight1;
@@ -7675,6 +7993,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         {
             PushUndoState();
             road.defaultWidthLaneRight1 = (std::max)(0.0f, defaultWidthLaneRight1);
+            InvalidateRoadPreviewCache(m_activeRoad);
         }
 
         float defaultWidthLaneCenter = road.defaultWidthLaneCenter;
@@ -7682,6 +8001,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         {
             PushUndoState();
             road.defaultWidthLaneCenter = (std::max)(0.0f, defaultWidthLaneCenter);
+            InvalidateRoadPreviewCache(m_activeRoad);
         }
 
         float defaultFriction = road.defaultFriction;

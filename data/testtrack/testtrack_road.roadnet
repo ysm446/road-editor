@@ -1939,14 +1939,7 @@
     },
     {
       "active": 1,
-      "bankAngle": [
-        {
-          "bankAngle": 0.0,
-          "overrideBank": 0,
-          "targetSpeed": 40.0,
-          "u_coord": 0.35875436663627625
-        }
-      ],
+      "bankAngle": [],
       "closed": false,
       "defaultFriction": 0.15000000596046448,
       "defaultTargetSpeed": 30.0,
@@ -1959,7 +1952,7 @@
       "laneSections": [
         {
           "offsetCenter": 0.0,
-          "u_coord": 0.26842498779296875,
+          "u_coord": 0.5121327042579651,
           "useLaneCenter": 1,
           "useLaneLeft1": 1,
           "useLaneLeft2": 0,
@@ -1973,10 +1966,10 @@
         },
         {
           "offsetCenter": 0.0,
-          "u_coord": 0.686479926109314,
+          "u_coord": 0.7976288199424744,
           "useLaneCenter": 1,
           "useLaneLeft1": 1,
-          "useLaneLeft2": 0,
+          "useLaneLeft2": 1,
           "useLaneRight1": 1,
           "useLaneRight2": 0,
           "widthLaneCenter": 0.0,
@@ -5882,7 +5875,64 @@
       "endIntersectionId": "42e6b21b-d995-4564-9158-6e3c5beff5eb",
       "groupId": "legacy-import-group",
       "id": "5494268d-c643-4d17-9814-82043ffa2258",
-      "laneSections": [],
+      "laneSections": [
+        {
+          "offsetCenter": 0.0,
+          "u_coord": 0.13320086896419525,
+          "useLaneCenter": 1,
+          "useLaneLeft1": 1,
+          "useLaneLeft2": 0,
+          "useLaneRight1": 1,
+          "useLaneRight2": 0,
+          "widthLaneCenter": 0.0,
+          "widthLaneLeft1": 3.0,
+          "widthLaneLeft2": 3.0,
+          "widthLaneRight1": 3.0,
+          "widthLaneRight2": 3.0
+        },
+        {
+          "offsetCenter": 0.0,
+          "u_coord": 0.24188485741615295,
+          "useLaneCenter": 1,
+          "useLaneLeft1": 1,
+          "useLaneLeft2": 1,
+          "useLaneRight1": 1,
+          "useLaneRight2": 0,
+          "widthLaneCenter": 0.0,
+          "widthLaneLeft1": 3.0,
+          "widthLaneLeft2": 3.0,
+          "widthLaneRight1": 3.0,
+          "widthLaneRight2": 3.0
+        },
+        {
+          "offsetCenter": 0.0,
+          "u_coord": 0.4475322961807251,
+          "useLaneCenter": 1,
+          "useLaneLeft1": 1,
+          "useLaneLeft2": 1,
+          "useLaneRight1": 1,
+          "useLaneRight2": 0,
+          "widthLaneCenter": 0.0,
+          "widthLaneLeft1": 3.0,
+          "widthLaneLeft2": 3.0,
+          "widthLaneRight1": 3.0,
+          "widthLaneRight2": 3.0
+        },
+        {
+          "offsetCenter": 0.0,
+          "u_coord": 0.7235939502716064,
+          "useLaneCenter": 1,
+          "useLaneLeft1": 1,
+          "useLaneLeft2": 0,
+          "useLaneRight1": 1,
+          "useLaneRight2": 0,
+          "widthLaneCenter": 0.0,
+          "widthLaneLeft1": 3.0,
+          "widthLaneLeft2": 3.0,
+          "widthLaneRight1": 3.0,
+          "widthLaneRight2": 3.0
+        }
+      ],
       "name": "Road 38",
       "point": [
         {
@@ -5891,15 +5941,6 @@
             -591.33251953125,
             1434.549072265625,
             178.84878540039063
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            -573.73974609375,
-            1434.7203369140625,
-            156.34242248535156
           ],
           "useCurvatureRadius": 0
         },
@@ -5918,15 +5959,6 @@
             -544.423095703125,
             1434.0201416015625,
             128.22262573242188
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            -521.3865966796875,
-            1433.95458984375,
-            121.18096160888672
           ],
           "useCurvatureRadius": 0
         },
@@ -5960,27 +5992,9 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            -432.1551818847656,
-            1433.6610107421875,
-            77.31422424316406
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
             -403.79522705078125,
             1433.6396484375,
             54.17869567871094
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            -376.51458740234375,
-            1433.5513916015625,
-            33.26140213012695
           ],
           "useCurvatureRadius": 0
         },
@@ -19044,10 +19058,23 @@
     },
     {
       "active": 1,
-      "bankAngle": [],
+      "bankAngle": [
+        {
+          "bankAngle": 0.0,
+          "overrideBank": 0,
+          "targetSpeed": 40.0,
+          "u_coord": 0.25246211886405945
+        },
+        {
+          "bankAngle": 7.0,
+          "overrideBank": 0,
+          "targetSpeed": 60.0,
+          "u_coord": 0.7684073448181152
+        }
+      ],
       "closed": false,
       "defaultFriction": 0.15000000596046448,
-      "defaultTargetSpeed": 60.0,
+      "defaultTargetSpeed": 40.0,
       "defaultWidthLaneCenter": 0.0,
       "defaultWidthLaneLeft1": 2.0,
       "defaultWidthLaneRight1": 2.0,
@@ -19069,54 +19096,36 @@
         {
           "curvatureRadius": 0.0,
           "pos": [
-            382.9223937988281,
-            1444.9833984375,
-            -113.86973571777344
+            372.557861328125,
+            1444.6588134765625,
+            -101.61713409423828
           ],
           "useCurvatureRadius": 0
         },
         {
           "curvatureRadius": 0.0,
           "pos": [
-            367.3175964355469,
-            1443.18603515625,
-            -99.37725067138672
+            336.1496276855469,
+            1444.6307373046875,
+            -98.69261932373047
           ],
           "useCurvatureRadius": 0
         },
         {
           "curvatureRadius": 0.0,
           "pos": [
-            344.9839782714844,
-            1441.5718994140625,
-            -98.48096466064453
+            315.8936767578125,
+            1439.9608154296875,
+            -117.31794738769531
           ],
           "useCurvatureRadius": 0
         },
         {
           "curvatureRadius": 0.0,
           "pos": [
-            319.9683837890625,
-            1438.6180419921875,
-            -114.4493408203125
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            310.1251220703125,
-            1437.4720458984375,
-            -133.07472229003906
-          ],
-          "useCurvatureRadius": 0
-        },
-        {
-          "curvatureRadius": 0.0,
-          "pos": [
-            300.52142333984375,
-            1435.9197998046875,
-            -151.8789825439453
+            303.48565673828125,
+            1435.2626953125,
+            -144.27606201171875
           ],
           "useCurvatureRadius": 0
         },
@@ -19135,7 +19144,7 @@
       "verticalCurve": [
         {
           "offset": 0.0,
-          "u_coord": 0.6226917505264282,
+          "u_coord": 0.7321815490722656,
           "vcl": 50.0
         }
       ]

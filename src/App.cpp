@@ -2198,14 +2198,16 @@ void App::Render()
                     }
                 }
                 float bankVectorInterval = m_bankVectorInterval;
-                if (ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u30D9\u30AF\u30C8\u30EB\u9593\u9694 (m)", &bankVectorInterval, 1.0f, 5.0f, "%.1f"))
+                ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u30D9\u30AF\u30C8\u30EB\u9593\u9694 (m)", &bankVectorInterval, 1.0f, 5.0f, "%.1f");
+                if (ImGui::IsItemDeactivatedAfterEdit())
                 {
                     m_bankVectorInterval = (std::max)(0.5f, bankVectorInterval);
                     m_editor.SetBankVectorInterval(m_bankVectorInterval);
                     SaveViewSettings();
                 }
                 float bankAngleMaxDegrees = m_bankAngleColorMaxDegrees;
-                if (ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u89D2\u4E0A\u9650 (deg)", &bankAngleMaxDegrees, 1.0f, 5.0f, "%.1f"))
+                ImGui::InputFloat(u8"\u30D0\u30F3\u30AF\u89D2\u4E0A\u9650 (deg)", &bankAngleMaxDegrees, 1.0f, 5.0f, "%.1f");
+                if (ImGui::IsItemDeactivatedAfterEdit())
                 {
                     m_bankAngleColorMaxDegrees = (std::max)(0.1f, bankAngleMaxDegrees);
                     m_editor.SetBankAngleColorMaxDegrees(m_bankAngleColorMaxDegrees);

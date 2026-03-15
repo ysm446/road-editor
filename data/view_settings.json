@@ -5,7 +5,7 @@
     0.2664092779159546
   ],
   "bankAngleColorMaxDegrees": 15.0,
-  "bankVectorInterval": 6.0,
+  "bankVectorInterval": 5.0,
   "contourColor": [
     0.6640926599502563,
     0.6640926599502563,
@@ -63,14 +63,14 @@
     "displaySettings": {
       "height": 614.0,
       "width": 380.0,
-      "x": 1356.0,
-      "y": 50.0
+      "x": 1332.0,
+      "y": 56.0
     },
     "properties": {
       "height": 717.0,
       "width": 380.0,
-      "x": 1008.0,
-      "y": 44.0
+      "x": 954.0,
+      "y": 50.0
     },
     "roadEditor": {
       "height": 478.0,

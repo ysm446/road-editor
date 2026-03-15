@@ -58,6 +58,25 @@ struct BankFrameSample
     float angleRadians = 0.0f;
 };
 
+struct LanePreviewLine
+{
+    std::vector<DirectX::XMFLOAT3> points;
+};
+
+enum class LanePreviewLineKind
+{
+    Centerline = 0,
+    LeftOuter2,
+    LeftOuter1,
+    LeftBoundary1,
+    CenterLeftBoundary,
+    CenterRightBoundary,
+    RightBoundary1,
+    RightOuter1,
+    RightOuter2,
+    Count
+};
+
 // Manages interactive polyline road editing.
 // Owned by App, updated every frame after camera input.
 class PolylineEditor
@@ -301,6 +320,7 @@ private:
     const std::vector<float>& GetRoadParametricPreviewCurveArcLengthsCached(int roadIndex) const;
     const std::vector<BankFrameSample>& GetRoadBankFrameSamplesCached(int roadIndex) const;
     const std::vector<unsigned int>& GetRoadBankPreviewColorsCached(int roadIndex) const;
+    const std::vector<LanePreviewLine>& GetRoadLanePreviewLinesCached(int roadIndex) const;
     const std::vector<unsigned int>& GetRoadVerticalGradeColorsCached(int roadIndex) const;
     const std::vector<TerrainClearanceSample>& GetRoadTerrainClearanceSamplesCached(int roadIndex) const;
     const RoadPreviewMetrics& GetRoadPreviewMetricsCached(int roadIndex) const;
@@ -345,6 +365,7 @@ private:
         bool verticalArcLengthsValid = false;
         bool bankFrameSamplesValid = false;
         bool bankPreviewColorsValid = false;
+        bool lanePreviewLinesValid = false;
         bool verticalGradeColorsValid = false;
         bool terrainClearanceValid = false;
         bool metricsValid = false;
@@ -356,6 +377,7 @@ private:
         std::vector<float> verticalArcLengths;
         std::vector<BankFrameSample> bankFrameSamples;
         std::vector<unsigned int> bankPreviewColors;
+        std::vector<LanePreviewLine> lanePreviewLines;
         std::vector<unsigned int> verticalGradeColors;
         std::vector<TerrainClearanceSample> terrainClearanceSamples;
         RoadPreviewMetrics metrics;
