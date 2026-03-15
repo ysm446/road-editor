@@ -1185,6 +1185,7 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadPreviewCurveDetaile
         cache.previewDetailed = BuildRoadPreviewCurveDetailed(m_network->roads[roadIndex]);
         cache.previewDetailedValid = true;
         cache.previewPositionsValid = false;
+        cache.metricsValid = false;
     }
     return cache.previewDetailed;
 }
@@ -1220,6 +1221,7 @@ const std::vector<PreviewCurvePoint>& PolylineEditor::GetRoadVerticalPreviewCurv
         cache.verticalDetailedValid = true;
         cache.verticalPositionsValid = false;
         cache.verticalGradeColorsValid = false;
+        cache.metricsValid = false;
     }
     return cache.verticalDetailed;
 }
@@ -1304,6 +1306,44 @@ void PolylineEditor::SetRoadGradeRedThresholdPercent(float value)
         return;
     m_roadGradeRedThresholdPercent = value;
     InvalidateAllGradeColorCaches();
+}
+
+const RoadPreviewMetrics& PolylineEditor::GetRoadPreviewMetricsCached(int roadIndex) const
+{
+    static const RoadPreviewMetrics kEmpty;
+    if (!m_network || roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+        return kEmpty;
+
+    EnsureRoadPreviewCacheSize();
+    RoadPreviewCache& cache = m_roadPreviewCaches[roadIndex];
+    if (!cache.metricsValid)
+    {
+        const std::vector<XMFLOAT3>& previewCurve = GetRoadVerticalPreviewCurveCached(roadIndex);
+        RoadPreviewMetrics metrics;
+        if (!previewCurve.empty())
+        {
+            XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+            for (const XMFLOAT3& point : previewCurve)
+            {
+                center.x += point.x;
+                center.y += point.y;
+                center.z += point.z;
+            }
+            const float invCount = 1.0f / static_cast<float>(previewCurve.size());
+            center.x *= invCount;
+            center.y *= invCount;
+            center.z *= invCount;
+
+            metrics.valid = true;
+            metrics.center = center;
+            metrics.length = ComputePolylineLength(previewCurve);
+            metrics.averageGradePercent = ComputeAverageAbsoluteGradePercent(previewCurve);
+            metrics.maxGradePercent = ComputeMaxAbsoluteGradePercent(previewCurve);
+        }
+        cache.metrics = metrics;
+        cache.metricsValid = true;
+    }
+    return cache.metrics;
 }
 
 bool PolylineEditor::ConsumeStatusMessage(std::string& outMessage)
@@ -4061,10 +4101,12 @@ void PolylineEditor::Update(int vpW, int vpH,
     const bool zDown = (GetAsyncKeyState('Z') & 0x8000) != 0;
     const bool yDown = (GetAsyncKeyState('Y') & 0x8000) != 0;
     const bool cDown = (GetAsyncKeyState('C') & 0x8000) != 0;
+    const bool aDown = (GetAsyncKeyState('A') & 0x8000) != 0;
     const bool pasteVDown = (GetAsyncKeyState('V') & 0x8000) != 0;
     const bool undoShortcut = ctrlDown && zDown;
     const bool redoShortcut = ctrlDown && yDown;
     const bool copyShortcut = ctrlDown && cDown;
+    const bool selectAllShortcut = ctrlDown && aDown;
     const bool pasteShortcut = ctrlDown && pasteVDown;
     if (!ImGui::GetIO().WantTextInput)
     {
@@ -4087,13 +4129,36 @@ void PolylineEditor::Update(int vpW, int vpH,
             CopySelectedRoads();
             m_prevCopyShortcut = copyShortcut;
             m_prevPasteShortcut = pasteShortcut;
+            m_prevSelectAllShortcut = selectAllShortcut;
             return;
+        }
+        if (selectAllShortcut && !m_prevSelectAllShortcut)
+        {
+            bool handled = false;
+            if (!m_selectedPoints.empty())
+            {
+                const int parentRoadIndex = m_selectedPoints.front().roadIndex;
+                if (parentRoadIndex >= 0 &&
+                    parentRoadIndex < static_cast<int>(m_network->roads.size()))
+                {
+                    SelectSingleRoad(parentRoadIndex);
+                    handled = SelectAllPointsOnSelectedRoads();
+                    if (handled)
+                        SetMode(EditorMode::PointEdit);
+                }
+            }
+            m_prevSelectAllShortcut = selectAllShortcut;
+            m_prevCopyShortcut = copyShortcut;
+            m_prevPasteShortcut = pasteShortcut;
+            if (handled)
+                return;
         }
         if (pasteShortcut && !m_prevPasteShortcut)
         {
             PasteCopiedRoadsAtCursor();
             m_prevCopyShortcut = copyShortcut;
             m_prevPasteShortcut = pasteShortcut;
+            m_prevSelectAllShortcut = selectAllShortcut;
             return;
         }
     }
@@ -4101,6 +4166,7 @@ void PolylineEditor::Update(int vpW, int vpH,
     m_prevRedoShortcut = redoShortcut;
     m_prevCopyShortcut = copyShortcut;
     m_prevPasteShortcut = pasteShortcut;
+    m_prevSelectAllShortcut = selectAllShortcut;
 
     if (wPress && m_mode != EditorMode::Pathfinding)
     {
@@ -6156,25 +6222,28 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         drawRoadOverlay(road, colRoadSel, kSelectedRoadThickness);
     }
 
-    for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
+    if (m_mode != EditorMode::Navigate)
     {
-        const Road& road = m_network->roads[ri];
-        if (!IsRoadGuidelineVisible(road))
-            continue;
-        for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
+        for (int ri = 0; ri < static_cast<int>(m_network->roads.size()); ++ri)
         {
-            ImVec2 sp;
-            if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, sp))
+            const Road& road = m_network->roads[ri];
+            if (!IsRoadGuidelineVisible(road))
                 continue;
-            const bool pointSelected = IsPointSelected(ri, pi);
-            const bool roadSelected = IsRoadSelected(ri) || ri == m_activeRoad;
-            ImU32 col = colPoint;
-            if (roadSelected)
-                col = colRoadSel;
-            if (pointSelected)
-                col = colPointSel;
-            const float radius = pointSelected ? (kRadius + 2.0f) : kRadius;
-            dl->AddCircleFilled(sp, radius, col, 20);
+            for (int pi = 0; pi < static_cast<int>(road.points.size()); ++pi)
+            {
+                ImVec2 sp;
+                if (!WorldToScreen(road.points[pi].pos, viewProj, vpW, vpH, sp))
+                    continue;
+                const bool pointSelected = IsPointSelected(ri, pi);
+                const bool roadSelected = IsRoadSelected(ri) || ri == m_activeRoad;
+                ImU32 col = colPoint;
+                if (roadSelected)
+                    col = colRoadSel;
+                if (pointSelected)
+                    col = colPointSel;
+                const float radius = pointSelected ? (kRadius + 2.0f) : kRadius;
+                dl->AddCircleFilled(sp, radius, col, 20);
+            }
         }
     }
 
@@ -6184,17 +6253,8 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
         if (!IsRoadVisible(road) || !(m_showRoadNames || m_showRoadPreviewMetrics) || road.points.empty())
             continue;
 
-        XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
-        for (const RoadPoint& point : road.points)
-        {
-            center.x += point.pos.x;
-            center.y += point.pos.y;
-            center.z += point.pos.z;
-        }
-        const float invCount = 1.0f / static_cast<float>(road.points.size());
-        center.x *= invCount;
-        center.y *= invCount;
-        center.z *= invCount;
+        const RoadPreviewMetrics& metrics = GetRoadPreviewMetricsCached(ri);
+        const XMFLOAT3 center = metrics.valid ? metrics.center : road.points.front().pos;
 
         ImVec2 labelPos;
         if (WorldToScreen(center, viewProj, vpW, vpH, labelPos))
@@ -6205,19 +6265,13 @@ void PolylineEditor::DrawOverlay(XMMATRIX viewProj, int vpW, int vpH) const
 
             if (m_showRoadPreviewMetrics)
             {
-                const std::vector<XMFLOAT3>& previewCurve = GetRoadPreviewCurveCached(ri);
-                const float previewLength = ComputePolylineLength(previewCurve);
-                const float averageGradePercent =
-                    ComputeAverageAbsoluteGradePercent(previewCurve);
-                const float maxGradePercent =
-                    ComputeMaxAbsoluteGradePercent(previewCurve);
                 char metricsBuf[128] = {};
                 sprintf_s(
                     metricsBuf,
                     "%.0fm / %.1f%%(%.1f%%)",
-                    std::round(previewLength),
-                    averageGradePercent,
-                    maxGradePercent);
+                    std::round(metrics.length),
+                    metrics.averageGradePercent,
+                    metrics.maxGradePercent);
                 const float metricsOffsetY = (m_showRoadNames && !road.name.empty()) ? 10.0f : 0.0f;
                 dl->AddText(
                     ImVec2(textPos.x, textPos.y + metricsOffsetY),

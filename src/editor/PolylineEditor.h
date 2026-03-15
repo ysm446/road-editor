@@ -34,6 +34,15 @@ struct PreviewCurvePoint
     PreviewCurveSegmentKind kind = PreviewCurveSegmentKind::Other;
 };
 
+struct RoadPreviewMetrics
+{
+    bool valid = false;
+    DirectX::XMFLOAT3 center = { 0.0f, 0.0f, 0.0f };
+    float length = 0.0f;
+    float averageGradePercent = 0.0f;
+    float maxGradePercent = 0.0f;
+};
+
 // Manages interactive polyline road editing.
 // Owned by App, updated every frame after camera input.
 class PolylineEditor
@@ -267,6 +276,7 @@ private:
     const std::vector<DirectX::XMFLOAT3>& GetRoadVerticalPreviewCurveCached(int roadIndex) const;
     const std::vector<DirectX::XMFLOAT3>& GetRoadParametricPreviewCurveCached(int roadIndex) const;
     const std::vector<unsigned int>& GetRoadVerticalGradeColorsCached(int roadIndex) const;
+    const RoadPreviewMetrics& GetRoadPreviewMetricsCached(int roadIndex) const;
     void QueuePropertyRevealForRoad(int roadIndex);
     void QueuePropertyRevealForIntersection(int intersectionIndex);
     void ClearPropertyReveal();
@@ -305,11 +315,13 @@ private:
         bool verticalDetailedValid = false;
         bool verticalPositionsValid = false;
         bool verticalGradeColorsValid = false;
+        bool metricsValid = false;
         std::vector<PreviewCurvePoint> previewDetailed;
         std::vector<DirectX::XMFLOAT3> previewPositions;
         std::vector<PreviewCurvePoint> verticalDetailed;
         std::vector<DirectX::XMFLOAT3> verticalPositions;
         std::vector<unsigned int> verticalGradeColors;
+        RoadPreviewMetrics metrics;
     };
     EditorSnapshot CaptureSnapshot() const;
     void RestoreSnapshot(const EditorSnapshot& snapshot);
@@ -401,6 +413,7 @@ private:
     bool m_prevRedoShortcut = false;
     bool m_prevCopyShortcut = false;
     bool m_prevPasteShortcut = false;
+    bool m_prevSelectAllShortcut = false;
     RoadClipboard m_roadClipboard;
     int m_propertyRevealRoad = -1;
     int m_propertyRevealIntersection = -1;
