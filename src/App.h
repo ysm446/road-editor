@@ -50,6 +50,7 @@ private:
     bool    OpenRoads();
     void    UpdateWindowTitle() const;
     void    AddRecentProjectPath(const char* path);
+    bool    PruneMissingRecentProjectPaths();
     void    NewProject();
     void    ApplyTerrainSettings();
     void    RefreshTerrainPathDisplayBuffers();

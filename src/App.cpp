@@ -643,7 +643,7 @@ void App::LoadViewSettings()
                     if (!item.is_string())
                         continue;
                     const std::string normalized = NormalizePathString(item.get<std::string>().c_str());
-                    if (!normalized.empty())
+                    if (!normalized.empty() && fs::exists(fs::path(normalized)))
                         m_recentProjectPaths.push_back(normalized);
                     if (m_recentProjectPaths.size() >= 8)
                         break;
@@ -676,6 +676,14 @@ void App::SaveViewSettings() const
 {
     try
     {
+        std::vector<std::string> recentProjectPaths;
+        recentProjectPaths.reserve(m_recentProjectPaths.size());
+        for (const std::string& recentPath : m_recentProjectPaths)
+        {
+            if (fs::exists(fs::path(recentPath)))
+                recentProjectPaths.push_back(recentPath);
+        }
+
         nlohmann::json root =
         {
             { "showRoadNames", m_showRoadNames },
@@ -705,7 +713,7 @@ void App::SaveViewSettings() const
             { "intersectionCircleColor", { m_intersectionCircleColor.x, m_intersectionCircleColor.y, m_intersectionCircleColor.z } },
             { "contourColor", { m_contourColor.x, m_contourColor.y, m_contourColor.z } },
             { "backgroundColor", { m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z } },
-            { "recentProjectPaths", m_recentProjectPaths }
+            { "recentProjectPaths", recentProjectPaths }
         };
 
         std::ofstream ofs(kViewSettingsPath);
@@ -734,6 +742,21 @@ void App::AddRecentProjectPath(const char* path)
     m_recentProjectPaths.insert(m_recentProjectPaths.begin(), normalized);
     if (m_recentProjectPaths.size() > 8)
         m_recentProjectPaths.resize(8);
+}
+
+bool App::PruneMissingRecentProjectPaths()
+{
+    const size_t originalSize = m_recentProjectPaths.size();
+    m_recentProjectPaths.erase(
+        std::remove_if(
+            m_recentProjectPaths.begin(),
+            m_recentProjectPaths.end(),
+            [](const std::string& recentPath)
+            {
+                return recentPath.empty() || !fs::exists(fs::path(recentPath));
+            }),
+        m_recentProjectPaths.end());
+    return m_recentProjectPaths.size() != originalSize;
 }
 
 void App::ResetPathfindingState()
@@ -1651,6 +1674,8 @@ void App::Render()
             }
             if (!m_recentProjectPaths.empty())
             {
+                if (PruneMissingRecentProjectPaths())
+                    SaveViewSettings();
                 ImGui::Separator();
                 if (ImGui::BeginMenu(u8"\u6700\u8FD1\u958B\u3044\u305F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8"))
                 {
