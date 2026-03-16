@@ -2169,6 +2169,62 @@ bool PolylineEditor::GetFocusTarget(XMFLOAT3& outTarget) const
     if (!m_network)
         return false;
 
+    auto tryGetParametricPointFocusTarget = [this, &outTarget](int roadIndex, float uCoord) -> bool
+    {
+        if (roadIndex < 0 || roadIndex >= static_cast<int>(m_network->roads.size()))
+            return false;
+
+        const std::vector<XMFLOAT3>& previewCurve = GetRoadParametricPreviewCurveCached(roadIndex);
+        if (previewCurve.empty())
+            return false;
+
+        const std::vector<float>& cumulativeLengths = GetRoadPreviewCurveArcLengthsCached(roadIndex);
+        outTarget = SamplePolylineAtNormalizedDistance(previewCurve, cumulativeLengths, uCoord);
+        return true;
+    };
+
+    VerticalCurveRef selectedVerticalCurve;
+    if (GetPrimarySelectedVerticalCurvePoint(selectedVerticalCurve))
+    {
+        const Road& road = m_network->roads[selectedVerticalCurve.roadIndex];
+        if (selectedVerticalCurve.curveIndex >= 0 &&
+            selectedVerticalCurve.curveIndex < static_cast<int>(road.verticalCurve.size()) &&
+            tryGetParametricPointFocusTarget(
+                selectedVerticalCurve.roadIndex,
+                road.verticalCurve[selectedVerticalCurve.curveIndex].uCoord))
+        {
+            return true;
+        }
+    }
+
+    BankAngleRef selectedBankAngle;
+    if (GetPrimarySelectedBankAnglePoint(selectedBankAngle))
+    {
+        const Road& road = m_network->roads[selectedBankAngle.roadIndex];
+        if (selectedBankAngle.pointIndex >= 0 &&
+            selectedBankAngle.pointIndex < static_cast<int>(road.bankAngle.size()) &&
+            tryGetParametricPointFocusTarget(
+                selectedBankAngle.roadIndex,
+                road.bankAngle[selectedBankAngle.pointIndex].uCoord))
+        {
+            return true;
+        }
+    }
+
+    LaneSectionRef selectedLaneSection;
+    if (GetPrimarySelectedLaneSectionPoint(selectedLaneSection))
+    {
+        const Road& road = m_network->roads[selectedLaneSection.roadIndex];
+        if (selectedLaneSection.pointIndex >= 0 &&
+            selectedLaneSection.pointIndex < static_cast<int>(road.laneSections.size()) &&
+            tryGetParametricPointFocusTarget(
+                selectedLaneSection.roadIndex,
+                road.laneSections[selectedLaneSection.pointIndex].uCoord))
+        {
+            return true;
+        }
+    }
+
     if (m_activeRoad >= 0 &&
         m_activeRoad < static_cast<int>(m_network->roads.size()))
     {
