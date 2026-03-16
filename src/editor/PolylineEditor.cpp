@@ -2374,7 +2374,7 @@ bool PolylineEditor::CopySelectedRoads()
     CollectSelectedIntersectionIndices(intersectionIndices);
     if (roadIndices.empty() && intersectionIndices.empty())
     {
-        m_statusMessage = "Select a road or intersection before copying";
+        m_statusMessage = u8"コピーする前に道路または交差点を選択してください";
         return false;
     }
 
@@ -2413,12 +2413,12 @@ bool PolylineEditor::CopySelectedRoads()
 
     if (clipboard.roads.empty() && clipboard.intersections.empty())
     {
-        m_statusMessage = "Nothing selected to copy";
+        m_statusMessage = u8"コピーする対象が選択されていません";
         return false;
     }
     if (anchorCount == 0)
     {
-        m_statusMessage = "Selected item has no position to copy";
+        m_statusMessage = u8"選択した項目にコピー可能な位置情報がありません";
         return false;
     }
 
@@ -2431,7 +2431,7 @@ bool PolylineEditor::CopySelectedRoads()
     };
     m_roadClipboard = std::move(clipboard);
     const int copiedCount = static_cast<int>(m_roadClipboard.roads.size() + m_roadClipboard.intersections.size());
-    m_statusMessage = copiedCount > 1 ? "Selection copied" : "Item copied";
+    m_statusMessage = copiedCount > 1 ? u8"選択項目をコピーしました" : u8"項目をコピーしました";
     return true;
 }
 
@@ -2441,12 +2441,12 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
         return false;
     if (m_roadClipboard.roads.empty() && m_roadClipboard.intersections.empty())
     {
-        m_statusMessage = "Copy a road or intersection before pasting";
+        m_statusMessage = u8"貼り付ける前に道路または交差点をコピーしてください";
         return false;
     }
     if (!m_hasCursorPos)
     {
-        m_statusMessage = "Move the cursor over the ground before pasting";
+        m_statusMessage = u8"貼り付ける前にカーソルを地面上へ移動してください";
         return false;
     }
 
@@ -2546,7 +2546,7 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
 
     if (pastedRoads.empty() && pastedIntersections.empty())
     {
-        m_statusMessage = "Paste failed";
+        m_statusMessage = u8"貼り付けに失敗しました";
         return false;
     }
 
@@ -2565,7 +2565,7 @@ bool PolylineEditor::PasteCopiedRoadsAtCursor()
         SetActiveGroupById(m_network->intersections[m_activeIntersection].groupId);
 
     const int pastedCount = static_cast<int>(pastedRoads.size() + pastedIntersections.size());
-    m_statusMessage = pastedCount > 1 ? "Selection pasted" : "Item pasted";
+    m_statusMessage = pastedCount > 1 ? u8"選択項目を貼り付けました" : u8"項目を貼り付けました";
     return true;
 }
 
@@ -2652,7 +2652,7 @@ void PolylineEditor::Undo()
     m_redoStack.push_back(CaptureSnapshot());
     RestoreSnapshot(m_undoStack.back());
     m_undoStack.pop_back();
-    m_statusMessage = "Undo";
+    m_statusMessage = u8"元に戻しました";
 }
 
 void PolylineEditor::Redo()
@@ -2663,7 +2663,7 @@ void PolylineEditor::Redo()
     m_undoStack.push_back(CaptureSnapshot());
     RestoreSnapshot(m_redoStack.back());
     m_redoStack.pop_back();
-    m_statusMessage = "Redo";
+    m_statusMessage = u8"やり直しました";
 }
 
 void PolylineEditor::ClearHistory()
@@ -3497,7 +3497,7 @@ bool PolylineEditor::AutoCreateIntersectionsFromEndpoints()
 
     if (endpoints.size() < 2)
     {
-        m_statusMessage = "No overlapping road endpoints found";
+        m_statusMessage = u8"重なっている道路端点は見つかりませんでした";
         return false;
     }
 
@@ -3582,7 +3582,7 @@ bool PolylineEditor::AutoCreateIntersectionsFromEndpoints()
 
     if (planned.empty())
     {
-        m_statusMessage = "No new intersections were needed";
+        m_statusMessage = u8"新しい交差点を作成する必要はありませんでした";
         return false;
     }
 
@@ -3632,14 +3632,14 @@ bool PolylineEditor::AutoCreateIntersectionsFromEndpoints()
 
     if (createdCount <= 0)
     {
-        m_statusMessage = "Intersection creation failed";
+        m_statusMessage = u8"交差点の作成に失敗しました";
         return false;
     }
 
     InvalidateAllPreviewCaches();
     m_statusMessage = createdCount == 1
-        ? "1 intersection created"
-        : std::to_string(createdCount) + " intersections created";
+        ? u8"交差点を1件作成しました"
+        : std::to_string(createdCount) + u8" 件の交差点を作成しました";
     return true;
 }
 
@@ -3652,7 +3652,7 @@ bool PolylineEditor::ConnectSelectedIntersectionsWithRoad()
     CollectSelectedIntersectionIndices(intersectionIndices);
     if (intersectionIndices.size() != 2)
     {
-        m_statusMessage = "Select exactly 2 intersections";
+        m_statusMessage = u8"交差点をちょうど2つ選択してください";
         return false;
     }
 
@@ -3664,7 +3664,7 @@ bool PolylineEditor::ConnectSelectedIntersectionsWithRoad()
         secondIndex >= static_cast<int>(m_network->intersections.size()) ||
         firstIndex == secondIndex)
     {
-        m_statusMessage = "Select exactly 2 intersections";
+        m_statusMessage = u8"交差点をちょうど2つ選択してください";
         return false;
     }
 
@@ -3672,7 +3672,7 @@ bool PolylineEditor::ConnectSelectedIntersectionsWithRoad()
     const Intersection& secondIntersection = m_network->intersections[secondIndex];
     if (Distance3(firstIntersection.pos, secondIntersection.pos) <= 1e-4f)
     {
-        m_statusMessage = "Selected intersections are too close to connect";
+        m_statusMessage = u8"選択した交差点同士が近すぎて接続できません";
         return false;
     }
 
@@ -3683,7 +3683,7 @@ bool PolylineEditor::ConnectSelectedIntersectionsWithRoad()
         "Road " + std::to_string(m_network->roads.size()));
     if (newRoadIndex < 0 || newRoadIndex >= static_cast<int>(m_network->roads.size()))
     {
-        m_statusMessage = "Road creation failed";
+        m_statusMessage = u8"道路の作成に失敗しました";
         return false;
     }
 
@@ -3711,7 +3711,7 @@ bool PolylineEditor::ConnectSelectedIntersectionsWithRoad()
     m_hoverSnapIntersection = -1;
     m_dragging = false;
     InvalidateRoadPreviewCache(newRoadIndex);
-    m_statusMessage = "Road created between intersections";
+    m_statusMessage = u8"交差点間に道路を作成しました";
     return true;
 }
 
@@ -3753,7 +3753,7 @@ bool PolylineEditor::SplitSelectedRoadAtPoint()
     const int splitIndex = selectedPoint.pointIndex;
     if (splitIndex <= 0 || splitIndex >= static_cast<int>(sourceRoad.points.size()) - 1)
     {
-        m_statusMessage = "Select a middle point to split the road";
+        m_statusMessage = u8"道路を分割するには中間点を選択してください";
         return false;
     }
 
@@ -3821,8 +3821,8 @@ bool PolylineEditor::SplitSelectedRoadAtPoint()
     m_hoverSnapIntersection = -1;
     m_dragging = false;
     m_statusMessage = originalClosed
-        ? "Closed road split into two roads"
-        : "Road split with new intersection";
+        ? u8"閉じた道路を2本の道路に分割しました"
+        : u8"道路を分割して新しい交差点を作成しました";
     return true;
 }
 
@@ -3844,7 +3844,7 @@ bool PolylineEditor::MergeSelectedRoads()
     const Road& roadB = m_network->roads[roadBIndex];
     if (roadA.points.size() < 2 || roadB.points.size() < 2)
     {
-        m_statusMessage = "Both roads need at least two points";
+        m_statusMessage = u8"結合する両方の道路に少なくとも2点必要です";
         return false;
     }
 
@@ -3913,7 +3913,7 @@ bool PolylineEditor::MergeSelectedRoads()
 
     if (!foundConnection)
     {
-        m_statusMessage = "Selected roads need endpoints within 5m to merge";
+        m_statusMessage = u8"道路を結合するには端点同士が5m以内にある必要があります";
         return false;
     }
 
@@ -3944,7 +3944,7 @@ bool PolylineEditor::MergeSelectedRoads()
     ClearPointSelection();
     ClearIntersectionSelection();
     m_activeIntersection = -1;
-    m_statusMessage = "Roads merged";
+    m_statusMessage = u8"道路を結合しました";
     return true;
 }
 
@@ -5003,7 +5003,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         else if (m_mode == EditorMode::LaneEdit)
             ClearLaneSectionSelection();
         if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
-            m_statusMessage = "Editing road: " + m_network->roads[roadIndex].name;
+            m_statusMessage = std::string(u8"編集中の道路: ") + m_network->roads[roadIndex].name;
     };
     const auto collectSelectedIntersections = [&]() -> std::vector<int>
     {
@@ -5054,8 +5054,8 @@ void PolylineEditor::Update(int vpW, int vpH,
         m_activeIntersection = -1;
         m_hoverSnapIntersection = -1;
         m_statusMessage = intersectionsToDelete.size() > 1
-            ? "Intersections deleted"
-            : "Intersection deleted";
+            ? u8"交差点を削除しました"
+            : u8"交差点を削除しました";
         return true;
     };
     if (!ImGui::GetIO().WantTextInput)
@@ -5307,7 +5307,7 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             ClearVerticalCurveSelection();
             SanitizeSelection();
-            m_statusMessage = "Vertical curve point deleted";
+            m_statusMessage = u8"縦断曲線ポイントを削除しました";
             return;
         }
 
@@ -5321,7 +5321,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                     selectCurveEditRoad(clickedRoad);
                     return;
                 }
-                m_statusMessage = "Click a road polyline to choose a road for vertical curve editing";
+                m_statusMessage = u8"縦断曲線を編集する道路を選ぶには道路ポリラインをクリックしてください";
                 return;
             }
             if (clickedRoad >= 0 && clickedRoad != m_activeRoad)
@@ -5417,7 +5417,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 SelectSingleVerticalCurvePoint(roadIndex, curveIndex);
                 ClearPointSelection();
                 ClearIntersectionSelection();
-                m_statusMessage = "Vertical curve point added";
+                m_statusMessage = u8"縦断曲線ポイントを追加しました";
                 return;
             }
         }
@@ -5544,7 +5544,7 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             ClearBankAngleSelection();
             SanitizeSelection();
-            m_statusMessage = "Bank angle point deleted";
+            m_statusMessage = u8"バンク角ポイントを削除しました";
             return;
         }
 
@@ -5558,7 +5558,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                     selectCurveEditRoad(clickedRoad);
                     return;
                 }
-                m_statusMessage = "Click a road polyline to choose a road for bank angle editing";
+                m_statusMessage = u8"バンク角を編集する道路を選ぶには道路ポリラインをクリックしてください";
                 return;
             }
             if (clickedRoad >= 0 && clickedRoad != m_activeRoad)
@@ -5656,7 +5656,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 SelectSingleBankAnglePoint(roadIndex, pointIndex);
                 ClearPointSelection();
                 ClearIntersectionSelection();
-                m_statusMessage = "Bank angle point added";
+                m_statusMessage = u8"バンク角ポイントを追加しました";
                 return;
             }
         }
@@ -5791,7 +5791,7 @@ void PolylineEditor::Update(int vpW, int vpH,
 
             ClearLaneSectionSelection();
             SanitizeSelection();
-            m_statusMessage = "Lane section point deleted";
+            m_statusMessage = u8"車線セクションポイントを削除しました";
             return;
         }
 
@@ -5805,7 +5805,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                     selectCurveEditRoad(clickedRoad);
                     return;
                 }
-                m_statusMessage = "Click a road polyline to choose a road for lane editing";
+                m_statusMessage = u8"車線を編集する道路を選ぶには道路ポリラインをクリックしてください";
                 return;
             }
             if (clickedRoad >= 0 && clickedRoad != m_activeRoad)
@@ -5914,7 +5914,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 SelectSingleLaneSectionPoint(roadIndex, pointIndex);
                 ClearPointSelection();
                 ClearIntersectionSelection();
-                m_statusMessage = "Lane section point added";
+                m_statusMessage = u8"車線セクションポイントを追加しました";
                 return;
             }
         }
@@ -5999,11 +5999,11 @@ void PolylineEditor::Update(int vpW, int vpH,
                 m_activeIntersection = -1;
                 m_hoverSnapIntersection = -1;
                 if (shouldDeleteRoads && shouldDeleteIntersections)
-                    m_statusMessage = "Roads and intersections deleted";
+                    m_statusMessage = u8"道路と交差点を削除しました";
                 else if (shouldDeleteRoads)
-                    m_statusMessage = roadsToDelete.size() > 1 ? "Roads deleted" : "Road deleted";
+                    m_statusMessage = roadsToDelete.size() > 1 ? u8"道路を削除しました" : u8"道路を削除しました";
                 else
-                    m_statusMessage = intersectionsToDelete.size() > 1 ? "Intersections deleted" : "Intersection deleted";
+                    m_statusMessage = intersectionsToDelete.size() > 1 ? u8"交差点を削除しました" : u8"交差点を削除しました";
                 return;
             }
         }
@@ -6099,7 +6099,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             if (FindIntersectionWithinDistance(hitPos, kMinIntersectionSpacingMeters) >= 0)
             {
-                m_statusMessage = "Cannot place an intersection within 10m of another intersection";
+                m_statusMessage = u8"別の交差点から10m以内には交差点を配置できません";
                 return;
             }
 
@@ -6115,7 +6115,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                     m_network->groups[m_activeGroup].id;
             }
             ClearPointSelection();
-            m_statusMessage = "Intersection placed";
+            m_statusMessage = u8"交差点を配置しました";
         }
 
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
@@ -6423,7 +6423,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 {
                     PushUndoState();
                     SnapSelectedEndpointToIntersection(m_hoverSnapIntersection);
-                    m_statusMessage = "Road endpoint connected";
+                    m_statusMessage = u8"道路の端点を接続しました";
                 }
                 else
                 {
@@ -6555,7 +6555,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                             m_dragging = false;
                             m_activeGizmoAxis = GizmoAxis::None;
                             m_hoverSnapIntersection = -1;
-                            m_statusMessage = "Point inserted";
+                            m_statusMessage = u8"ポイントを挿入しました";
                         }
                         else
                         {
@@ -6626,7 +6626,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 removedAny = true;
             }
             if (removedAny)
-                m_statusMessage = pointsToDelete.size() > 1 ? "Points deleted" : "Point deleted";
+                m_statusMessage = pointsToDelete.size() > 1 ? u8"ポイントを削除しました" : u8"ポイントを削除しました";
             ClearPointSelection();
             SanitizeSelection();
             m_activeGizmoAxis = GizmoAxis::None;
@@ -7961,7 +7961,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         const int newIndex = m_network->AddGroup(
             "Group " + std::to_string(m_network->groups.size()));
         m_activeGroup = newIndex;
-        m_statusMessage = "Group created";
+        m_statusMessage = u8"グループを作成しました";
     }
 
     ImGui::BeginChild("GroupTree", ImVec2(0, 210), true);
@@ -8132,7 +8132,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
         PushUndoState();
         m_network->RemoveGroup(groupToDelete);
         SanitizeSelection();
-        m_statusMessage = "Group deleted";
+        m_statusMessage = u8"グループを削除しました";
     }
 
     if (propertyRevealHandled)
@@ -8407,7 +8407,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
                 InvalidateRoadPreviewCache(selectedVerticalCurve.roadIndex);
                 ClearVerticalCurveSelection();
                 SanitizeSelection();
-                m_statusMessage = "Vertical curve point deleted";
+                m_statusMessage = u8"縦断曲線ポイントを削除しました";
             }
         }
     }
@@ -8493,7 +8493,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
                 InvalidateRoadPreviewCache(selectedBankAngle.roadIndex);
                 ClearBankAngleSelection();
                 SanitizeSelection();
-                m_statusMessage = "Bank angle point deleted";
+                m_statusMessage = u8"バンク角ポイントを削除しました";
             }
         }
     }
@@ -8645,7 +8645,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
                 InvalidateRoadPreviewCache(selectedLaneSection.roadIndex);
                 ClearLaneSectionSelection();
                 SanitizeSelection();
-                m_statusMessage = "Lane section point deleted";
+                m_statusMessage = u8"車線セクションポイントを削除しました";
             }
         }
     }
@@ -8683,7 +8683,7 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
                 {
                     PushUndoState();
                     ClearSelectedRoadConnection();
-                    m_statusMessage = "Road endpoint disconnected";
+                    m_statusMessage = u8"道路の端点を切り離しました";
                 }
             }
         }

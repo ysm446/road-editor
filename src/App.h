@@ -127,7 +127,7 @@ private:
     // Mouse-terrain intersection (updated each frame)
     bool              m_cursorHitValid = false;
     DirectX::XMFLOAT3 m_cursorHitPos   = {};
-    std::string       m_statusMessage  = "Ready";
+    std::string       m_statusMessage  = u8"準備完了";
     bool              m_prevFocusKey   = false;
     bool              m_showGrid = true;
     bool              m_showCameraWindow = false;

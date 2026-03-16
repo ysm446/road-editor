@@ -887,14 +887,14 @@ bool App::SyncPathfindingEndpointsFromSelectedRoad()
         roadIndex < 0 ||
         roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
     {
-        SetStatusMessage("Select one road before entering pathfinding");
+        SetStatusMessage(u8"経路探索に入る前に道路を1本選択してください");
         return false;
     }
 
     const Road& road = m_roadNetwork.roads[roadIndex];
     if (road.points.size() < 2)
     {
-        SetStatusMessage("Selected road needs at least two points");
+        SetStatusMessage(u8"選択した道路には少なくとも2点必要です");
         return false;
     }
 
@@ -908,7 +908,7 @@ bool App::SyncPathfindingEndpointsFromSelectedRoad()
     if (!ComputePathfindingPreview())
         return false;
 
-    SetStatusMessage("Pathfinding preview synced from selected road");
+    SetStatusMessage(u8"選択した道路から経路探索プレビューを同期しました");
     return true;
 }
 
@@ -1026,7 +1026,7 @@ void App::NewProject()
     RefreshTerrainPathDisplayBuffers();
     m_terrain->lightingMode = Terrain::LightingModeBasic;
     UpdateWindowTitle();
-    SetStatusMessage("New project");
+    SetStatusMessage(u8"新規プロジェクトを作成しました");
 }
 
 bool App::SaveProjectAs()
@@ -1060,12 +1060,12 @@ bool App::SaveRoads(const char* path)
     m_editor.SetFilePath(path);
     if (!m_editor.Save(path))
     {
-        SetStatusMessage(std::string("Road save failed: ") + path);
+        SetStatusMessage(std::string(u8"道路の保存に失敗しました: ") + path);
         return false;
     }
 
     m_hasEstablishedRoadFilePath = true;
-    SetStatusMessage(std::string("Roads saved: ") + path);
+    SetStatusMessage(std::string(u8"道路を保存しました: ") + path);
     return true;
 }
 
@@ -1092,12 +1092,12 @@ bool App::LoadRoadsFromPath(const char* path)
     m_editor.SetFilePath(path);
     if (!m_editor.Load(path))
     {
-        SetStatusMessage(std::string("Road load failed: ") + path);
+        SetStatusMessage(std::string(u8"道路の読み込みに失敗しました: ") + path);
         return false;
     }
 
     m_hasEstablishedRoadFilePath = true;
-    SetStatusMessage(std::string("Roads loaded: ") + path);
+    SetStatusMessage(std::string(u8"道路を読み込みました: ") + path);
     return true;
 }
 
@@ -1215,12 +1215,12 @@ bool App::SaveProject(const char* path)
         AddRecentProjectPath(path);
         SaveViewSettings();
         UpdateWindowTitle();
-        SetStatusMessage(std::string("Project saved: ") + path);
+        SetStatusMessage(std::string(u8"プロジェクトを保存しました: ") + path);
         return true;
     }
     catch (...)
     {
-        SetStatusMessage(std::string("Project save failed: ") + path);
+        SetStatusMessage(std::string(u8"プロジェクトの保存に失敗しました: ") + path);
         return false;
     }
 }
@@ -1271,7 +1271,7 @@ bool App::LoadProject(const char* path)
             {
                 if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
                 {
-                    SetStatusMessage(std::string("Terrain load failed: ") + m_terrainPath);
+                    SetStatusMessage(std::string(u8"地形の読み込みに失敗しました: ") + m_terrainPath);
                     return false;
                 }
                 ApplyTerrainSettings();
@@ -1333,12 +1333,12 @@ bool App::LoadProject(const char* path)
                 c.value("elevation", 0.4f));
         }
 
-        SetStatusMessage(std::string("Project loaded: ") + path);
+        SetStatusMessage(std::string(u8"プロジェクトを読み込みました: ") + path);
         return true;
     }
     catch (...)
     {
-        SetStatusMessage(std::string("Project load failed: ") + path);
+        SetStatusMessage(std::string(u8"プロジェクトの読み込みに失敗しました: ") + path);
         return false;
     }
 }
@@ -1368,7 +1368,7 @@ void App::UpdateSunInput(bool wantMouse)
     {
         m_sunDragActive = true;
         m_lastSunMouse = cursor;
-        SetStatusMessage("Sun direction editing");
+        SetStatusMessage(u8"太陽方向を編集中です");
         return;
     }
 
@@ -1669,7 +1669,7 @@ int App::Run()
                         m_camera->GetDistance(),
                         m_camera->GetAzimuth(),
                         m_camera->GetElevation());
-                    SetStatusMessage("Camera focused");
+                    SetStatusMessage(u8"カメラを選択対象へ移動しました");
                 }
             }
 
@@ -2279,11 +2279,11 @@ void App::Render()
                         }
                         else if (!m_terrain->LoadColorTexture(m_d3d->GetDevice(), m_terrainTexturePath))
                         {
-                            SetStatusMessage(std::string("Terrain texture load failed: ") + m_terrainTexturePath);
+                            SetStatusMessage(std::string(u8"地形テクスチャの読み込みに失敗しました: ") + m_terrainTexturePath);
                         }
                         else
                         {
-                            SetStatusMessage(std::string("Terrain texture loaded: ") + m_terrainTexturePath);
+                            SetStatusMessage(std::string(u8"地形テクスチャを読み込みました: ") + m_terrainTexturePath);
                         }
                         RefreshTerrainPathDisplayBuffers();
                     }
@@ -2453,13 +2453,13 @@ void App::Render()
         {
             if (!m_terrain->LoadFromFile(m_d3d->GetDevice(), m_terrainPath))
             {
-                SetStatusMessage(std::string("Terrain load failed: ") + m_terrainPath);
+                SetStatusMessage(std::string(u8"地形の読み込みに失敗しました: ") + m_terrainPath);
                 ImGui::OpenPopup("LoadError");
             }
             else
             {
                 ApplyTerrainSettings();
-                SetStatusMessage(std::string("Terrain loaded: ") + m_terrainPath);
+                SetStatusMessage(std::string(u8"地形を読み込みました: ") + m_terrainPath);
             }
         }
         if (ImGui::Button(u8"\u30CF\u30A4\u30C8\u30D5\u30A3\u30FC\u30EB\u30C9\u3092\u30AF\u30EA\u30A2", ImVec2(-1, 0)))
@@ -2474,7 +2474,7 @@ void App::Render()
             m_loadOffsetY = 0.0f;
             m_loadOffsetZ = 0.0f;
             m_contourSegments.clear();
-            SetStatusMessage("Height field cleared");
+            SetStatusMessage(u8"ハイトフィールドをクリアしました");
         }
         if (ImGui::BeginPopup("LoadError"))
         {
@@ -2661,14 +2661,14 @@ void App::UpdatePathfindingInput(bool wantMouseByImGui)
         m_pathfinding.draggingStart = true;
         m_pathfinding.draggingEnd = false;
         updateDraggedHandle();
-        SetStatusMessage("Dragging pathfinding start");
+        SetStatusMessage(u8"経路探索の開始点をドラッグ中です");
     }
     else if (hasEndScreen && Distance2D(mousePos, endScreen) <= handlePickRadius)
     {
         m_pathfinding.draggingStart = false;
         m_pathfinding.draggingEnd = true;
         updateDraggedHandle();
-        SetStatusMessage("Dragging pathfinding end");
+        SetStatusMessage(u8"経路探索の終了点をドラッグ中です");
     }
 }
 
@@ -2736,7 +2736,7 @@ bool App::ComputePathfindingPreview()
 
     if (!m_pathfinding.hasStart || !m_pathfinding.hasEnd)
     {
-        SetStatusMessage("Pick start and end first");
+        SetStatusMessage(u8"先に開始点と終了点を指定してください");
         return false;
     }
 
@@ -2748,7 +2748,7 @@ bool App::ComputePathfindingPreview()
             m_pathfinding.gridStep,
             grid))
     {
-        SetStatusMessage("Pathfinding grid setup failed");
+        SetStatusMessage(u8"経路探索グリッドの初期化に失敗しました");
         return false;
     }
 
@@ -2759,14 +2759,14 @@ bool App::ComputePathfindingPreview()
     if (!WorldToGrid(grid, m_pathfinding.startPos, startCol, startRow) ||
         !WorldToGrid(grid, m_pathfinding.endPos, endCol, endRow))
     {
-        SetStatusMessage("Start or end is outside the search area");
+        SetStatusMessage(u8"開始点または終了点が探索範囲外です");
         return false;
     }
 
     const int cellCount = grid.cols * grid.rows;
     if (cellCount <= 0 || cellCount > 1500000)
     {
-        SetStatusMessage("Pathfinding grid is too large");
+        SetStatusMessage(u8"経路探索グリッドが大きすぎます");
         return false;
     }
 
@@ -2818,7 +2818,7 @@ bool App::ComputePathfindingPreview()
     if (startIndex == endIndex)
     {
         m_pathfinding.previewPath = { m_pathfinding.startPos, m_pathfinding.endPos };
-        SetStatusMessage("Path preview computed (2 points)");
+        SetStatusMessage(u8"経路プレビューを計算しました (2点)");
         return true;
     }
 
@@ -2932,7 +2932,7 @@ bool App::ComputePathfindingPreview()
 
     if (bestEndState < 0)
     {
-        SetStatusMessage("No route found for the current grade settings");
+        SetStatusMessage(u8"現在の勾配設定では経路が見つかりませんでした");
         return false;
     }
 
@@ -2949,7 +2949,7 @@ bool App::ComputePathfindingPreview()
 
     if (reversedPath.empty())
     {
-        SetStatusMessage("Pathfinding produced an empty path");
+        SetStatusMessage(u8"経路探索の結果が空でした");
         return false;
     }
 
@@ -2957,7 +2957,7 @@ bool App::ComputePathfindingPreview()
     m_pathfinding.previewPath.insert(m_pathfinding.previewPath.begin(), m_pathfinding.startPos);
     m_pathfinding.previewPath.back() = m_pathfinding.endPos;
     SetStatusMessage(
-        "Path preview computed (" + std::to_string(m_pathfinding.previewPath.size()) + " points)");
+        std::string(u8"経路プレビューを計算しました (") + std::to_string(m_pathfinding.previewPath.size()) + u8" 点)");
     return true;
 }
 
@@ -2965,7 +2965,7 @@ bool App::ApplyPathfindingPreviewAsRoad()
 {
     if (m_pathfinding.previewPath.size() < 2)
     {
-        SetStatusMessage("Compute a path preview first");
+        SetStatusMessage(u8"先に経路プレビューを計算してください");
         return false;
     }
 
@@ -2975,14 +2975,14 @@ bool App::ApplyPathfindingPreviewAsRoad()
         m_pathfinding.gridStep);
     if (controlPoints.size() < 2)
     {
-        SetStatusMessage("Path smoothing failed");
+        SetStatusMessage(u8"経路の平滑化に失敗しました");
         return false;
     }
 
     const int roadIndex = m_editor.GetActiveRoadIndex();
     if (roadIndex < 0 || roadIndex >= static_cast<int>(m_roadNetwork.roads.size()))
     {
-        SetStatusMessage("Select a road before applying pathfinding");
+        SetStatusMessage(u8"経路探索を適用する前に道路を選択してください");
         return false;
     }
 
@@ -3025,7 +3025,7 @@ bool App::ApplyPathfindingPreviewAsRoad()
     m_editor.SetMode(EditorMode::Navigate);
     ResetPathfindingState();
     SetStatusMessage(
-        "Selected road updated from pathfinding (" + std::to_string(road.points.size()) + " points)");
+        std::string(u8"選択した道路を経路探索結果で更新しました (") + std::to_string(road.points.size()) + u8" 点)");
     return true;
 }
 
@@ -3101,7 +3101,7 @@ void App::DrawPathfindingPanel()
         m_pathfinding.hasStart = false;
         m_pathfinding.hasEnd = false;
         m_pathfinding.previewPath.clear();
-        SetStatusMessage("Pathfinding preview cleared");
+        SetStatusMessage(u8"経路探索プレビューをクリアしました");
     }
 
     ImGui::Separator();
@@ -3114,7 +3114,7 @@ void App::DrawPathfindingPanel()
     {
         m_editor.SetMode(EditorMode::Navigate);
         ResetPathfindingState();
-        SetStatusMessage("Pathfinding closed");
+        SetStatusMessage(u8"経路探索を終了しました");
     }
 }
 
