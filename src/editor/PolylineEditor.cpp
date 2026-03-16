@@ -8534,10 +8534,10 @@ void PolylineEditor::DrawUI(ID3D11Device* /*device*/,
 
             float bankAngle = currentPoint.bankAngle;
             ImGui::BeginDisabled(!overrideBank);
-            if (ImGui::SliderFloat(u8"\u30D0\u30F3\u30AF\u89D2##bank", &bankAngle, 0.0f, 90.0f, "%.1f"))
+            if (ImGui::SliderFloat(u8"\u30D0\u30F3\u30AF\u89D2##bank", &bankAngle, -90.0f, 90.0f, "%.1f"))
             {
                 PushUndoState();
-                road.bankAngle[selectedBankAngle.pointIndex].bankAngle = std::clamp(bankAngle, 0.0f, 90.0f);
+                road.bankAngle[selectedBankAngle.pointIndex].bankAngle = std::clamp(bankAngle, -90.0f, 90.0f);
                 InvalidateRoadPreviewCache(selectedBankAngle.roadIndex);
             }
             ImGui::EndDisabled();
