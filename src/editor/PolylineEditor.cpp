@@ -5001,6 +5001,51 @@ void PolylineEditor::Update(int vpW, int vpH,
         if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
             m_statusMessage = "Editing road: " + m_network->roads[roadIndex].name;
     };
+    const auto deleteSelectedIntersections = [&]() -> bool
+    {
+        std::vector<int> intersectionsToDelete = m_selectedIntersections;
+        if (m_activeIntersection >= 0 &&
+            m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+        {
+            intersectionsToDelete.push_back(m_activeIntersection);
+        }
+        if (intersectionsToDelete.empty())
+            return false;
+
+        std::sort(intersectionsToDelete.begin(), intersectionsToDelete.end(), std::greater<int>());
+        intersectionsToDelete.erase(
+            std::unique(intersectionsToDelete.begin(), intersectionsToDelete.end()),
+            intersectionsToDelete.end());
+
+        PushUndoState();
+        for (int intersectionIndex : intersectionsToDelete)
+        {
+            if (intersectionIndex < 0 ||
+                intersectionIndex >= static_cast<int>(m_network->intersections.size()))
+            {
+                continue;
+            }
+
+            const std::string removedId = m_network->intersections[intersectionIndex].id;
+            for (Road& road : m_network->roads)
+            {
+                if (road.startIntersectionId == removedId)
+                    road.startIntersectionId.clear();
+                if (road.endIntersectionId == removedId)
+                    road.endIntersectionId.clear();
+            }
+            m_network->RemoveIntersection(intersectionIndex);
+        }
+
+        InvalidateAllPreviewCaches();
+        ClearIntersectionSelection();
+        m_activeIntersection = -1;
+        m_hoverSnapIntersection = -1;
+        m_statusMessage = intersectionsToDelete.size() > 1
+            ? "Intersections deleted"
+            : "Intersection deleted";
+        return true;
+    };
     if (!ImGui::GetIO().WantTextInput)
     {
         if (undoShortcut && !m_prevUndoShortcut)
@@ -5908,24 +5953,12 @@ void PolylineEditor::Update(int vpW, int vpH,
     {
         const XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
         if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
-            m_activeIntersection >= 0 &&
-            m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+            (!m_selectedIntersections.empty() ||
+             (m_activeIntersection >= 0 &&
+              m_activeIntersection < static_cast<int>(m_network->intersections.size()))))
         {
-            PushUndoState();
-            const std::string removedId = m_network->intersections[m_activeIntersection].id;
-            for (Road& road : m_network->roads)
-            {
-                if (road.startIntersectionId == removedId)
-                    road.startIntersectionId.clear();
-                if (road.endIntersectionId == removedId)
-                    road.endIntersectionId.clear();
-            }
-            m_network->RemoveIntersection(m_activeIntersection);
-            InvalidateAllPreviewCaches();
-            m_activeIntersection = -1;
-            m_hoverSnapIntersection = -1;
-            m_statusMessage = "Intersection deleted";
-            return;
+            if (deleteSelectedIntersections())
+                return;
         }
 
         if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
@@ -6704,21 +6737,11 @@ void PolylineEditor::Update(int vpW, int vpH,
         }
 
         if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
-            m_activeIntersection >= 0 &&
-            m_activeIntersection < static_cast<int>(m_network->intersections.size()))
+            (!m_selectedIntersections.empty() ||
+             (m_activeIntersection >= 0 &&
+              m_activeIntersection < static_cast<int>(m_network->intersections.size()))))
         {
-            PushUndoState();
-            const std::string removedId = m_network->intersections[m_activeIntersection].id;
-            for (Road& road : m_network->roads)
-            {
-                if (road.startIntersectionId == removedId)
-                    road.startIntersectionId.clear();
-                if (road.endIntersectionId == removedId)
-                    road.endIntersectionId.clear();
-            }
-            m_network->RemoveIntersection(m_activeIntersection);
-            m_activeIntersection = -1;
-            m_statusMessage = "Intersection deleted";
+            deleteSelectedIntersections();
         }
     }
 }
