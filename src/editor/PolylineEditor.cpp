@@ -359,7 +359,7 @@ float EvaluateInterpolatedBankAngleRadians(const Road& road,
             pointDistance,
             0.0f,
             point.overrideBank,
-            XMConvertToRadians(std::clamp(point.bankAngle, 0.0f, 90.0f))
+            XMConvertToRadians(std::clamp(point.bankAngle, -90.0f, 90.0f))
         });
     }
 
