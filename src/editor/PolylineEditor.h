@@ -446,6 +446,7 @@ private:
     bool m_prev3Key    = false;
     bool m_prev4Key    = false;
     bool m_prev5Key    = false;
+    bool m_prevDeleteKey = false;
 
     // Default width for new points
     float m_defaultWidth = 3.0f;

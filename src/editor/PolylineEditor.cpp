@@ -4920,6 +4920,8 @@ void PolylineEditor::Update(int vpW, int vpH,
     bool fourPress = fourDown && !m_prev4Key;
     bool fiveDown = (GetAsyncKeyState('5') & 0x8000) != 0;
     bool fivePress = fiveDown && !m_prev5Key;
+    bool deleteDown = (GetAsyncKeyState(VK_DELETE) & 0x8000) != 0;
+    bool deletePress = deleteDown && !m_prevDeleteKey;
 
     if (wantMouse || alt)
     {
@@ -4935,6 +4937,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         m_prev3Key     = threeDown;
         m_prev4Key     = fourDown;
         m_prev5Key     = fiveDown;
+        m_prevDeleteKey = deleteDown;
         return;
     }
     m_prevLButton = lDown;
@@ -4947,6 +4950,7 @@ void PolylineEditor::Update(int vpW, int vpH,
     m_prev3Key = threeDown;
     m_prev4Key = fourDown;
     m_prev5Key = fiveDown;
+    m_prevDeleteKey = deleteDown;
 
     // Compute ray
     XMFLOAT3 rayOrig, rayDir;
@@ -5001,7 +5005,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
             m_statusMessage = "Editing road: " + m_network->roads[roadIndex].name;
     };
-    const auto deleteSelectedIntersections = [&]() -> bool
+    const auto collectSelectedIntersections = [&]() -> std::vector<int>
     {
         std::vector<int> intersectionsToDelete = m_selectedIntersections;
         if (m_activeIntersection >= 0 &&
@@ -5009,15 +5013,14 @@ void PolylineEditor::Update(int vpW, int vpH,
         {
             intersectionsToDelete.push_back(m_activeIntersection);
         }
-        if (intersectionsToDelete.empty())
-            return false;
-
         std::sort(intersectionsToDelete.begin(), intersectionsToDelete.end(), std::greater<int>());
         intersectionsToDelete.erase(
             std::unique(intersectionsToDelete.begin(), intersectionsToDelete.end()),
             intersectionsToDelete.end());
-
-        PushUndoState();
+        return intersectionsToDelete;
+    };
+    const auto deleteIntersectionsByIndex = [&](const std::vector<int>& intersectionsToDelete)
+    {
         for (int intersectionIndex : intersectionsToDelete)
         {
             if (intersectionIndex < 0 ||
@@ -5036,6 +5039,15 @@ void PolylineEditor::Update(int vpW, int vpH,
             }
             m_network->RemoveIntersection(intersectionIndex);
         }
+    };
+    const auto deleteSelectedIntersections = [&]() -> bool
+    {
+        const std::vector<int> intersectionsToDelete = collectSelectedIntersections();
+        if (intersectionsToDelete.empty())
+            return false;
+
+        PushUndoState();
+        deleteIntersectionsByIndex(intersectionsToDelete);
 
         InvalidateAllPreviewCaches();
         ClearIntersectionSelection();
@@ -5249,7 +5261,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             return;
         }
 
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+        if (deletePress &&
             !m_selectedVerticalCurvePoints.empty())
         {
             PushUndoState();
@@ -5486,7 +5498,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             return;
         }
 
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+        if (deletePress &&
             !m_selectedBankAnglePoints.empty())
         {
             PushUndoState();
@@ -5733,7 +5745,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             return;
         }
 
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+        if (deletePress &&
             !m_selectedLaneSectionPoints.empty())
         {
             PushUndoState();
@@ -5952,35 +5964,48 @@ void PolylineEditor::Update(int vpW, int vpH,
     if (m_mode == EditorMode::Navigate)
     {
         const XMMATRIX viewProj = XMMatrixInverse(nullptr, invViewProj);
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
-            (!m_selectedIntersections.empty() ||
-             (m_activeIntersection >= 0 &&
-              m_activeIntersection < static_cast<int>(m_network->intersections.size()))))
+        if (deletePress)
         {
-            if (deleteSelectedIntersections())
-                return;
-        }
-
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
-            !m_selectedRoads.empty() &&
-            m_activePoint < 0 &&
-            m_selectedPoints.empty())
-        {
-            PushUndoState();
+            const std::vector<int> intersectionsToDelete = collectSelectedIntersections();
             std::vector<int> roadsToDelete = m_selectedRoads;
             std::sort(roadsToDelete.begin(), roadsToDelete.end(), std::greater<int>());
             roadsToDelete.erase(std::unique(roadsToDelete.begin(), roadsToDelete.end()), roadsToDelete.end());
-            for (int roadIndex : roadsToDelete)
+
+            const bool shouldDeleteRoads =
+                !roadsToDelete.empty() &&
+                m_activePoint < 0 &&
+                m_selectedPoints.empty();
+            const bool shouldDeleteIntersections = !intersectionsToDelete.empty();
+            if (shouldDeleteRoads || shouldDeleteIntersections)
             {
-                if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
-                    m_network->RemoveRoad(roadIndex);
+                PushUndoState();
+
+                if (shouldDeleteRoads)
+                {
+                    for (int roadIndex : roadsToDelete)
+                    {
+                        if (roadIndex >= 0 && roadIndex < static_cast<int>(m_network->roads.size()))
+                            m_network->RemoveRoad(roadIndex);
+                    }
+                }
+
+                if (shouldDeleteIntersections)
+                    deleteIntersectionsByIndex(intersectionsToDelete);
+
+                InvalidateAllPreviewCaches();
+                ClearRoadSelection();
+                ClearPointSelection();
+                ClearIntersectionSelection();
+                m_activeIntersection = -1;
+                m_hoverSnapIntersection = -1;
+                if (shouldDeleteRoads && shouldDeleteIntersections)
+                    m_statusMessage = "Roads and intersections deleted";
+                else if (shouldDeleteRoads)
+                    m_statusMessage = roadsToDelete.size() > 1 ? "Roads deleted" : "Road deleted";
+                else
+                    m_statusMessage = intersectionsToDelete.size() > 1 ? "Intersections deleted" : "Intersection deleted";
+                return;
             }
-            InvalidateAllPreviewCaches();
-            ClearRoadSelection();
-            ClearPointSelection();
-            m_hoverSnapIntersection = -1;
-            m_statusMessage = roadsToDelete.size() > 1 ? "Roads deleted" : "Road deleted";
-            return;
         }
 
         if (lClick)
@@ -6560,7 +6585,7 @@ void PolylineEditor::Update(int vpW, int vpH,
         }
 
         // Delete selected point
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+        if (deletePress &&
             !m_selectedPoints.empty())
         {
             PushUndoState();
@@ -6584,12 +6609,12 @@ void PolylineEditor::Update(int vpW, int vpH,
                     }),
                 pointsToDelete.end());
             bool removedAny = false;
-            for (auto it = pointsToDelete.rbegin(); it != pointsToDelete.rend(); ++it)
+            for (const PointRef& pointRef : pointsToDelete)
             {
-                if (it->roadIndex < 0 || it->roadIndex >= static_cast<int>(m_network->roads.size()))
+                if (pointRef.roadIndex < 0 || pointRef.roadIndex >= static_cast<int>(m_network->roads.size()))
                     continue;
-                Road& road = m_network->roads[it->roadIndex];
-                const int pointIndex = it->pointIndex;
+                Road& road = m_network->roads[pointRef.roadIndex];
+                const int pointIndex = pointRef.pointIndex;
                 if (pointIndex < 0 || pointIndex >= static_cast<int>(road.points.size()))
                     continue;
                 if (pointIndex == 0)
@@ -6597,7 +6622,7 @@ void PolylineEditor::Update(int vpW, int vpH,
                 if (pointIndex == static_cast<int>(road.points.size()) - 1)
                     road.endIntersectionId.clear();
                 road.points.erase(road.points.begin() + pointIndex);
-                InvalidateRoadPreviewCache(it->roadIndex);
+                InvalidateRoadPreviewCache(pointRef.roadIndex);
                 removedAny = true;
             }
             if (removedAny)
@@ -6736,7 +6761,7 @@ void PolylineEditor::Update(int vpW, int vpH,
             }
         }
 
-        if ((GetAsyncKeyState(VK_DELETE) & 0x8000) &&
+        if (deletePress &&
             (!m_selectedIntersections.empty() ||
              (m_activeIntersection >= 0 &&
               m_activeIntersection < static_cast<int>(m_network->intersections.size()))))
